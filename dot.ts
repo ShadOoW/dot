@@ -7,6 +7,7 @@ import { kernelCommand } from "./src/commands/kernel.ts";
 import { assetsCommand } from "./src/commands/assets.ts";
 import { docsCommand } from "./src/commands/docs.ts";
 import { toolsCommand } from "./src/commands/tools/index.ts";
+import { cacheCommand } from "./src/commands/cache.ts";
 
 const main = defineCommand({
   meta: {
@@ -20,6 +21,7 @@ const main = defineCommand({
     assets: assetsCommand,
     docs: docsCommand,
     tools: toolsCommand,
+    cache: cacheCommand,
   },
 });
 

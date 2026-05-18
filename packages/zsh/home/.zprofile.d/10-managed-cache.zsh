@@ -7,6 +7,16 @@ if [ -f "$HOME/.cache/.managed" ]; then
   mkdir -p "$FNM_DIR"
   export RUSTUP_HOME="$HOME/.cache/managed-rustup"
   mkdir -p "$RUSTUP_HOME"
+  export GOMODCACHE="$HOME/.cache/managed-go/pkg/mod"
+  mkdir -p "$GOMODCACHE"
+  export STACK_ROOT="$HOME/.cache/managed-stack"
+  mkdir -p "$STACK_ROOT"
+  export CARGO_HOME="$HOME/.cache/managed-cargo"
+  mkdir -p "$CARGO_HOME/bin"
+  export GRADLE_USER_HOME="$HOME/.cache/managed-gradle"
+  mkdir -p "$GRADLE_USER_HOME"
+  export NUGET_PACKAGES="$HOME/.cache/managed-nuget"
+  mkdir -p "$NUGET_PACKAGES"
 else
   export ZINIT_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/zinit/zinit.git"
 fi
