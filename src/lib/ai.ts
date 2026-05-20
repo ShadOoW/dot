@@ -48,7 +48,28 @@ Everything is up to date.
 
 Respond with bullet points only. No preamble, no headers, no explanation.`;
 
-async function callMiniMax(userContent: string): Promise<string> {
+export const CACHE_SYSTEM_PROMPT = `You receive the raw terminal output of a Linux cache-clean command.
+
+Your job: identify what the user needs to act on or be aware of.
+
+Report ONLY:
+- Errors or failures (permission errors, failed deletions, tool crashes)
+- Warnings (missing helper tools like cargo-cache, unexpected skips)
+- Required actions: tools to install, manual cleanup steps
+
+Do NOT report:
+- Successful operations or cleared caches
+- Tools skipped only because they are not installed
+- Disk space freed or remaining sizes
+- "Cleared", "removed", or "up to date" success messages
+- yay "Error reading fd" lines for download-* temp files (these are harmless)
+
+If there is nothing to report, respond with exactly:
+Cache cleaned successfully.
+
+Respond with bullet points only. No preamble, no headers, no explanation.`;
+
+async function callMiniMax(userContent: string, systemPromptOverride?: string): Promise<string> {
   const apiKey = process.env.MINIMAX_API_KEY;
   const apiBase = (process.env.MINIMAX_API_BASE ?? "https://api.minimax.io/v1").replace(/\/$/, "");
   const model = process.env.MINIMAX_MODEL ?? "MiniMax-Text-01";
@@ -66,7 +87,7 @@ async function callMiniMax(userContent: string): Promise<string> {
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPromptOverride ?? SYSTEM_PROMPT },
         { role: "user", content: userContent },
       ],
       temperature: 0.1,
@@ -88,18 +109,21 @@ async function callMiniMax(userContent: string): Promise<string> {
 
 // ─── public ──────────────────────────────────────────────────────────────────
 
-export async function analyzeWithAI(output: string) {
+export async function analyzeWithAI(output: string, systemPrompt?: string) {
   logSection("AI Analysis");
   logInfo("Analysing…");
 
   try {
-    const text = await callMiniMax(output);
+    const text = await callMiniMax(output, systemPrompt);
     const lines = text.trim().split("\n");
 
     while (lines.length && !lines[0].trim()) lines.shift();
     while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
 
-    if (lines.length === 0) return;
+    if (lines.length === 0) {
+      logInfo("Nothing to report.");
+      return;
+    }
 
     console.log();
     for (const line of lines) {

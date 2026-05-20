@@ -4,6 +4,7 @@ import { mkdir, readdir, rm, symlink } from "fs/promises";
 import { dirname, join } from "path";
 import { HOME_DIR } from "../lib/config.ts";
 import { commandExists, logDesc, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
+import { analyzeWithAI, captureAndStream, CACHE_SYSTEM_PROMPT } from "../lib/ai.ts";
 
 // ─── cleaners ────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,11 @@ async function cleanPacman(): Promise<boolean> {
   if (!commandExists("pacman")) return true;
   logSection("pacman");
   const p = commandExists("doas") ? "doas" : "sudo";
+  // remove leftover incomplete download temp files so paccache doesn't emit fd errors
+  Bun.spawnSync(
+    [p, "find", "/var/cache/pacman/pkg", "-maxdepth", "1", "-name", "download-*", "-delete"],
+    { stdout: "pipe", stderr: "pipe" }
+  );
   if (commandExists("paccache")) {
     Bun.spawnSync([p, "paccache", "-rk1"], { stdout: "inherit", stderr: "inherit" });
     Bun.spawnSync([p, "paccache", "-ruk0"], { stdout: "inherit", stderr: "inherit" });
@@ -45,7 +51,34 @@ async function cleanFlatpak(): Promise<boolean> {
 async function cleanGo(): Promise<boolean> {
   if (!commandExists("go")) return true;
   logSection("go");
-  Bun.spawnSync(["go", "clean", "-cache", "-testcache", "-fuzzcache"], { stdout: "inherit", stderr: "inherit" });
+  Bun.spawnSync(["go", "clean", "-cache", "-testcache", "-fuzzcache", "-modcache"], { stdout: "inherit", stderr: "inherit" });
+  return true;
+}
+
+async function cleanRustup(): Promise<boolean> {
+  const rustupHome = process.env.RUSTUP_HOME ?? join(HOME_DIR, ".rustup");
+  if (!existsSync(rustupHome)) return true;
+  logSection("rustup");
+  for (const dir of ["downloads", "tmp"]) {
+    const p = join(rustupHome, dir);
+    if (existsSync(p)) {
+      await rm(p, { recursive: true, force: true });
+      await mkdir(p, { recursive: true });
+      logInfo(`${dir} cleared`);
+    }
+  }
+  return true;
+}
+
+async function cleanStack(): Promise<boolean> {
+  const stackRoot = process.env.STACK_ROOT ?? join(HOME_DIR, ".stack");
+  if (!existsSync(stackRoot)) return true;
+  logSection("stack");
+  const pantry = join(stackRoot, "pantry");
+  if (existsSync(pantry)) {
+    await rm(pantry, { recursive: true, force: true });
+    logInfo("pantry cleared");
+  }
   return true;
 }
 
@@ -140,6 +173,8 @@ const CLEANERS: Cleaner[] = [
   { name: "yay",     run: cleanYay },
   { name: "flatpak", run: cleanFlatpak },
   { name: "go",      run: cleanGo },
+  { name: "rustup",  run: cleanRustup },
+  { name: "stack",   run: cleanStack },
   { name: "cargo",   run: cleanCargo },
   { name: "npm",     run: cleanNpm },
   { name: "bun",     run: cleanBun },
@@ -179,14 +214,27 @@ async function ensureLink({ link, target }: Link): Promise<LinkResult> {
 
 // ─── subcommands ─────────────────────────────────────────────────────────────
 
+async function withAI(rawArgs: string[], run: () => Promise<boolean>): Promise<boolean> {
+  if (!rawArgs.includes("--ai")) return run();
+  const filteredArgs = rawArgs.filter((a) => a !== "--ai");
+  const cmdArgs = [process.execPath, process.argv[1], "cache", "clean", ...filteredArgs];
+  const output = await captureAndStream(cmdArgs);
+  await analyzeWithAI(output, CACHE_SYSTEM_PROMPT);
+  return true;
+}
+
 const cleanCommand = defineCommand({
   meta: { description: "Clean tool caches (skips tools not installed on this system)" },
-  async run() {
-    logDesc("Cleans caches for all installed tools. Skips anything not present.");
-    let ok = true;
-    for (const c of CLEANERS) {
-      if (!await c.run()) ok = false;
-    }
+  args: { ai: { type: "boolean" as const, description: "Analyse output with AI after completion" } },
+  async run({ rawArgs }) {
+    const ok = await withAI(rawArgs, async () => {
+      logDesc("Cleans caches for all installed tools. Skips anything not present.");
+      let ok = true;
+      for (const c of CLEANERS) {
+        if (!await c.run()) ok = false;
+      }
+      return ok;
+    });
     if (!ok) process.exit(1);
   },
 });
