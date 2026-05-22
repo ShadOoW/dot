@@ -8,7 +8,7 @@
 | `j / k`         | Down / Up                           |
 | `gg / G`        | Top / Bottom                        |
 | `C-u / C-d`     | Half-page up / down                 |
-| `<A-j> / <A-k>` | Scroll preview pane                 |
+| `<C-j> / <C-k>` | Scroll preview pane                 |
 | `f<char>`       | Jump to char                        |
 | `z`             | Zoxide jump (fzf)                   |
 | `C-f`           | Smart filter (type to narrow)       |
@@ -22,7 +22,19 @@ Select multiple items with `Space`, then act on them.
 
 ## Go-to (`g…`)
 
-`gh` home · `gd` Downloads · `gc` ~/.config · `gC` dotfiles · `gp` Pictures · `gt` tig
+| Key   | Target             |
+| ----- | ------------------ |
+| `gh`  | ~                  |
+| `gc`  | ~/.config          |
+| `gC`  | ~/.config/dotfiles |
+| `go`  | /mnt/backup/code   |
+| `gdd` | /data              |
+| `gdc` | /data/code         |
+| `gdw` | /data/downloads    |
+| `gds` | /data/screens      |
+| `gdm` | /data/media        |
+| `gdo` | /data/ops          |
+| `gdS` | /data/stash        |
 
 ## Files
 
@@ -37,23 +49,35 @@ Select multiple items with `Space`, then act on them.
 | `p`      | Paste                               |
 | `d`      | Trash                               |
 | `D`      | Delete permanently                  |
-| `C`      | Compress (ouch)                     |
 | `<A-d>`  | Drag & drop (ripdrag)               |
 
 > Markers: **purple** = selected with Space · **teal** = copied · **orange** = cut
-> These are different from git status colors (green = new, red = deleted, etc.)
 
 ## Open / enter
 
-| Key     | Behavior                                    |
-| ------- | ------------------------------------------- |
-| `l`     | Navigate into dir / open file (smart-enter) |
-| `Enter` | Dir → new kitty terminal (yazi hides)       |
-| `Enter` | Text/code → nvim in new kitty (yazi hides)  |
-| `Enter` | Image/video/PDF → xdg-open                  |
-| `!`     | New kitty terminal in current dir           |
+| Key     | Behavior                                          |
+| ------- | ------------------------------------------------- |
+| `l`     | Navigate into dir / open file (smart-enter)       |
+| `o`     | Pick opener interactively (nvim vs browser, etc.) |
+| `Enter` | Dir → new kitty terminal (yazi hides)             |
+| `Enter` | Text/code → nvim in new kitty (yazi hides)        |
+| `Enter` | Image/video/PDF → xdg-open                        |
+| `!`     | New kitty terminal in current dir                 |
 
 > Press `mod+a` to bring yazi back after it hides itself.
+
+## Tools (`;…`)
+
+Press `;` to open the tools menu, then:
+
+| Key | Action             |
+| --- | ------------------ |
+| `c` | Compress (ouch)    |
+| `e` | Extract (ouch)     |
+| `g` | Git log (tig)      |
+| `m` | chmod              |
+| `r` | Restore from trash |
+| `d` | Diff               |
 
 ## Copy path (`Y…`)
 

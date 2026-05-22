@@ -13,6 +13,18 @@ on = "l"
 run = "plugin smart-enter"
 desc = "Enter dir / open file"
 
+# ── Open with interactive picker (choose app) ────────────────────────────────
+[[mgr.prepend_keymap]]
+on = "o"
+run = "open --interactive"
+desc = "Open with picker"
+
+# ── Tools menu (;…) ──────────────────────────────────────────────────────────
+[[mgr.prepend_keymap]]
+on = ";"
+run = "plugin tools"
+desc = "Tools menu"
+
 # ── Relative-number motions (1-9j/k) ────────────────────────────────────────
 # These only apply to navigation (j/k). Press N then j/k to move N rows.
 [[mgr.prepend_keymap]]
@@ -73,7 +85,7 @@ on = "!"
 run = "shell '~/.config/yazi/scripts/open-terminal.sh'"
 desc = "Terminal in CWD"
 
-# ── Drag & drop via ripdrag (Alt+d to avoid conflicting with scroll C-d) ─────
+# ── Drag & drop via ripdrag ──────────────────────────────────────────────────
 [[mgr.prepend_keymap]]
 on = "<A-d>"
 run = "plugin drag"
@@ -89,12 +101,6 @@ desc = "Preview: scroll down"
 on = "<C-k>"
 run = "seek -5"
 desc = "Preview: scroll up"
-
-# ── Archive: compress selected ───────────────────────────────────────────────
-[[mgr.prepend_keymap]]
-on = "C"
-run = "plugin ouch"
-desc = "Compress with ouch"
 
 # ── Yank / Cut / Paste with visual feedback ──────────────────────────────────
 [[mgr.prepend_keymap]]
@@ -150,13 +156,7 @@ on = "?"
 run = "shell --block -- bat --language=md --style=plain --paging=always ~/.config/yazi/CHEATSHEET.md"
 desc = "Show cheatsheet"
 
-# ── Git shortcuts ─────────────────────────────────────────────────────────────
-[[mgr.prepend_keymap]]
-on = ["g", "t"]
-run = "shell --block -- tig"
-desc = "Git: open tig"
-
-# ── Go-to directory shortcuts ─────────────────────────────────────────────────
+# ── Go-to directory shortcuts (g…) ───────────────────────────────────────────
 [[mgr.prepend_keymap]]
 on = ["g", "h"]
 run = "cd ~"
@@ -177,11 +177,16 @@ on = ["g", "o"]
 run = "cd /mnt/backup/code"
 desc = "Go: /mnt/backup/code"
 
-# ── Goto /data (gd prefix) ─────────────────────────────────────────────────────
+# ── Goto /data (gd prefix) ───────────────────────────────────────────────────
 [[mgr.prepend_keymap]]
 on = ["g", "d", "d"]
 run = "cd /data"
 desc = "Go: /data"
+
+[[mgr.prepend_keymap]]
+on = ["g", "d", "c"]
+run = "cd /data/code"
+desc = "Go: /data/code"
 
 [[mgr.prepend_keymap]]
 on = ["g", "d", "w"]
@@ -190,8 +195,23 @@ desc = "Go: /data/downloads"
 
 [[mgr.prepend_keymap]]
 on = ["g", "d", "s"]
-run = "cd /data/screen"
-desc = "Go: /data/screen"
+run = "cd /data/screens"
+desc = "Go: /data/screens"
+
+[[mgr.prepend_keymap]]
+on = ["g", "d", "m"]
+run = "cd /data/media"
+desc = "Go: /data/media"
+
+[[mgr.prepend_keymap]]
+on = ["g", "d", "o"]
+run = "cd /data/ops"
+desc = "Go: /data/ops"
+
+[[mgr.prepend_keymap]]
+on = ["g", "d", "S"]
+run = "cd /data/stash"
+desc = "Go: /data/stash"
 
 # ── Input widget: Escape closes immediately (no double-Escape needed) ─────────
 [[input.prepend_keymap]]

@@ -33,6 +33,10 @@ suppress_preload = false
 edit = [
   { run = 'swaymsg [app_id=yazi-explorer] move scratchpad; ~/.config/yazi/scripts/edit-in-kitty.sh "$@"', desc = "nvim in kitty" },
 ]
+open_html = [
+  { run = 'swaymsg [app_id=yazi-explorer] move scratchpad; ~/.config/yazi/scripts/edit-in-kitty.sh "$@"', desc = "nvim" },
+  { run = 'swaymsg [app_id=yazi-explorer] move scratchpad; xdg-open "$@"', desc = "Browser" },
+]
 open_terminal = [
   { run = 'swaymsg [app_id=yazi-explorer] move scratchpad; ~/.config/yazi/scripts/open-terminal.sh "$1"', desc = "Terminal here" },
 ]
@@ -45,6 +49,7 @@ reveal = [
 
 [open]
 rules = [
+  { mime = "text/html", use = "open_html" },
   { mime = "text/*", use = "edit" },
   { mime = "application/json", use = "edit" },
   { mime = "application/xml", use = "edit" },
