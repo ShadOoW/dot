@@ -22,7 +22,10 @@ export async function showPackageInfo(pkg: string): Promise<void> {
   if (meta.os.length > 0) {
     console.log(`${colors.dim("OS:")}       ${meta.os.join(", ")}`);
   }
-  if (meta.tags.length > 0 || meta.os.length > 0) console.log("");
+  if (meta.hosts.length > 0) {
+    console.log(`${colors.dim("Hosts:")}    ${meta.hosts.join(", ")}`);
+  }
+  if (meta.tags.length > 0 || meta.os.length > 0 || meta.hosts.length > 0) console.log("");
 
   const distro = detectDistro();
   const distroPackages = meta.packages[distro] ?? meta.packages["linux"];

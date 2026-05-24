@@ -1,6 +1,7 @@
 import { readdir, readFile } from "fs/promises";
-import { existsSync, lstatSync, readlinkSync } from "fs";
-import { join, dirname } from "path";
+import { existsSync, lstatSync, readFileSync, readlinkSync } from "fs";
+import { hostname } from "os";
+import { join } from "path";
 import { PACKAGES_DIR, HOME_DIR } from "./config.ts";
 
 export type FileEntry = { source: string; target: string };
@@ -18,6 +19,7 @@ export interface PackageMeta {
   enableScripts: { name: string; init?: string }[];
   cleanSteps: string[];
   os: string[];
+  hosts: string[];
 }
 
 export function detectDistro(): string {
@@ -61,7 +63,33 @@ export async function getPackageMeta(name: string): Promise<PackageMeta | null> 
     enableScripts: collectEnableScripts(pkgDir),
     cleanSteps: (raw.cleanSteps as string[]) ?? [],
     os: (raw.os as string[]) ?? [],
+    hosts: (raw.hosts as string[]) ?? [],
   };
+}
+
+let cachedHost: string | null = null;
+
+export function detectHost(): string {
+  if (cachedHost !== null) return cachedHost;
+  if (process.env.DOT_HOST) return cachedHost = process.env.DOT_HOST;
+  const hostFile = join(HOME_DIR, ".config/dot/host");
+  if (existsSync(hostFile)) {
+    try {
+      const v = readFileSync(hostFile, "utf-8").trim();
+      if (v) return cachedHost = v;
+    } catch { /* fall through */ }
+  }
+  return cachedHost = hostname();
+}
+
+/**
+ * A package "applies" to a host when meta.hosts is empty (universal)
+ * or includes the current host. Comparison is case-insensitive.
+ */
+export function appliesToHost(meta: Pick<PackageMeta, "hosts">, host: string = detectHost()): boolean {
+  if (!meta.hosts || meta.hosts.length === 0) return true;
+  const h = host.toLowerCase();
+  return meta.hosts.some((x) => x.toLowerCase() === h);
 }
 
 export async function collectFiles(pkgDir: string, section: "home" | "system", init?: string): Promise<FileEntry[]> {

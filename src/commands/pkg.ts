@@ -1,32 +1,16 @@
 import { defineCommand } from "citty";
 import { existsSync } from "fs";
-import { lstatSync, readlinkSync } from "fs";
 import { join } from "path";
 import { PACKAGES_DIR } from "../lib/config.ts";
-import { collectFiles, getPackageMeta, listPackages } from "../lib/pkg.ts";
-import { colors, logError, logInfo } from "../lib/console.ts";
-import { linkPackage } from "./link.ts";
-import { unlinkPackage } from "./link.ts";
+import { appliesToHost, collectFiles, detectHost, getPackageMeta, listPackages } from "../lib/pkg.ts";
+import { checkFileStatus, type FileStatus } from "../lib/status.ts";
+import { colors, logError, logInfo, logWarn } from "../lib/console.ts";
+import { linkPackage, unlinkPackage } from "./link.ts";
 import { showPackageInfo, runConfigure, runInitScript } from "./info.ts";
 
-// ─── status helpers ───────────────────────────────────────────────────────────
-
-type FileStatus = "ok" | "broken" | "missing" | "drift";
-
-function checkFileStatus(source: string, target: string): FileStatus {
-  if (!existsSync(target)) return "missing";
-  try {
-    const stat = lstatSync(target);
-    if (!stat.isSymbolicLink()) return "drift";
-    return readlinkSync(target) === source ? "ok" : "broken";
-  } catch {
-    return "missing";
-  }
-}
-
-async function showPackageStatus(pkg: string): Promise<void> {
+async function showPackageStatus(pkg: string): Promise<boolean> {
   const pkgDir = join(PACKAGES_DIR, pkg);
-  if (!existsSync(pkgDir)) { logError(`Package "${pkg}" not found`); return; }
+  if (!existsSync(pkgDir)) { logError(`Package "${pkg}" not found`); return false; }
 
   const homeFiles = await collectFiles(pkgDir, "home");
   const systemFiles = await collectFiles(pkgDir, "system");
@@ -34,7 +18,7 @@ async function showPackageStatus(pkg: string): Promise<void> {
 
   if (allFiles.length === 0) {
     console.log(`  ${colors.dim(pkg)}: no files`);
-    return;
+    return true;
   }
 
   const statusIcon: Record<FileStatus, string> = {
@@ -58,15 +42,26 @@ async function showPackageStatus(pkg: string): Promise<void> {
     if (s === "ok") okCount++;
   }
   console.log(`  ${colors.dim(`${okCount}/${allFiles.length} linked`)}`);
+  return okCount === allFiles.length;
 }
 
-async function showAllStatus(): Promise<void> {
+async function showAllStatus(): Promise<boolean> {
   const pkgs = await listPackages();
-  console.log(`\n${"Package".padEnd(22)} ${"Status".padEnd(14)} Files`);
+  const host = detectHost();
+  console.log(`\n${colors.dim(`host: ${host}`)}`);
+  console.log(`${"Package".padEnd(22)} ${"Status".padEnd(14)} Files`);
   console.log("─".repeat(52));
 
+  let allHealthy = true;
+  let skippedHost = 0;
   for (const name of pkgs) {
     const pkgDir = join(PACKAGES_DIR, name);
+    const meta = await getPackageMeta(name);
+    if (meta && !appliesToHost(meta)) {
+      skippedHost++;
+      console.log(`  ${name.padEnd(20)} ${colors.dim("other host".padEnd(14))} ${colors.dim(`hosts=[${meta.hosts.join(", ")}]`)}`);
+      continue;
+    }
     const homeFiles = await collectFiles(pkgDir, "home");
     const systemFiles = await collectFiles(pkgDir, "system");
     const allFiles = [...homeFiles, ...systemFiles];
@@ -78,6 +73,7 @@ async function showAllStatus(): Promise<void> {
     const allOk = counts.ok === allFiles.length;
     const noneOk = counts.ok === 0;
     const hasIssues = counts.broken > 0 || counts.drift > 0;
+    if (hasIssues) allHealthy = false;
 
     const rawStatus = allOk ? "ok" : noneOk ? "not linked" : hasIssues ? "issues" : "partial";
     const paddedRaw = rawStatus.padEnd(14);
@@ -94,27 +90,46 @@ async function showAllStatus(): Promise<void> {
 
     console.log(`  ${name.padEnd(20)} ${statusStr} ${detail}`);
   }
+  if (skippedHost > 0) console.log(`\n${colors.dim(`${skippedHost} package(s) excluded by host filter`)}`);
   console.log("");
+  return allHealthy;
 }
 
-// ─── dispatch ─────────────────────────────────────────────────────────────────
+// ─── typed dispatch ───────────────────────────────────────────────────────────
 
-async function dispatch(
-  pkg: string,
-  action: string,
-  args: { init?: string; "dry-run"?: boolean; yes?: boolean }
-): Promise<void> {
-  switch (action) {
-    case "info":      return showPackageInfo(pkg);
-    case "link":      return linkPackage(pkg, args.init, args["dry-run"] ?? false);
-    case "unlink":    return unlinkPackage(pkg, args.init, args.yes ?? false);
-    case "status":    return showPackageStatus(pkg);
-    case "configure": return runConfigure(pkg);
-    case "enable":    return runInitScript(pkg, "enable", args.init);
-    case "disable":   return runInitScript(pkg, "disable", args.init);
-    default:
-      logError(`Unknown action "${action}". Valid: link, unlink, info, status, configure, enable, disable`);
+const ACTIONS = ["info", "link", "unlink", "status", "configure", "enable", "disable"] as const;
+type Action = typeof ACTIONS[number];
+
+function isAction(s: string): s is Action {
+  return (ACTIONS as readonly string[]).includes(s);
+}
+
+interface DispatchArgs {
+  init?: string;
+  dryRun: boolean;
+  yes: boolean;
+  force: boolean;
+  ignoreHost: boolean;
+}
+
+// Each handler returns true on success, false on failure (drives exit code).
+// process.exit-ing handlers (configure, enable, disable) return Promise<never>.
+const HANDLERS: Record<Action, (pkg: string, a: DispatchArgs) => Promise<boolean>> = {
+  info:      async (pkg) => { await showPackageInfo(pkg); return true; },
+  link:      (pkg, a) => linkPackage(pkg, { init: a.init, dryRun: a.dryRun, force: a.force, ignoreHost: a.ignoreHost }),
+  unlink:    (pkg, a) => unlinkPackage(pkg, { init: a.init, dryRun: a.dryRun, skipConfirm: a.yes }),
+  status:    (pkg) => showPackageStatus(pkg),
+  configure: async (pkg) => { await runConfigure(pkg); return true; },
+  enable:    async (pkg, a) => { await runInitScript(pkg, "enable", a.init); return true; },
+  disable:   async (pkg, a) => { await runInitScript(pkg, "disable", a.init); return true; },
+};
+
+async function dispatch(pkg: string, action: string, args: DispatchArgs): Promise<boolean> {
+  if (!isAction(action)) {
+    logError(`Unknown action "${action}". Valid: ${ACTIONS.join(", ")}`);
+    return false;
   }
+  return HANDLERS[action](pkg, args);
 }
 
 // ─── command ─────────────────────────────────────────────────────────────────
@@ -123,11 +138,21 @@ export const pkgCommand = defineCommand({
   meta: { description: "Manage dotfile packages" },
   args: {
     init: { type: "string", description: "Init system: runit or systemd" },
-    "dry-run": { type: "boolean", description: "Preview without applying (link only)" },
+    "dry-run": { type: "boolean", description: "Preview without applying (link/unlink)" },
     yes: { type: "boolean", short: "y", description: "Skip confirmation (unlink only)" },
+    force: { type: "boolean", description: "Allow link to overwrite real (non-symlink) files" },
+    "ignore-host": { type: "boolean", description: "Link even if meta.hosts excludes this host" },
     tag: { type: "string", description: "Apply action to all packages with this tag" },
   },
   async run({ args, rawArgs }) {
+    const dispatchArgs: DispatchArgs = {
+      init: args.init,
+      dryRun: args["dry-run"] ?? false,
+      yes: args.yes ?? false,
+      force: args.force ?? false,
+      ignoreHost: args["ignore-host"] ?? false,
+    };
+
     if (args.tag) {
       // Filter out the tag value from positionals (it's consumed by --tag)
       const positionals = rawArgs.filter((a) => !a.startsWith("-") && a !== args.tag);
@@ -135,16 +160,29 @@ export const pkgCommand = defineCommand({
 
       const allPkgs = await listPackages();
       const tagged: string[] = [];
+      const excludedByHost: string[] = [];
       for (const name of allPkgs) {
         const meta = await getPackageMeta(name);
-        if (meta?.tags.includes(args.tag!)) tagged.push(name);
+        if (!meta?.tags.includes(args.tag!)) continue;
+        if (!dispatchArgs.ignoreHost && !appliesToHost(meta)) {
+          excludedByHost.push(name);
+          continue;
+        }
+        tagged.push(name);
       }
       if (tagged.length === 0) {
-        logError(`No packages found with tag "${args.tag}"`);
-        return;
+        logError(`No packages found with tag "${args.tag}"${excludedByHost.length ? ` (${excludedByHost.length} excluded by host filter)` : ""}`);
+        process.exit(1);
       }
-      logInfo(`Packages tagged "${args.tag}": ${tagged.join(", ")}`);
-      for (const name of tagged) await dispatch(name, action, args);
+      logInfo(`Packages tagged "${args.tag}" on host ${detectHost()}: ${tagged.join(", ")}`);
+      if (excludedByHost.length > 0) {
+        logWarn(`Excluded by host filter: ${excludedByHost.join(", ")} (use --ignore-host to include)`);
+      }
+      let allOk = true;
+      for (const name of tagged) {
+        if (!(await dispatch(name, action, dispatchArgs))) allOk = false;
+      }
+      if (!allOk) process.exit(1);
       return;
     }
 
@@ -169,7 +207,9 @@ Actions:
 
 Flags:
   --init runit|systemd   Init system (auto-detected)
-  --dry-run              Preview link changes
+  --dry-run              Preview link/unlink changes
+  --force                Allow link to overwrite real files (use with care)
+  --ignore-host          Link even if meta.hosts excludes this host
   -y, --yes              Skip unlink confirmation
   --tag <tag>            Apply action to all packages with this tag
 
@@ -180,15 +220,17 @@ Available packages:
     }
 
     if (pkgName === "status" && !action) {
-      await showAllStatus();
+      const healthy = await showAllStatus();
+      if (!healthy) process.exit(1);
       return;
     }
 
     if (!existsSync(join(PACKAGES_DIR, pkgName))) {
       logError(`Package "${pkgName}" not found`);
-      return;
+      process.exit(1);
     }
 
-    await dispatch(pkgName, action ?? "info", args);
+    const ok = await dispatch(pkgName, action ?? "info", dispatchArgs);
+    if (!ok) process.exit(1);
   },
 });
