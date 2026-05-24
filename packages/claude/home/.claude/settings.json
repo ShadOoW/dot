@@ -4,13 +4,20 @@
     "typescript-lsp@claude-plugins-official": true,
     "backend-development@claude-code-workflows": true,
     "comprehensive-review@claude-code-workflows": true,
-    "javascript-typescript@claude-code-workflows": true
+    "javascript-typescript@claude-code-workflows": true,
+    "agentmemory@agentmemory": true
   },
   "extraKnownMarketplaces": {
     "claude-code-workflows": {
       "source": {
         "source": "github",
         "repo": "wshobson/agents"
+      }
+    },
+    "agentmemory": {
+      "source": {
+        "source": "github",
+        "repo": "rohitg00/agentmemory"
       }
     }
   },
