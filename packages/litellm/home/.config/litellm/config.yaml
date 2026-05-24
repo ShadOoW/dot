@@ -9,5 +9,5 @@ litellm_settings:
   drop_params: true
 
 general_settings:
-  database_url: sqlite:///./litellm.db
+  # database_url: sqlite:///./litellm.db
   master_key: ${LITELLM_MASTER_KEY}
