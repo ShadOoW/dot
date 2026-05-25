@@ -85,8 +85,8 @@ export async function linkPackage(pkg: string, options: LinkOptions = {}): Promi
 
   let resolvedInit = initOverride;
   if (hasSystem && !resolvedInit) {
-    const { runit, systemd } = hasInitDirs(pkgDir);
-    if (runit || systemd) {
+    const { runit, systemd, launchd } = hasInitDirs(pkgDir);
+    if (runit || systemd || launchd) {
       const detected = detectInit();
       if (detected) {
         resolvedInit = detected;
@@ -95,6 +95,7 @@ export async function linkPackage(pkg: string, options: LinkOptions = {}): Promi
         logError(`Package "${pkg}" has init-specific configs. Specify --init:`);
         if (runit) console.error(`  dot pkg ${pkg} link --init runit`);
         if (systemd) console.error(`  dot pkg ${pkg} link --init systemd`);
+        if (launchd) console.error(`  dot pkg ${pkg} link --init launchd`);
         return false;
       }
     }
@@ -268,8 +269,8 @@ export async function unlinkPackage(pkg: string, options: UnlinkOptions = {}): P
 
   let resolvedInit = initOverride;
   if (!resolvedInit) {
-    const { runit, systemd } = hasInitDirs(pkgDir);
-    if (runit || systemd) resolvedInit = detectInit() ?? undefined;
+    const { runit, systemd, launchd } = hasInitDirs(pkgDir);
+    if (runit || systemd || launchd) resolvedInit = detectInit() ?? undefined;
   }
 
   const hasHome = existsSync(join(pkgDir, "home"));

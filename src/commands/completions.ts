@@ -71,7 +71,7 @@ async function generateZsh(): Promise<string> {
     `  local -a tags=(${tagList})`,
     "",
     "  _arguments \\",
-    "    '--init=[Init system]:init:(runit systemd)' \\",
+    "    '--init=[Init system]:init:(runit systemd launchd)' \\",
     "    '--dry-run[Preview without applying]' \\",
     "    '--force[Allow overwriting real files]' \\",
     "    '--ignore-host[Link even if excluded by host filter]' \\",

@@ -127,7 +127,9 @@ export async function runInitScript(pkg: string, action: "enable" | "disable", i
     process.exit(1);
   }
 
-  const proc = Bun.spawn(["sudo", "bash", scriptPath], { stdout: "inherit", stderr: "inherit" });
+  const isLaunchd = scriptName.includes("launchd");
+  const cmd = isLaunchd ? ["bash", scriptPath] : ["sudo", "bash", scriptPath];
+  const proc = Bun.spawn(cmd, { stdout: "inherit", stderr: "inherit" });
   process.exit(await proc.exited);
 }
 

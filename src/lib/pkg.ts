@@ -29,9 +29,10 @@ export function detectDistro(): string {
   return "linux";
 }
 
-export function detectInit(): "runit" | "systemd" | null {
+export function detectInit(): "runit" | "systemd" | "launchd" | null {
   if (existsSync("/run/runit")) return "runit";
   if (existsSync("/run/systemd")) return "systemd";
+  if (process.platform === "darwin") return "launchd";
   const proc = Bun.spawnSync(["ps", "-p", "1", "-o", "comm="], { stdout: "pipe" });
   const comm = new TextDecoder().decode(proc.stdout).trim();
   if (comm === "runit") return "runit";
@@ -108,6 +109,7 @@ export async function collectFiles(pkgDir: string, section: "home" | "system", i
         const rel = full.replace(pkgDir + "/", "");
         if (rel === "system/runit" && init !== "runit") continue;
         if (rel === "system/systemd" && init !== "systemd") continue;
+        if (rel === "system/launchd" && init !== "launchd") continue;
         await walk(full);
       } else {
         const relative = full.replace(pkgDir + "/", "");
@@ -125,14 +127,16 @@ export function resolveTarget(relative: string): string {
   if (relative.startsWith("system/base/")) return "/" + relative.slice(12);
   if (relative.startsWith("system/runit/")) return "/" + relative.slice(13);
   if (relative.startsWith("system/systemd/")) return "/" + relative.slice(15);
+  if (relative.startsWith("system/launchd/")) return join(HOME_DIR, relative.slice(15));
   if (relative.startsWith("system/")) return "/" + relative.slice(7);
   return "/" + relative;
 }
 
-export function hasInitDirs(pkgDir: string): { runit: boolean; systemd: boolean } {
+export function hasInitDirs(pkgDir: string): { runit: boolean; systemd: boolean; launchd: boolean } {
   return {
     runit: existsSync(join(pkgDir, "system", "runit")),
     systemd: existsSync(join(pkgDir, "system", "systemd")),
+    launchd: existsSync(join(pkgDir, "system", "launchd")),
   };
 }
 
@@ -147,10 +151,10 @@ export function isAlreadyLinked(source: string, target: string): boolean {
 }
 
 function collectEnableScripts(pkgDir: string): { name: string; init?: string }[] {
-  return ["enable-runit.sh", "enable-systemd.sh", "enable.sh"]
+  return ["enable-runit.sh", "enable-systemd.sh", "enable-launchd.sh", "enable.sh"]
     .filter((f) => existsSync(join(pkgDir, f)))
     .map((f) => ({
       name: f.replace(".sh", ""),
-      init: f.includes("runit") ? "runit" : f.includes("systemd") ? "systemd" : undefined,
+      init: f.includes("runit") ? "runit" : f.includes("systemd") ? "systemd" : f.includes("launchd") ? "launchd" : undefined,
     }));
 }
