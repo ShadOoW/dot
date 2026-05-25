@@ -6,6 +6,8 @@ if pgrep -x fuzzel &>/dev/null; then
   exit 0
 fi
 
+DB="/data/stash/clipboard/cliphist"
+
 if [[ "$DELETE_MODE" == "--delete" ]]; then
   prompt="󰆴  "
 else
@@ -13,7 +15,7 @@ else
 fi
 
 selected=$(
-  cliphist list | fuzzel --dmenu \
+  cliphist -db-path "$DB" list | fuzzel --dmenu \
     --prompt="$prompt" \
     --width=72 \
     --lines=16 \
@@ -24,7 +26,7 @@ selected=$(
 [[ -z "$selected" ]] && exit 0
 
 if [[ "$DELETE_MODE" == "--delete" ]]; then
-  cliphist delete <<<"$selected"
+  cliphist -db-path "$DB" delete <<<"$selected"
 else
-  cliphist decode <<<"$selected" | wl-copy
+  cliphist -db-path "$DB" decode <<<"$selected" | wl-copy
 fi

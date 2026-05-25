@@ -10,6 +10,7 @@ bindsym {
     $mod+x exec $window
     $mod+c exec $clipboard
     $mod+Mod1+c exec $clipboard_delete
+    $mod+i exec $images
 
     $mod+a exec $sp_explorer
     $mod+m exec $sp_music
@@ -175,8 +176,8 @@ bindsym --locked {
 }
 
 # Window screenshot (saves to ~/Pictures with timestamp and copies to clipboard)
-bindsym Print exec grim -g "$(slurp)" - | tee /data/screens/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy
-bindsym $mod+p exec grim -g "$(swaymsg -t get_tree | jq -r '.. | select(.pid? and .visible?) | .rect | "\(.x),\(.y) \(.width)x\(.height)"' | slurp)" - | tee /data/screens/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy
+bindsym Print exec grim -g "$(slurp)" - | tee /data/stash/clipboard/screens/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy
+bindsym $mod+p exec grim -g "$(swaymsg -t get_tree | jq -r '.. | select(.pid? and .visible?) | .rect | "\(.x),\(.y) \(.width)x\(.height)"' | slurp)" - | tee /data/stash/clipboard/screens/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy
 
 # Lock screen
 bindsym $mod+l exec swaylock

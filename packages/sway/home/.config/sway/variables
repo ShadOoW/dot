@@ -8,6 +8,7 @@ set {
     $window ~/.config/rofi/open-close.sh "rofi -show sway-windows -modi 'sway-windows:/home/shad/.config/rofi/scripts/sway-windows.sh' -selected-row $(/home/shad/.config/rofi/scripts/sway-windows.sh --focused-index)"
     $clipboard ~/.config/fuzzel-scripts/clipboard.sh
     $clipboard_delete ~/.config/fuzzel-scripts/clipboard.sh --delete
+    $images ~/.config/fuzzel-scripts/images.sh
     $commands ~/.config/rofi/open-close.sh "~/.config/rofi/custom-commands.sh"
     $projects ~/.config/rofi/open-close.sh "~/.config/kitty/scripts/project-manager.sh"
     
