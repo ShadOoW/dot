@@ -1,32 +1,59 @@
 import { logError, logInfo, logSection } from "./console.ts";
+import type { LLMProvider } from "./ai-provider.ts";
+import { createMiniMaxProvider } from "./providers/minimax.ts";
+import { createClaudeProvider } from "./providers/claude.ts";
+import { createOllamaProvider } from "./providers/ollama.ts";
 
 const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]/g;
 
-export async function captureAndStream(args: string[]): Promise<string> {
-  const proc = Bun.spawn(args, {
-    stdout: "pipe",
-    stderr: "pipe",
-    stdin: "inherit",
-  });
-
-  const parts: string[] = [];
-
-  async function tee(stream: ReadableStream<Uint8Array>, out: typeof process.stdout | typeof process.stderr) {
-    for await (const chunk of stream) {
-      out.write(chunk);
-      parts.push(new TextDecoder().decode(chunk));
-    }
-  }
-
-  await Promise.all([tee(proc.stdout, process.stdout), tee(proc.stderr, process.stderr)]);
-  await proc.exited;
-
-  return parts.join("").replace(ANSI_RE, "").replace(/\r\n?/g, "\n");
+export function detectProvider(): LLMProvider {
+  if (process.env.MINIMAX_API_KEY) return createMiniMaxProvider();
+  if (process.env.ANTHROPIC_API_KEY) return createClaudeProvider();
+  if (process.env.OLLAMA_HOST || process.env.OLLAMA_MODEL) return createOllamaProvider();
+  throw new Error(
+    "No AI provider configured. Set MINIMAX_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_HOST/OLLAMA_MODEL",
+  );
 }
 
-// ─── MiniMax API ─────────────────────────────────────────────────────────────
+// Intercepts process.stdout/stderr at the JS write layer.
+// Note: Bun.spawnSync/spawn with stdout:"inherit" bypasses this — subprocess output
+// is still shown to the user but not captured. Console-level output (logInfo, logError,
+// section headers, etc.) IS captured, which covers all actionable signals.
+export async function captureInProcess(fn: () => Promise<boolean>): Promise<{ ok: boolean; output: string }> {
+  const parts: string[] = [];
+  const dec = new TextDecoder();
 
-const SYSTEM_PROMPT = `You receive the raw terminal output of a Linux system update command.
+  const origOut = process.stdout.write.bind(process.stdout);
+  const origErr = process.stderr.write.bind(process.stderr);
+
+  const tap = (chunk: Uint8Array | string) => {
+    const text = typeof chunk === "string" ? chunk : dec.decode(chunk as Uint8Array);
+    parts.push(text.replace(ANSI_RE, "").replace(/\r\n?/g, "\n"));
+  };
+
+  // @ts-expect-error — intentional stream tap
+  process.stdout.write = (chunk: Uint8Array | string, ...rest: unknown[]) => {
+    tap(chunk);
+    return origOut(chunk as string, ...(rest as []));
+  };
+  // @ts-expect-error — intentional stream tap
+  process.stderr.write = (chunk: Uint8Array | string, ...rest: unknown[]) => {
+    tap(chunk);
+    return origErr(chunk as string, ...(rest as []));
+  };
+
+  let ok = true;
+  try {
+    ok = await fn();
+  } finally {
+    process.stdout.write = origOut;
+    process.stderr.write = origErr;
+  }
+
+  return { ok, output: parts.join("") };
+}
+
+export const SYSTEM_PROMPT = `You receive the raw terminal output of a Linux system update command.
 
 Your job: identify what the user needs to act on or be aware of.
 
@@ -69,66 +96,22 @@ Cache cleaned successfully.
 
 Respond with bullet points only. No preamble, no headers, no explanation.`;
 
-async function callMiniMax(userContent: string, systemPromptOverride?: string): Promise<string> {
-  const apiKey = process.env.MINIMAX_API_KEY;
-  const apiBase = (process.env.MINIMAX_API_BASE ?? "https://api.minimax.io/v1").replace(/\/$/, "");
-  const model = process.env.MINIMAX_MODEL ?? "MiniMax-Text-01";
-
-  if (!apiKey) {
-    throw new Error("MINIMAX_API_KEY not set — add it to ~/.config/secrets/minimax");
-  }
-
-  const res = await fetch(`${apiBase}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPromptOverride ?? SYSTEM_PROMPT },
-        { role: "user", content: userContent },
-      ],
-      temperature: 0.1,
-      max_tokens: 512,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`API ${res.status}: ${body}`);
-  }
-
-  const data = await res.json() as { choices: { message: { content: string } }[] };
-  const raw = data.choices?.[0]?.message?.content ?? "";
-  if (!raw) throw new Error("empty response from API");
-  const content = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  return content;
-}
-
-// ─── public ──────────────────────────────────────────────────────────────────
-
 export async function analyzeWithAI(output: string, systemPrompt?: string) {
   logSection("AI Analysis");
   logInfo("Analysing…");
 
   try {
-    const text = await callMiniMax(output, systemPrompt);
+    const provider = detectProvider();
+    const text = await provider.complete(systemPrompt ?? SYSTEM_PROMPT, output);
     const lines = text.trim().split("\n");
 
     while (lines.length && !lines[0].trim()) lines.shift();
     while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
 
-    if (lines.length === 0) {
-      logInfo("Nothing to report.");
-      return;
-    }
+    if (lines.length === 0) { logInfo("Nothing to report."); return; }
 
     console.log();
-    for (const line of lines) {
-      logInfo(line);
-    }
+    for (const line of lines) logInfo(line);
     console.log();
   } catch (err) {
     logError(`AI analysis failed: ${(err as Error).message}`);

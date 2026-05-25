@@ -2,6 +2,7 @@ import { anyzigUpdater } from "./anyzig.ts";
 import { bunGlobalUpdater } from "./bun-global.ts";
 import { bunSelfUpdater } from "./bun-self.ts";
 import { cargoUpdater } from "./cargo.ts";
+import { completionsUpdater } from "./completions.ts";
 import { denoUpdater } from "./deno.ts";
 import { flatpakUpdater } from "./flatpak.ts";
 import { fnmUpdater } from "./fnm.ts";
@@ -36,6 +37,7 @@ export const UPDATERS: Updater[] = [
   pnpmUpdater,
   pipxUpdater,
   cargoUpdater,
+  completionsUpdater,
   // source
   pkgbuildsUpdater,
   fnmUpdater,

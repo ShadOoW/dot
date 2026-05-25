@@ -4,7 +4,7 @@ import { mkdir, readdir, rm, symlink } from "fs/promises";
 import { dirname, join } from "path";
 import { HOME_DIR } from "../lib/config.ts";
 import { commandExists, logDesc, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
-import { analyzeWithAI, captureAndStream, CACHE_SYSTEM_PROMPT } from "../lib/ai.ts";
+import { analyzeWithAI, captureInProcess, CACHE_SYSTEM_PROMPT } from "../lib/ai.ts";
 
 // ─── cleaners ────────────────────────────────────────────────────────────────
 
@@ -214,20 +214,18 @@ async function ensureLink({ link, target }: Link): Promise<LinkResult> {
 
 // ─── subcommands ─────────────────────────────────────────────────────────────
 
-async function withAI(rawArgs: string[], run: () => Promise<boolean>): Promise<boolean> {
-  if (!rawArgs.includes("--ai")) return run();
-  const filteredArgs = rawArgs.filter((a) => a !== "--ai");
-  const cmdArgs = [process.execPath, process.argv[1], "cache", "clean", ...filteredArgs];
-  const output = await captureAndStream(cmdArgs);
+async function withAI(useAI: boolean, run: () => Promise<boolean>): Promise<boolean> {
+  if (!useAI) return run();
+  const { ok, output } = await captureInProcess(run);
   await analyzeWithAI(output, CACHE_SYSTEM_PROMPT);
-  return true;
+  return ok;
 }
 
 const cleanCommand = defineCommand({
   meta: { description: "Clean tool caches (skips tools not installed on this system)" },
   args: { ai: { type: "boolean" as const, description: "Analyse output with AI after completion" } },
-  async run({ rawArgs }) {
-    const ok = await withAI(rawArgs, async () => {
+  async run({ args }) {
+    const ok = await withAI(args.ai ?? false, async () => {
       logDesc("Cleans caches for all installed tools. Skips anything not present.");
       let ok = true;
       for (const c of CLEANERS) {

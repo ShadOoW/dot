@@ -2,18 +2,35 @@ import { defineCommand } from "citty";
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { rm } from "fs/promises";
 import { join } from "path";
-import { ASSETS, type AssetDef, syncAsset } from "../assets/definitions.ts";
+import { ASSETS, type AssetDef, syncAsset, type LogFn } from "../assets/definitions.ts";
 import { getLatestRelease } from "../lib/github.ts";
 import { getInstalledVersion, readManifest, setInstalledVersion } from "../lib/manifest.ts";
 import { colors, commandExists, logError, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
 
+// ─── concurrency ─────────────────────────────────────────────────────────────
+
+function semaphore(limit: number) {
+  let running = 0;
+  const queue: (() => void)[] = [];
+  return function<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const run = async () => {
+        running++;
+        try { resolve(await fn()); } catch (e) { reject(e); } finally {
+          running--;
+          queue.shift()?.();
+        }
+      };
+      running < limit ? run() : queue.push(run);
+    });
+  };
+}
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
 async function getLatestVersion(asset: AssetDef): Promise<string | null> {
   if (asset.kind === "git" || asset.kind === "git-installer") return null;
   if (asset.kind === "url" || asset.kind === "multi-url") return asset.version;
-  if (asset.kind === "release-tarball") {
-    const release = await getLatestRelease(asset.repo);
-    return release?.tag_name ?? null;
-  }
   const release = await getLatestRelease(asset.repo);
   return release?.tag_name ?? null;
 }
@@ -118,6 +135,8 @@ function hasValidFontFiles(dir: string): boolean {
   }
 }
 
+// ─── list ─────────────────────────────────────────────────────────────────────
+
 export const assetsListCommand = defineCommand({
   meta: { description: "List all assets with installed and latest versions" },
   async run() {
@@ -125,16 +144,15 @@ export const assetsListCommand = defineCommand({
     console.log(`\n${"Asset".padEnd(22)} ${"Installed".padEnd(16)} ${"Latest".padEnd(16)} Status`);
     console.log("─".repeat(72));
 
-    for (const asset of ASSETS) {
+    // Fetch all latest versions in parallel
+    const rows = await Promise.all(ASSETS.map(async (asset) => {
       const installed = manifest.get(asset.name) ?? "-";
-      const latest = asset.kind === "release" || asset.kind === "release-tarball"
-        ? (await getLatestRelease(asset.repo))?.tag_name ?? "?"
-        : asset.kind === "url" || asset.kind === "multi-url"
-          ? asset.version
-          : "git";
-      const installed_dir = asset.installDir;
-      const present = existsSync(installed_dir);
+      const latest = await getLatestVersion(asset) ?? "git";
+      const present = existsSync(asset.installDir);
+      return { asset, installed, latest, present };
+    }));
 
+    for (const { asset, installed, latest, present } of rows) {
       let status: string;
       if (!present) status = colors.red("not installed");
       else if (installed === "-") status = colors.yellow("untracked");
@@ -146,6 +164,67 @@ export const assetsListCommand = defineCommand({
     console.log("");
   },
 });
+
+// ─── sync ─────────────────────────────────────────────────────────────────────
+
+const SYNC_CONCURRENCY = 3;
+
+type SyncResult = { name: string; lines: string[]; synced: boolean; skipped: boolean };
+
+async function performSync(
+  asset: AssetDef,
+  opts: { force: boolean; manifest: Map<string, string> },
+): Promise<SyncResult> {
+  const lines: string[] = [];
+  const log: LogFn = (msg) => lines.push(`  ${colors.dim("·")} ${msg}`);
+  const succeed = (msg: string) => lines.push(`  ${colors.green("✓")} ${msg}`);
+  const warn = (msg: string) => lines.push(`  ${colors.yellow("!")} ${msg}`);
+  const fail = (msg: string) => lines.push(`  ${colors.red("✗")} ${msg}`);
+
+  lines.push(`\n${colors.dim("▸")} ${colors.bold(asset.name)}`);
+  lines.push(`  ${colors.dim(asset.description)}`);
+
+  try {
+    let latestVersion: string | null = null;
+
+    if (asset.kind === "release" || asset.kind === "release-tarball") {
+      const release = await getLatestRelease(asset.repo);
+      if (!release) { warn(`Could not fetch release info for ${asset.name}`); return { name: asset.name, lines, synced: false, skipped: false }; }
+      latestVersion = release.tag_name;
+      const installed = opts.manifest.get(asset.name);
+      if (!opts.force && installed === latestVersion && existsSync(asset.installDir)) {
+        log(`Already up to date (${latestVersion})`);
+        return { name: asset.name, lines, synced: false, skipped: true };
+      }
+      log(`${installed ?? "not installed"} → ${latestVersion}`);
+    } else if (asset.kind === "url" || asset.kind === "multi-url") {
+      latestVersion = asset.version;
+      const installed = opts.manifest.get(asset.name);
+      if (!opts.force && installed === latestVersion && existsSync(asset.installDir)) {
+        log(`Already up to date (${latestVersion})`);
+        return { name: asset.name, lines, synced: false, skipped: true };
+      }
+      log(`${installed ?? "not installed"} → ${latestVersion}`);
+    } else {
+      log(`Syncing: ${(asset as { remote: string }).remote}`);
+    }
+
+    if (opts.force && existsSync(asset.installDir)) {
+      log("Removing existing installation…");
+      await rm(asset.installDir, { recursive: true });
+    }
+
+    await syncAsset(asset, log);
+
+    const version = latestVersion ?? "git";
+    await setInstalledVersion(asset.name, version);
+    succeed(`${asset.name} → ${version}`);
+    return { name: asset.name, lines, synced: true, skipped: false };
+  } catch (e) {
+    fail(`Failed to sync ${asset.name}: ${e}`);
+    return { name: asset.name, lines, synced: false, skipped: false };
+  }
+}
 
 export const assetsSyncCommand = defineCommand({
   meta: { description: "Download/update assets (all or a specific one)" },
@@ -160,56 +239,31 @@ export const assetsSyncCommand = defineCommand({
     }
 
     const manifest = await readManifest();
+    const opts = { force, manifest };
+
+    const throttle = semaphore(SYNC_CONCURRENCY);
     let synced = 0;
     let skipped = 0;
+    let failed = 0;
 
-    for (const asset of toSync) {
-      logSection(asset.name);
-      logInfo(asset.description);
+    // Kick off all jobs concurrently (up to SYNC_CONCURRENCY at a time),
+    // flushing each asset's buffered output as it completes.
+    await Promise.all(toSync.map((asset) =>
+      throttle(async () => {
+        const result = await performSync(asset, opts);
+        for (const line of result.lines) console.log(line);
+        if (result.synced) synced++;
+        else if (result.skipped) skipped++;
+        else failed++;
+      })
+    ));
 
-      let latestVersion: string | null = null;
-      if (asset.kind === "release" || asset.kind === "release-tarball") {
-        const release = await getLatestRelease(asset.repo);
-        if (!release) { logWarn(`Could not fetch release info for ${asset.name}`); continue; }
-        latestVersion = release.tag_name;
-        const installed = manifest.get(asset.name);
-        if (!force && installed === latestVersion && existsSync(asset.installDir)) {
-          logInfo(`${asset.name} is already up to date (${latestVersion})`);
-          skipped++;
-          continue;
-        }
-        logInfo(`Updating ${asset.name}: ${installed ?? "not installed"} → ${latestVersion}`);
-      } else if (asset.kind === "url" || asset.kind === "multi-url") {
-        latestVersion = asset.version;
-        const installed = manifest.get(asset.name);
-        if (!force && installed === latestVersion && existsSync(asset.installDir)) {
-          logInfo(`${asset.name} is already up to date (${latestVersion})`);
-          skipped++;
-          continue;
-        }
-        logInfo(`Updating ${asset.name}: ${installed ?? "not installed"} → ${latestVersion}`);
-      } else {
-        logInfo(`Syncing git asset: ${asset.remote}`);
-      }
-
-      try {
-        if (force && existsSync(asset.installDir)) {
-          logInfo("Removing existing installation…");
-          await rm(asset.installDir, { recursive: true });
-        }
-        await syncAsset(asset, latestVersion ?? "");
-        const version = latestVersion ?? "git";
-        await setInstalledVersion(asset.name, version);
-        logSuccess(`${asset.name} → ${version}`);
-        synced++;
-      } catch (e) {
-        logError(`Failed to sync ${asset.name}: ${e}`);
-      }
-    }
-
-    console.log(`\nSynced: ${synced}  Skipped (up to date): ${skipped}`);
+    console.log(`\nSynced: ${synced}  Skipped (up to date): ${skipped}${failed ? `  Failed: ${failed}` : ""}`);
+    if (failed > 0) process.exit(1);
   },
 });
+
+// ─── info ─────────────────────────────────────────────────────────────────────
 
 export const assetsInfoCommand = defineCommand({
   meta: { description: "Show details for a specific asset" },
@@ -246,6 +300,8 @@ export const assetsInfoCommand = defineCommand({
     console.log("");
   },
 });
+
+// ─── test ─────────────────────────────────────────────────────────────────────
 
 export const assetsTestCommand = defineCommand({
   meta: { description: "Test font installation and Unicode rendering" },
@@ -303,6 +359,8 @@ export const assetsTestCommand = defineCommand({
     console.log("");
   },
 });
+
+// ─── parent command ───────────────────────────────────────────────────────────
 
 export const assetsCommand = defineCommand({
   meta: { description: "Manage fonts, icons, themes, and cursors from GitHub releases" },

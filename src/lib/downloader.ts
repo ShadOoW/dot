@@ -4,38 +4,41 @@ import { join } from "path";
 import { HOME_DIR } from "./config.ts";
 import { logInfo } from "./console.ts";
 
+export type LogFn = (msg: string) => void;
+
 const CACHE_DIR = join(HOME_DIR, ".cache/assets");
 
 export async function gitInstallerSync(
   remote: string,
   destDir: string,
   installCmd: string[],
-  sudo = false
+  sudo = false,
+  log: LogFn = logInfo,
 ): Promise<void> {
   const gitBin = "/usr/bin/git";
 
   if (existsSync(destDir)) {
-    logInfo("Pulling latest changes…");
+    log("Pulling latest changes…");
     const r = Bun.spawnSync(
       sudo ? ["sudo", gitBin, "-C", destDir, "pull"] : [gitBin, "-C", destDir, "pull"],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe" },
     );
     if (r.exitCode !== 0) throw new Error(`git pull failed: ${new TextDecoder().decode(r.stderr)}`);
   } else {
-    logInfo("Cloning repository…");
+    log("Cloning repository…");
     sudo && Bun.spawnSync(["sudo", "mkdir", "-p", destDir]);
     const r = Bun.spawnSync(
       sudo ? ["sudo", gitBin, "clone", "--depth=1", remote, destDir] : [gitBin, "clone", "--depth=1", remote, destDir],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe" },
     );
     if (r.exitCode !== 0) throw new Error(`git clone failed: ${new TextDecoder().decode(r.stderr)}`);
   }
 
   for (const cmd of installCmd) {
-    logInfo(`Running: ${cmd}`);
+    log(`Running: ${cmd}`);
     const r = Bun.spawnSync(
       sudo ? ["sudo", "sh", "-c", cmd] : ["sh", "-c", cmd],
-      { cwd: destDir, stdout: "pipe", stderr: "pipe" }
+      { cwd: destDir, stdout: "pipe", stderr: "pipe" },
     );
     if (r.exitCode !== 0) throw new Error(`Installer failed: ${new TextDecoder().decode(r.stderr)}`);
   }
@@ -45,18 +48,19 @@ export async function downloadAndExtract(
   url: string,
   destDir: string,
   sudo = false,
-  stripComponents = 0
+  stripComponents = 0,
+  log: LogFn = logInfo,
 ): Promise<void> {
   await mkdir(CACHE_DIR, { recursive: true });
   const tmp = await mkdtemp(join(CACHE_DIR, "dot-asset-"));
   const filename = url.split("/").pop() ?? "asset";
   const archivePath = join(tmp, filename);
 
-  logInfo(`Downloading ${filename}…`);
+  log(`Downloading ${filename}…`);
   const curl = Bun.spawnSync(["curl", "-L", "-o", archivePath, "--silent", "--show-error", url]);
   if (curl.exitCode !== 0) throw new Error(`Download failed: ${new TextDecoder().decode(curl.stderr)}`);
 
-  logInfo("Extracting…");
+  log("Extracting…");
   const extractDir = join(tmp, "extracted");
   await mkdir(extractDir, { recursive: true });
 
@@ -104,23 +108,24 @@ export async function downloadAndExtract(
 export async function gitCloneOrPull(
   remote: string,
   destDir: string,
-  sudo = false
+  sudo = false,
+  log: LogFn = logInfo,
 ): Promise<string> {
   const gitBin = "/usr/bin/git";
 
   if (existsSync(destDir)) {
-    logInfo("Pulling latest changes…");
+    log("Pulling latest changes…");
     const r = Bun.spawnSync(
       sudo ? ["sudo", gitBin, "-C", destDir, "pull"] : [gitBin, "-C", destDir, "pull"],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe" },
     );
     if (r.exitCode !== 0) throw new Error(`git pull failed: ${new TextDecoder().decode(r.stderr)}`);
   } else {
-    logInfo("Cloning repository…");
+    log("Cloning repository…");
     sudo && Bun.spawnSync(["sudo", "mkdir", "-p", destDir]);
     const r = Bun.spawnSync(
       sudo ? ["sudo", gitBin, "clone", "--depth=1", remote, destDir] : [gitBin, "clone", "--depth=1", remote, destDir],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe" },
     );
     if (r.exitCode !== 0) throw new Error(`git clone failed: ${new TextDecoder().decode(r.stderr)}`);
   }

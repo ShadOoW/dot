@@ -6,7 +6,8 @@ set {
     $term kitty
     $menu ~/.config/fuzzel-scripts/app-launcher.sh
     $window ~/.config/rofi/open-close.sh "rofi -show sway-windows -modi 'sway-windows:/home/shad/.config/rofi/scripts/sway-windows.sh' -selected-row $(/home/shad/.config/rofi/scripts/sway-windows.sh --focused-index)"
-    $clipboard ~/.config/rofi/open-close.sh "cliphist list | rofi -dmenu -display-columns 2 | cliphist decode | wl-copy"
+    $clipboard ~/.config/fuzzel-scripts/clipboard.sh
+    $clipboard_delete ~/.config/fuzzel-scripts/clipboard.sh --delete
     $commands ~/.config/rofi/open-close.sh "~/.config/rofi/custom-commands.sh"
     $projects ~/.config/rofi/open-close.sh "~/.config/kitty/scripts/project-manager.sh"
     

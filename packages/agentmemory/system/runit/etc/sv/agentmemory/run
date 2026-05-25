@@ -1,0 +1,8 @@
+#!/bin/sh
+set -a
+[ -f /home/shad/.config/secrets/minimax ] && . /home/shad/.config/secrets/minimax
+[ -f /home/shad/.agentmemory/.env ] && . /home/shad/.agentmemory/.env
+set +a
+
+exec chpst -u shad \
+  /home/shad/.cache/managed-fnm/aliases/default/bin/agentmemory

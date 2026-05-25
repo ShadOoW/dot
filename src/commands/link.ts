@@ -130,19 +130,17 @@ export async function linkPackage(pkg: string, options: LinkOptions = {}): Promi
         }
         try {
           await mkdir(dirname(target), { recursive: true });
-          if (existsSync(target)) {
-            if (isSymlink(target)) {
-              await unlink(target);
-            } else if (force) {
-              const stat = lstatSync(target);
-              if (stat.isDirectory()) {
-                logError(`  Cannot clobber real directory even with --force: ${target}`);
-                skipped++;
-                totalFailures++;
-                continue;
-              }
-              await unlink(target);
+          if (isSymlink(target)) {
+            await unlink(target);
+          } else if (existsSync(target) && force) {
+            const stat = lstatSync(target);
+            if (stat.isDirectory()) {
+              logError(`  Cannot clobber real directory even with --force: ${target}`);
+              skipped++;
+              totalFailures++;
+              continue;
             }
+            await unlink(target);
           }
           await symlink(source, target);
           console.log(`  ${colors.green("→")} ${target}`);
@@ -208,23 +206,28 @@ export async function linkPackage(pkg: string, options: LinkOptions = {}): Promi
           totalFailures++;
           continue;
         }
-        if (existsSync(target)) {
-          if (isSymlink(target) || force) {
-            const targetIsRealDir = !isSymlink(target) && (() => {
-              try { return lstatSync(target).isDirectory(); } catch { return false; }
-            })();
-            if (targetIsRealDir && !force) {
-              logError(`  Refusing to clobber real directory: ${target}`);
-              skipped++;
-              totalFailures++;
-              continue;
-            }
-            const rm = runSudo(["rm", "-f", target]);
-            if (!rm.ok) {
-              logError(`  Failed to remove ${target}${rm.stderr ? `: ${rm.stderr}` : ""}`);
-              totalFailures++;
-              continue;
-            }
+        if (isSymlink(target)) {
+          const rm = runSudo(["rm", "-f", target]);
+          if (!rm.ok) {
+            logError(`  Failed to remove ${target}${rm.stderr ? `: ${rm.stderr}` : ""}`);
+            totalFailures++;
+            continue;
+          }
+        } else if (existsSync(target) && force) {
+          const targetIsRealDir = (() => {
+            try { return lstatSync(target).isDirectory(); } catch { return false; }
+          })();
+          if (targetIsRealDir) {
+            logError(`  Refusing to clobber real directory: ${target}`);
+            skipped++;
+            totalFailures++;
+            continue;
+          }
+          const rm = runSudo(["rm", "-f", target]);
+          if (!rm.ok) {
+            logError(`  Failed to remove ${target}${rm.stderr ? `: ${rm.stderr}` : ""}`);
+            totalFailures++;
+            continue;
           }
         }
         const ln = runSudo(["ln", "-s", source, target]);

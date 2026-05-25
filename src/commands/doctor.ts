@@ -1,7 +1,8 @@
 import { defineCommand } from "citty";
 import { appliesToHost, detectHost, getPackageMeta, listPackages } from "../lib/pkg.ts";
 import { collectPackageStatus, type PackageStatus } from "../lib/status.ts";
-import { colors, logError, logInfo, logSuccess } from "../lib/console.ts";
+import { colors, logError, logInfo, logSection, logSuccess } from "../lib/console.ts";
+import { linkPackage } from "./link.ts";
 
 function summarize(s: PackageStatus): string {
   const total = s.files.length;
@@ -18,6 +19,8 @@ export const doctorCommand = defineCommand({
     verbose: { type: "boolean", short: "v", description: "Show details for every package, not just ones with issues" },
     quiet: { type: "boolean", short: "q", description: "Suppress per-package output; only print summary + issues" },
     "all-hosts": { type: "boolean", description: "Check packages from all hosts, not just the current one" },
+    fix: { type: "boolean", description: "Re-link packages with broken symlinks or missing links" },
+    force: { type: "boolean", description: "With --fix, overwrite real files (drift) instead of refusing" },
   },
   async run({ args }) {
     const pkgs = await listPackages();
@@ -86,8 +89,31 @@ export const doctorCommand = defineCommand({
       `${colors.red(`${withIssues.length} with issues`)}`,
     );
 
+    if (args.fix) {
+      // Fix candidates: packages with broken/drift issues + partially-linked packages with missing files.
+      // Fully unlinked packages are intentionally not linked — leave them alone.
+      const toFix = [...new Set([...withIssues, ...partial])];
+      if (toFix.length === 0) {
+        logSuccess("Nothing to fix.");
+        return;
+      }
+
+      logSection(`Fixing ${toFix.length} package(s)…`);
+      let fixed = 0;
+      let failed = 0;
+      for (const s of toFix) {
+        const ok = await linkPackage(s.name, { force: args.force });
+        if (ok) fixed++;
+        else failed++;
+      }
+      console.log("");
+      logInfo(`Fixed: ${fixed} package(s)${failed ? `, ${failed} with remaining issues` : ""}`);
+      if (failed > 0) process.exit(1);
+      return;
+    }
+
     if (withIssues.length > 0) {
-      logError("Doctor found issues. Re-run with -v for full breakdown, then `dot pkg <name> link` to repair.");
+      logError("Doctor found issues. Re-run with -v for full breakdown, then `dot pkg <name> link` to repair, or use --fix to repair automatically.");
       process.exit(1);
     }
   },

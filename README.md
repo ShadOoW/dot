@@ -33,20 +33,24 @@ bun dot.ts <command>
 
 ### Commands
 
-| Command               | Description                                    |
-| --------------------- | ---------------------------------------------- |
-| `dot link <pkg>`      | Symlink a package's files into place           |
-| `dot unlink <pkg>`    | Remove those symlinks                          |
-| `dot info <pkg>`      | Show metadata, files, and per-distro packages  |
-| `dot configure <pkg>` | Run `configure.sh` for a package               |
-| `dot enable <pkg>`    | Run the enable script (init-system-aware)      |
-| `dot disable <pkg>`   | Run the disable script                         |
-| `dot update system`   | Update xbps/pacman, flatpak, bun, deno, rustup |
-| `dot update global`   | Update npm/bun/pipx/cargo global packages      |
-| `dot update source`   | Build/update pkgbuilds, fnm, anyzig, ly, zinit |
-| `dot update --info`   | Show installed versions                        |
-| `dot assets sync`     | Sync fonts, icons, themes from GitHub releases |
-| `dot docs`            | Browse setup documentation                     |
+| Command               | Description                                               |
+| --------------------- | --------------------------------------------------------- |
+| `dot link <pkg>`      | Symlink a package's files into place                      |
+| `dot unlink <pkg>`    | Remove those symlinks                                     |
+| `dot info <pkg>`      | Show metadata, files, and per-distro packages             |
+| `dot configure <pkg>` | Run `configure.sh` for a package                          |
+| `dot enable <pkg>`    | Run the enable script (init-system-aware)                 |
+| `dot disable <pkg>`   | Run the disable script                                    |
+| `dot update system`   | Update xbps/pacman, flatpak, bun, deno, rustup            |
+| `dot update global`   | Update npm/bun/pipx/cargo global packages                 |
+| `dot update source`   | Build/update pkgbuilds, fnm, anyzig, ly, zinit            |
+| `dot update --info`   | Show installed versions                                   |
+| `dot update --ai`     | Run update then analyse output with an AI provider        |
+| `dot assets sync`     | Sync fonts, icons, themes from GitHub releases (parallel) |
+| `dot doctor`          | Health-check all packages: broken symlinks, drift         |
+| `dot doctor --fix`    | Auto-repair broken symlinks and re-link partial packages  |
+| `dot completions zsh` | Print zsh completion script (pipe to `_dot` in `$fpath`)  |
+| `dot docs`            | Browse setup documentation                                |
 
 ### Linking flags
 
@@ -153,6 +157,24 @@ cargo install fnm
 
 # Or via dot
 dot update source
+```
+
+## AI analysis (`--ai`)
+
+`dot update --ai` and `dot cache clean --ai` pipe their output to an LLM that filters it down to only errors, warnings, and required actions. Provider is selected by the first matching env var:
+
+| Env var             | Provider | Model override          |
+| ------------------- | -------- | ----------------------- |
+| `MINIMAX_API_KEY`   | MiniMax  | `MINIMAX_MODEL`         |
+| `ANTHROPIC_API_KEY` | Claude   | `CLAUDE_MODEL`          |
+| `OLLAMA_HOST`       | Ollama   | `OLLAMA_MODEL` (llama3) |
+
+## Shell completions
+
+```sh
+# Install once:
+dot completions zsh > ~/.local/share/zsh/completions/_dot
+# Re-run whenever packages or assets change.
 ```
 
 ## Notes

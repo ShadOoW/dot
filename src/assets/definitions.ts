@@ -1,8 +1,10 @@
 import { join } from "path";
 import { HOME_DIR } from "../lib/config.ts";
-import { downloadAndExtract, gitCloneOrPull, gitInstallerSync } from "../lib/downloader.ts";
+import { downloadAndExtract, gitCloneOrPull, gitInstallerSync, type LogFn } from "../lib/downloader.ts";
 import { getLatestRelease, findAsset } from "../lib/github.ts";
 import { logInfo, commandExists } from "../lib/console.ts";
+
+export type { LogFn };
 
 export type ReleaseAsset = {
   kind: "release";
@@ -12,7 +14,7 @@ export type ReleaseAsset = {
   filePattern: RegExp;
   installDir: string;
   sudo?: boolean;
-  postInstall?: () => Promise<void>;
+  postInstall?: (log?: LogFn) => Promise<void>;
 };
 
 export type ReleaseTarballAsset = {
@@ -22,7 +24,7 @@ export type ReleaseTarballAsset = {
   repo: string;
   installDir: string;
   sudo?: boolean;
-  postInstall?: () => Promise<void>;
+  postInstall?: (log?: LogFn) => Promise<void>;
 };
 
 export type GitInstallerAsset = {
@@ -33,7 +35,7 @@ export type GitInstallerAsset = {
   installDir: string;
   installCmd: string[];
   sudo?: boolean;
-  postInstall?: () => Promise<void>;
+  postInstall?: (log?: LogFn) => Promise<void>;
 };
 
 export type UrlAsset = {
@@ -44,7 +46,7 @@ export type UrlAsset = {
   version: string;
   installDir: string;
   sudo?: boolean;
-  postInstall?: () => Promise<void>;
+  postInstall?: (log?: LogFn) => Promise<void>;
 };
 
 export type GitAsset = {
@@ -64,7 +66,7 @@ export type MultiUrlAsset = {
   version: string;
   installDir: string;
   sudo?: boolean;
-  postInstall?: () => Promise<void>;
+  postInstall?: (log?: LogFn) => Promise<void>;
 };
 
 export type AssetDef =
@@ -79,41 +81,41 @@ const fontsDir = join(HOME_DIR, ".local/share/fonts");
 const iconsDir = join(HOME_DIR, ".local/share/icons");
 const binDir = join(HOME_DIR, ".local/bin");
 
-const refreshFontCache = async () => {
+const refreshFontCache = async (log: LogFn = logInfo) => {
   if (commandExists("fc-cache")) {
-    logInfo("Refreshing font cache…");
+    log("Refreshing font cache…");
     Bun.spawnSync(["fc-cache", "-fv"], { stdout: "ignore", stderr: "ignore" });
   }
 };
 
-const makeExecutable = async (file: string) => {
-  logInfo(`Making executable: ${file}`);
+const makeExecutable = async (file: string, log: LogFn = logInfo) => {
+  log(`Making executable: ${file}`);
   Bun.spawnSync(["chmod", "+x", file]);
 };
 
-export async function syncAsset(asset: AssetDef, latestVersion: string): Promise<void> {
+export async function syncAsset(asset: AssetDef, log: LogFn = logInfo): Promise<void> {
   if (asset.kind === "git-installer") {
-    await gitInstallerSync(asset.remote, asset.installDir, asset.installCmd, asset.sudo);
-    if (asset.postInstall) await asset.postInstall();
+    await gitInstallerSync(asset.remote, asset.installDir, asset.installCmd, asset.sudo, log);
+    if (asset.postInstall) await asset.postInstall(log);
     return;
   }
 
   if (asset.kind === "git") {
-    await gitCloneOrPull(asset.remote, asset.installDir, asset.sudo);
+    await gitCloneOrPull(asset.remote, asset.installDir, asset.sudo, log);
     return;
   }
 
   if (asset.kind === "url") {
-    await downloadAndExtract(asset.downloadUrl, asset.installDir, asset.sudo);
-    if (asset.postInstall) await asset.postInstall();
+    await downloadAndExtract(asset.downloadUrl, asset.installDir, asset.sudo, 0, log);
+    if (asset.postInstall) await asset.postInstall(log);
     return;
   }
 
   if (asset.kind === "multi-url") {
     for (const url of asset.urls) {
-      await downloadAndExtract(url, asset.installDir, asset.sudo);
+      await downloadAndExtract(url, asset.installDir, asset.sudo, 0, log);
     }
-    if (asset.postInstall) await asset.postInstall();
+    if (asset.postInstall) await asset.postInstall(log);
     return;
   }
 
@@ -123,12 +125,12 @@ export async function syncAsset(asset: AssetDef, latestVersion: string): Promise
   if (asset.kind === "release") {
     const file = findAsset(release, asset.filePattern);
     if (!file) throw new Error(`No matching asset in ${asset.repo} release ${release.tag_name}`);
-    await downloadAndExtract(file.browser_download_url, asset.installDir, asset.sudo);
+    await downloadAndExtract(file.browser_download_url, asset.installDir, asset.sudo, 0, log);
   } else if (asset.kind === "release-tarball") {
-    await downloadAndExtract(release.tarball_url, asset.installDir, asset.sudo, 1);
+    await downloadAndExtract(release.tarball_url, asset.installDir, asset.sudo, 1, log);
   }
 
-  if (asset.postInstall) await asset.postInstall();
+  if (asset.postInstall) await asset.postInstall(log);
 }
 
 
@@ -200,7 +202,7 @@ export const ASSETS: AssetDef[] = [
     description: "Papirus folder color tool",
     repo: "PapirusDevelopmentTeam/papirus-folders",
     installDir: binDir,
-    postInstall: async () => makeExecutable(join(binDir, "papirus-folders")),
+    postInstall: (log) => makeExecutable(join(binDir, "papirus-folders"), log),
   },
   {
     kind: "git-installer",

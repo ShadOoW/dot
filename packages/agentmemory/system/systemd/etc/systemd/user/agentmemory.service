@@ -1,0 +1,15 @@
+[Unit]
+Description=agentmemory persistent memory daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.cache/managed-fnm/aliases/default/bin/agentmemory
+Restart=on-failure
+RestartSec=5s
+EnvironmentFile=-%h/.config/secrets/minimax
+EnvironmentFile=-%h/.agentmemory/.env
+
+[Install]
+WantedBy=default.target

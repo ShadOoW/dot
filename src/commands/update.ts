@@ -4,7 +4,7 @@ import { join } from "path";
 import { HOME_DIR } from "../lib/config.ts";
 import { commandExists, getVersion, logDesc, logInfo, logSection, logWarn } from "../lib/console.ts";
 import { detectDistro } from "../lib/pkg.ts";
-import { analyzeWithAI, captureAndStream } from "../lib/ai.ts";
+import { analyzeWithAI, captureInProcess } from "../lib/ai.ts";
 import { runGroup } from "../lib/updaters/index.ts";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -37,14 +37,11 @@ function showInfo() {
   }
 }
 
-async function withAI(rawArgs: string[], subCmd: string | null, run: () => Promise<boolean>): Promise<boolean> {
-  if (!rawArgs.includes("--ai")) return run();
-  const filteredArgs = rawArgs.filter((a) => a !== "--ai");
-  const base = [process.execPath, process.argv[1], "update"];
-  const cmdArgs = subCmd ? [...base, subCmd, ...filteredArgs] : [...base, ...filteredArgs];
-  const output = await captureAndStream(cmdArgs);
+async function withAI(useAI: boolean, run: () => Promise<boolean>): Promise<boolean> {
+  if (!useAI) return run();
+  const { ok, output } = await captureInProcess(run);
   await analyzeWithAI(output);
-  return true;
+  return ok;
 }
 
 // ─── subcommands ─────────────────────────────────────────────────────────────
@@ -55,9 +52,9 @@ const aiFlag = { type: "boolean" as const, description: "Analyse output with AI 
 export const systemUpdateCommand = defineCommand({
   meta: { description: "Update system packages (xbps/pacman+yay/brew, flatpak) and self-updating runtimes" },
   args: { check: checkFlag, ai: aiFlag },
-  async run({ args, rawArgs }) {
+  async run({ args }) {
     const check = args.check ?? false;
-    const ok = await withAI(rawArgs, "system", async () => {
+    const ok = await withAI(args.ai ?? false, async () => {
       const distro = detectDistro();
       const pm = distro === "void" ? "xbps" : distro === "arch" ? "pacman + yay" : distro === "macos" ? "brew" : "system packages";
       logDesc(`Updates system packages via ${pm}, flatpak, bun, deno, and rustup.`);
@@ -70,12 +67,12 @@ export const systemUpdateCommand = defineCommand({
 });
 
 export const globalUpdateCommand = defineCommand({
-  meta: { description: "Update global package manager packages (npm, bun, pipx, cargo…)" },
+  meta: { description: "Update global package manager packages (npm, bun, pipx, cargo…) and shell completions" },
   args: { check: checkFlag, ai: aiFlag },
-  async run({ args, rawArgs }) {
+  async run({ args }) {
     const check = args.check ?? false;
-    const ok = await withAI(rawArgs, "global", async () => {
-      logDesc("Updates global packages via npm, bun, yarn, pnpm, pipx, and cargo.");
+    const ok = await withAI(args.ai ?? false, async () => {
+      logDesc("Updates global packages via npm, bun, yarn, pnpm, pipx, and cargo. Regenerates shell completions.");
       return runGroup("global", check);
     });
     if (!ok) process.exit(1);
@@ -85,9 +82,9 @@ export const globalUpdateCommand = defineCommand({
 export const sourceUpdateCommand = defineCommand({
   meta: { description: "Update source/custom-built tools (pkgbuilds, fnm, anyzig, ly, zinit)" },
   args: { check: checkFlag, ai: aiFlag },
-  async run({ args, rawArgs }) {
+  async run({ args }) {
     const check = args.check ?? false;
-    const ok = await withAI(rawArgs, "source", async () => {
+    const ok = await withAI(args.ai ?? false, async () => {
       logDesc("Builds and updates source tools: pkgbuilds, fnm, anyzig, ly, and zinit.");
       logSection("source tools");
       return runGroup("source", check);
@@ -114,7 +111,7 @@ export const updateCommand = defineCommand({
     if (args.info) { showInfo(); return; }
     if (args.all || args.check) {
       const check = args.check ?? false;
-      const ok = await withAI(rawArgs, null, async () => {
+      const ok = await withAI(args.ai ?? false, async () => {
         let ok = true;
         for (const group of ["system", "global", "source"] as const) {
           if (group === "source") logSection("source tools");
@@ -131,7 +128,7 @@ Usage: dot update <subcommand> [--check]
 
 Subcommands:
   system    Update xbps (Void) / pacman+yay (Arch), flatpak, bun, deno, rustup
-  global    Update npm -g, bun -g, yarn, pnpm, pipx, cargo
+  global    Update npm -g, bun -g, yarn, pnpm, pipx, cargo; regenerate shell completions
   source    Update pkgbuilds, fnm, anyzig, ly, zinit
 
 Flags:
