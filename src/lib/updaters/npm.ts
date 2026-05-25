@@ -1,4 +1,5 @@
 import { commandExists, getVersion, logInfo, logSection } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 export const npmUpdater: Updater = {
@@ -8,7 +9,7 @@ export const npmUpdater: Updater = {
     if (!commandExists("npm")) return true;
     if (check) { logInfo(`npm: ${getVersion("npm", ["--version"])}`); return true; }
     logSection("npm");
-    const r = Bun.spawnSync(["npm", "update", "-g"], { stdout: "inherit", stderr: "inherit" });
+    const r = await spawnInherit(["npm", "update", "-g"]);
     return r.exitCode === 0;
   },
 };

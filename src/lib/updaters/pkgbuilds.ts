@@ -3,6 +3,7 @@ import { readdir } from "fs/promises";
 import { join } from "path";
 import { CACHE_DIR, PKGBUILDS_DIR } from "../config.ts";
 import { commandExists, logError, logInfo, logWarn } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 function getInstalledXbpsVersion(pkg: string): string | null {
@@ -48,7 +49,7 @@ export const pkgbuildsUpdater: Updater = {
 
       logInfo(`${name}: building ${template}…`);
       const cacheDir = join(CACHE_DIR, name);
-      const result = Bun.spawnSync(["bash", buildScript, cacheDir], { stdout: "inherit", stderr: "inherit" });
+      const result = await spawnInherit(["bash", buildScript, cacheDir]);
       if (result.exitCode !== 0) { logError(`${name}: build failed`); ok = false; }
     }
     return ok;

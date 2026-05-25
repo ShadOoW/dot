@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { HOME_DIR } from "../config.ts";
 import { commandExists, getVersion, logInfo, logSection } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 export const bunGlobalUpdater: Updater = {
@@ -13,7 +14,7 @@ export const bunGlobalUpdater: Updater = {
     logSection("bun global");
     const lockfile = join(HOME_DIR, ".bun/install/global/bun.lock");
     if (existsSync(lockfile)) Bun.file(lockfile).delete();
-    const r = Bun.spawnSync(["bun", "update", "-g"], { stdout: "inherit", stderr: "inherit" });
+    const r = await spawnInherit(["bun", "update", "-g"]);
     return r.exitCode === 0;
   },
 };

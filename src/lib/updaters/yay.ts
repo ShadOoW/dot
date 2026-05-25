@@ -1,4 +1,5 @@
 import { commandExists, getVersion, logInfo, logSection } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 export const yayUpdater: Updater = {
@@ -8,7 +9,7 @@ export const yayUpdater: Updater = {
     if (!commandExists("yay")) return true;
     if (check) { logInfo(`yay: ${getVersion("yay", ["--version"])}`); return true; }
     logSection("yay");
-    const r = Bun.spawnSync(["yay", "-Sau", "--noconfirm", "--sudoloop", "--noprogressbar"], { stdout: "inherit", stderr: "inherit" });
+    const r = await spawnInherit(["yay", "-Sau", "--noconfirm", "--sudoloop"]);
     return r.exitCode === 0;
   },
 };

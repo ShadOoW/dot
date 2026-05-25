@@ -1,4 +1,5 @@
 import { commandExists, getVersion, logInfo, logSection } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 export const xbpsUpdater: Updater = {
@@ -8,7 +9,7 @@ export const xbpsUpdater: Updater = {
     if (!commandExists("xbps-install")) return true;
     if (check) { logInfo(`xbps: ${getVersion("xbps-query", ["--version"])}`); return true; }
     logSection("xbps");
-    const r = Bun.spawnSync(["sudo", "xbps-install", "-Syu"], { stdout: "inherit", stderr: "inherit" });
+    const r = await spawnInherit(["sudo", "xbps-install", "-Syu"]);
     return r.exitCode === 0;
   },
 };

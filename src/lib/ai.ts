@@ -3,6 +3,7 @@ import type { LLMProvider } from "./ai-provider.ts";
 import { createMiniMaxProvider } from "./providers/minimax.ts";
 import { createClaudeProvider } from "./providers/claude.ts";
 import { createOllamaProvider } from "./providers/ollama.ts";
+import { setCapturing } from "./spawn.ts";
 
 const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]/g;
 
@@ -15,10 +16,8 @@ export function detectProvider(): LLMProvider {
   );
 }
 
-// Intercepts process.stdout/stderr at the JS write layer.
-// Note: Bun.spawnSync/spawn with stdout:"inherit" bypasses this — subprocess output
-// is still shown to the user but not captured. Console-level output (logInfo, logError,
-// section headers, etc.) IS captured, which covers all actionable signals.
+// Intercepts process.stdout/stderr at the JS write layer and enables spawnInherit
+// capture mode so subprocess output is piped through process.stdout/stderr and captured.
 export async function captureInProcess(fn: () => Promise<boolean>): Promise<{ ok: boolean; output: string }> {
   const parts: string[] = [];
   const dec = new TextDecoder();
@@ -42,10 +41,12 @@ export async function captureInProcess(fn: () => Promise<boolean>): Promise<{ ok
     return origErr(chunk as string, ...(rest as []));
   };
 
+  setCapturing(true);
   let ok = true;
   try {
     ok = await fn();
   } finally {
+    setCapturing(false);
     process.stdout.write = origOut;
     process.stderr.write = origErr;
   }

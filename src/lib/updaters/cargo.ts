@@ -1,4 +1,5 @@
 import { commandExists, logInfo, logSection, logWarn } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 export const cargoUpdater: Updater = {
@@ -10,9 +11,9 @@ export const cargoUpdater: Updater = {
       logWarn("cargo-install-update not found — install with: cargo install cargo-install-update");
       return true;
     }
-    if (check) { Bun.spawnSync(["cargo", "install-update", "--dry-run"], { stdout: "inherit" }); return true; }
+    if (check) { await spawnInherit(["cargo", "install-update", "--dry-run"]); return true; }
     logSection("cargo");
-    const r = Bun.spawnSync(["cargo", "install-update", "-a"], { stdout: "inherit", stderr: "inherit" });
+    const r = await spawnInherit(["cargo", "install-update", "-a"]);
     return r.exitCode === 0;
   },
 };

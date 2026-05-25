@@ -1,4 +1,5 @@
 import { commandExists, getVersion, logInfo, logSection } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 export const rustupUpdater: Updater = {
@@ -8,7 +9,7 @@ export const rustupUpdater: Updater = {
     if (!commandExists("rustup")) return true;
     if (check) { logInfo(`rustup: ${getVersion("rustup", ["--version"])}`); return true; }
     logSection("rustup");
-    const r = Bun.spawnSync(["rustup", "update"], { stdout: "inherit", stderr: "inherit" });
+    const r = await spawnInherit(["rustup", "update"]);
     return r.exitCode === 0;
   },
 };

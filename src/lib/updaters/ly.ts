@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { HOME_DIR } from "../config.ts";
 import { commandExists, getVersion, logError, logInfo, logSuccess } from "../console.ts";
+import { spawnInherit } from "../spawn.ts";
 import type { Updater } from "./types.ts";
 
 export const lyUpdater: Updater = {
@@ -27,7 +28,7 @@ export const lyUpdater: Updater = {
 
     if (!existsSync(lyDir)) {
       logInfo("ly: cloning…");
-      const r = Bun.spawnSync(["git", "clone", "--recurse-submodules", lyRepo, lyDir], { stdout: "inherit", stderr: "inherit" });
+      const r = await spawnInherit(["git", "clone", "--recurse-submodules", lyRepo, lyDir]);
       if (r.exitCode !== 0) { logError("ly: clone failed"); return false; }
     } else {
       const headBefore = new TextDecoder().decode(
@@ -78,7 +79,7 @@ export const lyUpdater: Updater = {
       return false;
     }
     const priv = commandExists("doas") ? "doas" : "sudo";
-    const install = Bun.spawnSync([priv, zigCmd, "build", "installnoconf"], { cwd: lyDir, stdout: "inherit", stderr: "inherit" });
+    const install = await spawnInherit([priv, zigCmd, "build", "installnoconf"], { cwd: lyDir });
     if (install.exitCode !== 0) { logError("ly: install failed"); return false; }
     const lyVer = getVersion("ly", ["-v"]);
     logSuccess(`ly: ${lyVer || "installed"}`);
