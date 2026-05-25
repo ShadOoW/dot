@@ -1,0 +1,9 @@
+{
+  "description": "agentmemory daemon — persistent memory layer for Claude Code",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] }
+  },
+  "tags": ["ai", "memory"],
+  "os": ["linux"]
+}
