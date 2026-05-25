@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-exec bun "$HOME/.config/dotfiles/dot.ts" "$@"
+exec bun --cwd "$HOME/.config/dotfiles" "$HOME/.config/dotfiles/dot.ts" "$@"
