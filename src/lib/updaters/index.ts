@@ -20,6 +20,7 @@ import { zinitUpdater } from "./zinit.ts";
 import type { Updater, UpdaterGroup } from "./types.ts";
 
 export type { Updater, UpdaterGroup };
+export type StepCallback = (name: string, run: () => Promise<boolean>) => Promise<boolean>;
 
 export const UPDATERS: Updater[] = [
   // system
@@ -46,10 +47,11 @@ export const UPDATERS: Updater[] = [
   zinitUpdater,
 ];
 
-export async function runGroup(group: UpdaterGroup, check: boolean): Promise<boolean> {
+export async function runGroup(group: UpdaterGroup, check: boolean, step?: StepCallback): Promise<boolean> {
   let ok = true;
   for (const u of UPDATERS.filter((u) => u.group === group)) {
-    if (!await u.run(check)) ok = false;
+    const result = step ? await step(u.name, () => u.run(check)) : await u.run(check);
+    if (!result) ok = false;
   }
   return ok;
 }

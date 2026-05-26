@@ -4,8 +4,9 @@ import { join } from "path";
 import { HOME_DIR } from "../lib/config.ts";
 import { commandExists, getVersion, logDesc, logInfo, logSection, logWarn } from "../lib/console.ts";
 import { detectDistro } from "../lib/pkg.ts";
-import { analyzeWithAI, captureInProcess } from "../lib/ai.ts";
+import { analyzeStep, captureInProcess } from "../lib/ai.ts";
 import { runGroup } from "../lib/updaters/index.ts";
+import type { StepCallback } from "../lib/updaters/index.ts";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -37,10 +38,30 @@ function showInfo() {
   }
 }
 
-async function withAI(useAI: boolean, run: () => Promise<boolean>): Promise<boolean> {
+async function withAI(useAI: boolean, run: (step?: StepCallback) => Promise<boolean>): Promise<boolean> {
   if (!useAI) return run();
-  const { ok, output } = await captureInProcess(run);
-  await analyzeWithAI(output);
+
+  const findings: Array<{ name: string; bullets: string[] }> = [];
+
+  const step: StepCallback = async (name, fn) => {
+    const { ok, output } = await captureInProcess(fn);
+    const bullets = await analyzeStep(output);
+    if (bullets) findings.push({ name, bullets });
+    return ok;
+  };
+
+  const ok = await run(step);
+
+  logSection("AI Analysis");
+  if (findings.length === 0) {
+    logInfo("Everything is up to date.");
+  } else {
+    for (const { name, bullets } of findings) {
+      console.log(`  ${name}:`);
+      for (const b of bullets) logInfo(b);
+    }
+  }
+
   return ok;
 }
 
@@ -54,11 +75,11 @@ export const systemUpdateCommand = defineCommand({
   args: { check: checkFlag, ai: aiFlag },
   async run({ args }) {
     const check = args.check ?? false;
-    const ok = await withAI(args.ai ?? false, async () => {
+    const ok = await withAI(args.ai ?? false, async (step) => {
       const distro = detectDistro();
       const pm = distro === "void" ? "xbps" : distro === "arch" ? "pacman + yay" : distro === "macos" ? "brew" : "system packages";
       logDesc(`Updates system packages via ${pm}, flatpak, bun, deno, and rustup.`);
-      const result = await runGroup("system", check);
+      const result = await runGroup("system", check, step);
       if (!check) kernelHint();
       return result;
     });
@@ -71,9 +92,9 @@ export const globalUpdateCommand = defineCommand({
   args: { check: checkFlag, ai: aiFlag },
   async run({ args }) {
     const check = args.check ?? false;
-    const ok = await withAI(args.ai ?? false, async () => {
+    const ok = await withAI(args.ai ?? false, async (step) => {
       logDesc("Updates global packages via npm, bun, yarn, pnpm, pipx, and cargo. Regenerates shell completions.");
-      return runGroup("global", check);
+      return runGroup("global", check, step);
     });
     if (!ok) process.exit(1);
   },
@@ -84,10 +105,10 @@ export const sourceUpdateCommand = defineCommand({
   args: { check: checkFlag, ai: aiFlag },
   async run({ args }) {
     const check = args.check ?? false;
-    const ok = await withAI(args.ai ?? false, async () => {
+    const ok = await withAI(args.ai ?? false, async (step) => {
       logDesc("Builds and updates source tools: pkgbuilds, fnm, anyzig, ly, and zinit.");
       logSection("source tools");
-      return runGroup("source", check);
+      return runGroup("source", check, step);
     });
     if (!ok) process.exit(1);
   },
@@ -111,11 +132,11 @@ export const updateCommand = defineCommand({
     if (args.info) { showInfo(); return; }
     if (args.all || args.check) {
       const check = args.check ?? false;
-      const ok = await withAI(args.ai ?? false, async () => {
+      const ok = await withAI(args.ai ?? false, async (step) => {
         let ok = true;
         for (const group of ["system", "global", "source"] as const) {
           if (group === "source") logSection("source tools");
-          if (!await runGroup(group, check)) ok = false;
+          if (!await runGroup(group, check, step)) ok = false;
         }
         if (!check) kernelHint();
         return ok;

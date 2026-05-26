@@ -76,6 +76,37 @@ Everything is up to date.
 
 Respond with bullet points only. No preamble, no headers, no explanation.`;
 
+export const STEP_PROMPT = `You receive the raw terminal output of one step in a Linux system update.
+
+Report anything the user needs to act on or be aware of:
+- Errors or failures
+- Warnings
+- Announcements, notices, or important messages — even if the command succeeded
+- Required actions: reboot, service restart, manual steps
+- Version conflicts or unexpected states
+
+Do NOT report:
+- Packages that updated normally
+- Download progress or sizes
+- "Already up to date" or equivalent success messages
+
+If there is nothing to report, respond with exactly: ok
+
+Bullet points only. No preamble, no headers.`;
+
+export async function analyzeStep(output: string): Promise<string[] | null> {
+  if (output.trim().length < 100) return null;
+  try {
+    const provider = detectProvider();
+    const text = await provider.complete(STEP_PROMPT, output);
+    const trimmed = text.trim();
+    if (!trimmed || trimmed === "ok") return null;
+    return trimmed.split("\n").filter((l) => l.trim());
+  } catch (err) {
+    return [`analysis failed: ${(err as Error).message}`];
+  }
+}
+
 export const CACHE_SYSTEM_PROMPT = `You receive the raw terminal output of a Linux cache-clean command.
 
 Your job: identify what the user needs to act on or be aware of.
