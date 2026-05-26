@@ -6,8 +6,13 @@
     <string>local.agentmemory</string>
     <key>ProgramArguments</key>
     <array>
-        <string>HOME_PATH/.cache/managed-fnm/aliases/default/bin/agentmemory</string>
+        <string>/Users/youneselalami/.local/bin/agentmemory-launchd</string>
     </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/youneselalami/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
