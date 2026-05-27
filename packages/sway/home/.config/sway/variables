@@ -5,12 +5,11 @@ set {
     $mod Mod4
     $term kitty
     $menu ~/.config/fuzzel-scripts/app-launcher.sh
-    $window ~/.config/rofi/open-close.sh "rofi -show sway-windows -modi 'sway-windows:/home/shad/.config/rofi/scripts/sway-windows.sh' -selected-row $(/home/shad/.config/rofi/scripts/sway-windows.sh --focused-index)"
+    $window ~/.config/fuzzel-scripts/windows.sh
     $clipboard ~/.config/fuzzel-scripts/clipboard.sh
     $clipboard_delete ~/.config/fuzzel-scripts/clipboard.sh --delete
     $images ~/.config/fuzzel-scripts/images.sh
-    $commands ~/.config/rofi/open-close.sh "~/.config/rofi/custom-commands.sh"
-    $projects ~/.config/rofi/open-close.sh "~/.config/kitty/scripts/project-manager.sh"
+    $projects ~/.config/kitty/scripts/project-manager.sh
     
     # Scratchpad settings
     $sp_terminal "~/.config/sway/scripts/toggle-scratchpad.sh terminal app_id terminal-mark 'kitty --app-id terminal-mark'"

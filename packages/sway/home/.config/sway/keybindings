@@ -182,8 +182,8 @@ bindsym $mod+p exec grim -g "$(swaymsg -t get_tree | jq -r '.. | select(.pid? an
 # Lock screen
 bindsym $mod+l exec swaylock
 
-# Commands
-bindsym $mod+Shift+d exec $commands
+# Force-kill focused window (SIGKILL for unresponsive processes)
+bindsym $mod+Shift+q exec ~/.config/sway/scripts/force-kill.sh
 
 # Wi-Fi manager
 bindsym $mod+n exec iwmenu -l fuzzel

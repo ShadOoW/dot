@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 # Simple Project Manager for Kitty
-# Shows Rofi menu with projects from JSON file and launches them
+# Shows fuzzel menu with projects from JSON file and launches them
 
 PROJECTS_FILE="$(dirname "$0")/../projects.json"
 
 # Show menu and get selection
-project=$(jq -r '.projects | to_entries[] | "\(.key): \(.value.description)"' "$PROJECTS_FILE" | rofi -dmenu -i -p "Projects")
+project=$(jq -r '.projects | to_entries[] | "\(.key): \(.value.description)"' "$PROJECTS_FILE" | fuzzel --dmenu --prompt="  Projects  ")
 
 # Exit if nothing selected
 [ -z "$project" ] && exit 0

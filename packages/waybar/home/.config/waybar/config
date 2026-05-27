@@ -4,368 +4,333 @@
     "margin": "5 2 5 0",
     "reload_style_on_change": true,
     "modules-left": [
-      "group/audio",
-      "custom/updates",
-      "custom/claude-code"
+        "group/audio",
+        "custom/updates",
+        "custom/claude-code"
     ],
     "modules-center": [
-      "sway/workspaces",
-      "sway/mode"
+        "sway/workspaces",
+        "sway/mode"
     ],
     "sway/workspaces": {
-      "format": "{icon}",
-      "on-click": "activate",
-      "all-outputs": true,
-      "show-special": false,
-      "format-icons": {
-        "1": "१",
-        "2": "२",
-        "3": "३",
-        "4": "४",
-        "5": "५",
-        "6": "६",
-        "7": "७",
-        "8": "८",
-        "9": "९",
-        "10": "०"
-      },
-      "persistent-workspaces": {
-        "1": 1,
-        "2": 1,
-        "3": 1,
-        "4": 1,
-        "5": 1,
-        "6": 1,
-        "7": 1,
-        "8": 1,
-        "9": 1,
-        "10": 1
-      }
+        "format": "{icon}",
+        "on-click": "activate",
+        "all-outputs": true,
+        "show-special": false,
+        "format-icons": {
+            "1": "१",
+            "2": "२",
+            "3": "३",
+            "4": "४",
+            "5": "५",
+            "6": "६",
+            "7": "७",
+            "8": "८",
+            "9": "९",
+            "10": "०"
+        },
+        "persistent-workspaces": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1,
+            "6": 1,
+            "7": 1,
+            "8": 1,
+            "9": 1,
+            "10": 1
+        }
     },
     "modules-right": [
-      "custom/recorder",
-      "group/connection",
-      "group/together",
-      "tray"
+        "custom/recorder",
+        "group/connection",
+        "group/together",
+        "tray"
     ],
     "custom/recorder": {
-      "format": "{}",
-      "interval": "once",
-      "exec": "echo '{\"text\": \"\", \"class\": \"recording\", \"tooltip\": \"Recording in progress - Click to stop\"}'",
-      "tooltip": true,
-      "exec-if": "pgrep -x 'wl-screenrec'",
-      "on-click": "$HOME/.config/waybar/recorder.sh",
-      "return-type": "json",
-      "signal": 4
+        "format": "{}",
+        "interval": "once",
+        "exec": "echo '{\"text\": \"\", \"class\": \"recording\", \"tooltip\": \"Recording in progress - Click to stop\"}'",
+        "tooltip": true,
+        "exec-if": "pgrep -x 'wl-screenrec'",
+        "on-click": "$HOME/.config/waybar/recorder.sh",
+        "return-type": "json",
+        "signal": 4
     },
     "privacy": {
-      "orientation": "vertical",
-      "icon-spacing": 4,
-      "icon-size": 14,
-      "transition-duration": 250,
-      "modules": [
-        {
-          "type": "screenshare",
-          "tooltip": true,
-          "tooltip-icon-size": 24
-        }
-      ]
+        "orientation": "vertical",
+        "icon-spacing": 4,
+        "icon-size": 14,
+        "transition-duration": 250,
+        "modules": [
+            {
+                "type": "screenshare",
+                "tooltip": true,
+                "tooltip-icon-size": 24
+            }
+        ]
     },
     "group/brightness": {
-      "orientation": "inherit",
-      "drawer": {
-        "transition-duration": 500,
-        "transition-left-to-right": false
-      },
-      "modules": [
-        "backlight",
-        "backlight/slider"
-      ]
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 500,
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "backlight",
+            "backlight/slider"
+        ]
     },
     "backlight": {
-      "device": "intel_backlight",
-      "format": "{icon}",
-      "format-icons": [
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ],
-      "on-scroll-down": "brightnessctl s 5%-",
-      "on-scroll-up": "brightnessctl s +5%",
-      "tooltip": true,
-      "tooltip-format": "Brightness: {percent}% ",
-      "smooth-scrolling-threshold": 1
+        "device": "intel_backlight",
+        "format": "{icon}",
+        "format-icons": [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+        ],
+        "on-scroll-down": "brightnessctl s 5%-",
+        "on-scroll-up": "brightnessctl s +5%",
+        "tooltip": true,
+        "tooltip-format": "Brightness: {percent}% ",
+        "smooth-scrolling-threshold": 1
     },
     "backlight/slider": {
-      "min": 5,
-      "max": 100,
-      "orientation": "vertical",
-      "device": "intel_backlight"
+        "min": 5,
+        "max": 100,
+        "orientation": "vertical",
+        "device": "intel_backlight"
     },
     "group/audio": {
-      "orientation": "inherit",
-      "drawer": {
-        "transition-duration": 500,
-        "transition-left-to-right": false
-      },
-      "modules": [
-        "pulseaudio",
-        "pulseaudio/slider"
-      ]
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 500,
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "pulseaudio",
+            "pulseaudio/slider"
+        ]
     },
-"group/connection": {
-      "orientation": "inherit",
-      "modules": [
-        "group/network",
-        "group/bluetooth"
-      ]
+    "group/connection": {
+        "orientation": "inherit",
+        "modules": [
+            "group/network"
+        ]
     },
     "group/together": {
-      "orientation": "inherit",
-      "modules": [
-        "custom/weather",
-        "clock",
-        "group/utils"
-      ]
+        "orientation": "inherit",
+        "modules": [
+            "custom/weather",
+            "clock",
+            "group/utils"
+        ]
     },
     "group/utils": {
-      "orientation": "inherit",
-      "drawer": {
-        "transition-duration": 500,
-        "transition-left-to-right": true
-      },
-      "modules": [
-        "custom/mark",
-        "custom/sunset",
-        "idle_inhibitor",
-        "custom/hyprkill"
-      ]
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 500,
+            "transition-left-to-right": true
+        },
+        "modules": [
+            "custom/mark",
+            "custom/sunset",
+            "idle_inhibitor",
+            "custom/hyprkill"
+        ]
     },
     "group/network": {
-      "orientation": "inherit",
-      "drawer": {
-        "transition-duration": 500,
-        "transition-left-to-right": true
-      },
-      "modules": [
-        "network",
-        "network#speed"
-      ]
-    },
-    "group/bluetooth": {
-      "orientation": "inherit",
-      "drawer": {
-        "transition-duration": 500,
-        "transition-left-to-right": true
-      },
-      "modules": [
-        "bluetooth",
-        "bluetooth#status"
-      ]
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 500,
+            "transition-left-to-right": true
+        },
+        "modules": [
+            "network",
+            "network#speed"
+        ]
     },
     "group/power": {
-      "orientation": "inherit",
-      "drawer": {
-        "transition-duration": 500,
-        "transition-left-to-right": false
-      },
-      "modules": [
-        "battery",
-        "power-profiles-daemon"
-      ]
+        "orientation": "inherit",
+        "drawer": {
+            "transition-duration": 500,
+            "transition-left-to-right": false
+        },
+        "modules": [
+            "battery",
+            "power-profiles-daemon"
+        ]
     },
     "tray": {
-      "icon-size": 18,
-      "spacing": 10
+        "icon-size": 18,
+        "spacing": 10
     },
     "pulseaudio": {
-      "format": "{icon}",
-      "format-bluetooth": "{icon}",
-      "tooltip-format": "{volume}% {icon} | {desc}",
-      "format-muted": "󰖁",
-      "format-icons": {
-        "headphones": "󰋌",
-        "handsfree": "󰋌",
-        "headset": "󰋌",
-        "phone": "",
-        "portable": "",
-        "car": " ",
-        "default": [
-          "󰕿",
-          "󰖀",
-          "󰕾"
-        ]
-      },
-      "on-click": "volume mute",
-      "on-click-middle": "pavucontrol",
-      "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
-      "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
-      "smooth-scrolling-threshold": 1
+        "format": "{icon}",
+        "format-bluetooth": "{icon}",
+        "tooltip-format": "{volume}% {icon} | {desc}",
+        "format-muted": "󰖁",
+        "format-icons": {
+            "headphones": "󰋌",
+            "handsfree": "󰋌",
+            "headset": "󰋌",
+            "phone": "",
+            "portable": "",
+            "car": " ",
+            "default": [
+                "󰕿",
+                "󰖀",
+                "󰕾"
+            ]
+        },
+        "on-click": "volume mute",
+        "on-click-middle": "pavucontrol",
+        "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
+        "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
+        "smooth-scrolling-threshold": 1
     },
     "pulseaudio/slider": {
-      "min": 0,
-      "max": 140,
-      "orientation": "vertical"
+        "min": 0,
+        "max": 140,
+        "orientation": "vertical"
     },
     "network": {
-      "format": "{icon}",
-      "format-icons": {
-        "wifi": [
-          "󰤨"
-        ],
-        "ethernet": [
-          "󰈀"
-        ],
-        "disconnected": [
-          "󰖪"
-        ]
-      },
-      "format-wifi": "󰤨",
-      "format-ethernet": "󰈀",
-      "format-disconnected": "󰖪",
-      "format-linked": "󰈁",
-      "tooltip": false,
-      "on-click": "iwmenu -l rofi"
+        "format": "{icon}",
+        "format-icons": {
+            "wifi": [
+                "󰤨"
+            ],
+            "ethernet": [
+                "󰈀"
+            ],
+            "disconnected": [
+                "󰖪"
+            ]
+        },
+        "format-wifi": "󰤨",
+        "format-ethernet": "󰈀",
+        "format-disconnected": "󰖪",
+        "format-linked": "󰈁",
+        "tooltip": false,
+        "on-click": "iwmenu -l fuzzel"
     },
     "network#speed": {
-      "format": " {bandwidthDownBits} ",
-      "rotate": 90,
-      "interval": 5,
-      "tooltip-format": "{ipaddr}",
-      "tooltip-format-wifi": "{essid} ({signalStrength}%)   \n{ipaddr} | {frequency} MHz{icon} ",
-      "tooltip-format-ethernet": "{ifname} 󰈀 \n{ipaddr} | {frequency} MHz{icon} ",
-      "tooltip-format-disconnected": "Not Connected to any type of Network",
-      "tooltip": true,
-      "on-click": "iwmenu -l rofi"
-    },
-    "bluetooth": {
-      "format-on": "",
-      "format-off": "󰂲",
-      "format-disabled": "",
-      "format-connected": "<b></b>",
-      "tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} connected",
-      "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
-      "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-      "tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
-      "on-click": "rofi-bluetooth -config ~/.config/rofi/menu.d/network.rasi -i"
-    },
-    "bluetooth#status": {
-      "format-on": "",
-      "format-off": "",
-      "format-disabled": "",
-      "format-connected": "<b>{num_connections}</b>",
-      "format-connected-battery": "<small><b>{device_battery_percentage}%</b></small>",
-      "tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} connected",
-      "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
-      "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-      "tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
-      "on-click": "rofi-bluetooth -config ~/.config/rofi/menu.d/network.rasi -i"
+        "format": " {bandwidthDownBits} ",
+        "rotate": 90,
+        "interval": 5,
+        "tooltip-format": "{ipaddr}",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)   \n{ipaddr} | {frequency} MHz{icon} ",
+        "tooltip-format-ethernet": "{ifname} 󰈀 \n{ipaddr} | {frequency} MHz{icon} ",
+        "tooltip-format-disconnected": "Not Connected to any type of Network",
+        "tooltip": true,
+        "on-click": "iwmenu -l fuzzel"
     },
     "battery": {
-      "rotate": 270,
-      "states": {
-        "good": 95,
-        "warning": 30,
-        "critical": 15
-      },
-      "format": "{icon}",
-      "format-charging": "<b>{icon} </b>",
-      "format-full": "<span color='#82A55F'><b>{icon}</b></span>",
-      "format-icons": [
-        "󰁻",
-        "󰁼",
-        "󰁾",
-        "󰂀",
-        "󰂂",
-        "󰁹"
-      ],
-      "tooltip-format": "{timeTo} {capacity} % | {power} W"
+        "rotate": 270,
+        "states": {
+            "good": 95,
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{icon}",
+        "format-charging": "<b>{icon} </b>",
+        "format-full": "<span color='#82A55F'><b>{icon}</b></span>",
+        "format-icons": [
+            "󰁻",
+            "󰁼",
+            "󰁾",
+            "󰂀",
+            "󰂂",
+            "󰁹"
+        ],
+        "tooltip-format": "{timeTo} {capacity} % | {power} W"
     },
     "clock": {
-      "format": "{:%H\n%M}",
-      "tooltip-format": "<tt><small>{calendar}</small></tt>",
-      "calendar": {
-        "mode": "month",
-        "mode-mon-col": 3,
-        "weeks-pos": "right",
-        "on-scroll": 1,
-        "on-click-right": "mode",
-        "format": {
-          "today": "<span color='#a6e3a1'><b><u>{}</u></b></span>"
+        "format": "{:%H\n%M}",
+        "tooltip-format": "<tt><small>{calendar}</small></tt>",
+        "calendar": {
+            "mode": "month",
+            "mode-mon-col": 3,
+            "weeks-pos": "right",
+            "on-scroll": 1,
+            "on-click-right": "mode",
+            "format": {
+                "today": "<span color='#a6e3a1'><b><u>{}</u></b></span>"
+            }
         }
-      }
     },
     "power-profiles-daemon": {
-      "format": "{icon}",
-      "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
-      "tooltip": true,
-      "format-icons": {
-        "default": "",
-        "performance": "<span color='#B37F34'><small></small></span>",
-        "balanced": "<span><small> </small></span>",
-        "power-saver": "<span color='#a6e3a1'><small></small></span>"
-      }
+        "format": "{icon}",
+        "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+        "tooltip": true,
+        "format-icons": {
+            "default": "",
+            "performance": "<span color='#B37F34'><small></small></span>",
+            "balanced": "<span><small> </small></span>",
+            "power-saver": "<span color='#a6e3a1'><small></small></span>"
+        }
     },
     "custom/sunset": {
-      "format": "{}",
-      "tooltip": true,
-      "signal": 11,
-      "exec": "$HOME/.config/waybar/sunset.sh status",
-      "on-click": "$HOME/.config/waybar/sunset.sh",
-      "return-type": "json"
+        "format": "{}",
+        "tooltip": true,
+        "signal": 11,
+        "exec": "$HOME/.config/waybar/sunset.sh status",
+        "on-click": "$HOME/.config/waybar/sunset.sh",
+        "return-type": "json"
     },
     "custom/weather": {
-      "format": "{}",
-      "tooltip": true,
-      "interval": 3600,
-      "exec": "wttrbar --custom-indicator '{ICON}\n<b>{temp_C}</b>' --location casablanca",
-      "return-type": "json"
+        "format": "{}",
+        "tooltip": true,
+        "interval": 3600,
+        "exec": "wttrbar --custom-indicator '{ICON}\n<b>{temp_C}</b>' --location casablanca",
+        "return-type": "json"
     },
     "custom/claude-code": {
-      "format": "{}",
-      "tooltip": true,
-      "interval": 30,
-      "exec": "$HOME/.config/waybar/claude-code.sh",
-      "return-type": "json",
-      "on-click": "$TERMINAL -e claude"
+        "format": "{}",
+        "tooltip": true,
+        "interval": 30,
+        "exec": "$HOME/.config/waybar/claude-code.sh",
+        "return-type": "json",
+        "on-click": "$TERMINAL -e claude"
     },
     "custom/updates": {
-      "format": "{}",
-      "interval": 10800,
-      "exec": "~/.config/waybar/updatecheck.sh",
-      "return-type": "json",
-      "exec-if": "exit 0",
-      "signal": 8
+        "format": "{}",
+        "interval": 10800,
+        "exec": "~/.config/waybar/updatecheck.sh",
+        "return-type": "json",
+        "exec-if": "exit 0",
+        "signal": 8
     },
     "custom/mark": {
-      "format": "",
-      "tooltip": false
+        "format": "",
+        "tooltip": false
     },
     "custom/hyprkill": {
-      "format": "{}",
-      "interval": "once",
-      "exec": "echo '󰅙\nKill clients using hyrpctl kill'",
-      "on-click": "sleep 1 && hyprctl kill"
+        "format": "{}",
+        "interval": "once",
+        "exec": "echo '󰅙\nKill clients using hyrpctl kill'",
+        "on-click": "sleep 1 && hyprctl kill"
     },
-"idle_inhibitor": {
-      "format": "{icon}",
-      "tooltip-format-activated": "Idle Inhibitor is active",
-      "tooltip-format-deactivated": "Idle Inhibitor is not active",
-      "format-icons": {
-        "activated": "󰔡",
-        "deactivated": "󰔢"
-      }
+    "idle_inhibitor": {
+        "format": "{icon}",
+        "tooltip-format-activated": "Idle Inhibitor is active",
+        "tooltip-format-deactivated": "Idle Inhibitor is not active",
+        "format-icons": {
+            "activated": "󰔡",
+            "deactivated": "󰔢"
+        }
     }
-  }
+}
