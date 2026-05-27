@@ -9,7 +9,9 @@ the other half actionable, split it.
 Verify both MCP servers are reachable before doing anything else.
 
 - Bash: `curl -s http://localhost:3111/agentmemory/health`
-- Augment: run a trivial natural language query to confirm it responds
+- Augment: load the schema via ToolSearch (`select:mcp__augment-context-engine__codebase-retrieval`),
+  then run a trivial natural language query to confirm it responds. Call it directly in all subsequent
+  steps — never route Augment queries through sub-agents.
 
 If either fails, output exactly this and stop:
 
@@ -49,8 +51,10 @@ build and maintain this table as you process each commit in order:
 
 Finalize the table before moving to extraction.
 
-**Commit message:** use it to scope lessons if present — a pattern solving a
-narrow problem may not generalize. If absent, infer intent from the diff shape.
+**Commit message:** use it to scope lessons if it carries meaningful information
+about the change — a pattern solving a narrow problem may not generalize. If
+the message is absent or carries no semantic information about the change, infer
+intent from the diff shape.
 
 ---
 
@@ -69,6 +73,13 @@ names an anti-pattern. These are the highest-signal lessons.
 | State and async | Loading states, tri-state booleans, guards |
 | Data | Fetching, filtering, pagination, ID-based hydration |
 | UI | Flex/grid rules, prop design, conditional rendering |
+
+For any moved, renamed, or newly created file, run `ls` on the file's parent,
+grandparent, and further ancestors until you reach a level where the directory
+names make the organizing principle obvious. Read what else lives at each level.
+A good placement rule explains the whole visible structure, not just the one
+file that changed — if the rule only describes one folder, it is probably still
+an instance of a more general rule waiting to be written.
 
 ---
 
@@ -89,11 +100,27 @@ Example for a lesson about type casting:
 
 **Confidence levels:**
 
-| Level | Criteria |
-|-------|----------|
-| HIGH | 5+ distinct snippets across queries, OR 2+ snippets AND the diff contains an explicit removal/replacement of the wrong pattern |
-| MEDIUM | 1–2 snippets, OR 0 snippets but the diff contains an explicit removal/replacement |
-| LOW | 0 relevant snippets, pattern introduced fresh, no comparison point |
+Augment verification is **mandatory** for any confidence above LOW. Diff evidence
+(removals, replacements) is supporting signal only — it cannot substitute for
+independent Augment confirmation.
+
+| Level  | Criteria |
+|--------|----------|
+| HIGH   | 5+ distinct snippets across Augment queries confirming the pattern exists broadly in the codebase. Diff evidence is supporting signal only — it cannot substitute for Augment confirmation. |
+| MEDIUM | 2–4 snippets from Augment queries, OR 1 snippet AND an explicit removal/replacement in the diff. Diff-only evidence with 0 Augment results = LOW regardless of how clear the correction is. |
+| LOW    | 0–1 Augment snippets. Pattern may be valid but lacks independent codebase confirmation. |
+
+**For structural lessons** (folder placement, file naming, region conventions,
+file-to-folder conversions), Augment semantic search is insufficient alone.
+Also run a targeted bash search to confirm frequency:
+
+```bash
+find . -type f \( -name "*.ts" -o -name "*.tsx" \) | \
+  xargs grep -l "[pattern]" 2>/dev/null | head -20
+```
+
+Structural lesson confidence requires both Augment signal AND grep confirmation
+of at least 3 matching files. Without grep, cap at LOW regardless of Augment results.
 
 For multi-commit input, cross-commit recurrence overrides the above:
 2+ commits → elevate one level. 3+ commits → always HIGH.
@@ -136,6 +163,8 @@ Evidence: [one concrete example from the diff]
   never saw this commit
 - If the rule contains "and" connecting two independent instructions, split it
   into two lessons
+- For structural rules: ask "would a reader know exactly where to place a new
+  file without asking a follow-up?" If not, generalize until they would
 - Use the most natural form:
   - Behavioral: "When [situation], always/never [action] because [reason]"
   - Structural: "Files/regions that [condition] belong in [location] because [reason]"
