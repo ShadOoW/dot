@@ -1,26 +1,52 @@
 {
-  "enabledPlugins": {
-    "lua-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
-    "backend-development@claude-code-workflows": true,
-    "comprehensive-review@claude-code-workflows": true,
-    "javascript-typescript@claude-code-workflows": true,
-    "agentmemory@agentmemory": true
+  "enabledPlugins" : {
+    "agentmemory@agentmemory" : true,
+    "backend-development@claude-code-workflows" : true,
+    "comprehensive-review@claude-code-workflows" : true,
+    "javascript-typescript@claude-code-workflows" : true,
+    "lua-lsp@claude-plugins-official" : true,
+    "typescript-lsp@claude-plugins-official" : true
   },
-  "extraKnownMarketplaces": {
-    "claude-code-workflows": {
-      "source": {
-        "source": "github",
-        "repo": "wshobson/agents"
+  "extraKnownMarketplaces" : {
+    "agentmemory" : {
+      "source" : {
+        "repo" : "rohitg00\/agentmemory",
+        "source" : "github"
       }
     },
-    "agentmemory": {
-      "source": {
-        "source": "github",
-        "repo": "rohitg00/agentmemory"
+    "claude-code-workflows" : {
+      "source" : {
+        "repo" : "wshobson\/agents",
+        "source" : "github"
       }
     }
   },
-  "skipDangerousModePermissionPrompt": true,
-  "theme": "dark-ansi"
+  "hooks" : {
+    "Notification" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' notification # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "Stop" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' stop # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ]
+  },
+  "skipDangerousModePermissionPrompt" : true,
+  "theme" : "dark-ansi"
 }
