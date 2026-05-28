@@ -107,22 +107,71 @@ A good placement rule explains the whole visible structure, not just the one
 file that changed — if the rule only describes one folder, it is probably still
 an instance of a more general rule waiting to be written.
 
+## ⛔ DROP ACCOUNTING — write this block now, before running any Augment queries
+
+Every pattern you identified but chose NOT to extract as a candidate must be listed
+here. This is a checkpoint: do not proceed to Step 3 until this block is written.
+
+```
+Dropped: [pattern description] — [one-line reason: too narrow / consequence of another candidate / not generalizable / etc.]
+```
+
+If you drop nothing, write `Dropped: none`. A silent discard is a bug in the process.
+
 ---
 
 ## 3. Assess confidence via Augment
 
-For every candidate, run **3 Augment queries with different phrasings**.
-Request 5 results per query. Collect all snippets before assessing.
+**Process candidates one at a time in this exact loop:**
+For each candidate:
+1. Run its 3 queries
+2. Show its confidence table immediately (format below)
+3. State its confidence level
+4. Move to the next candidate
 
-Example for a lesson about type casting:
-- Query 1: `"as unknown as type cast TypeScript"`
-- Query 2: `"double cast force type assertion"`
-- Query 3: `"type error wrong source fix"`
+Do not batch Augment queries across multiple candidates. A snippet found while
+querying for candidate A may not be counted toward candidate B's confidence table,
+even if it is relevant — run fresh queries for each candidate.
+
+For every candidate, run **3 Augment queries from conceptually different angles**.
+The three angles must be distinct entry points into the same idea — not synonym
+rotation. Use these three frames:
+
+1. **The pattern** — what you are looking for (positive form)
+2. **The anti-pattern** — what was removed or replaced (negative form / old way)
+3. **A structural or domain consequence** — what breaks or appears elsewhere when
+   the rule is followed or violated
+
+Example for a lesson about event order folder placement:
+- Query 1 (pattern): `"Event order folder scope entity primary placement"`
+- Query 2 (anti-pattern): `"order file placed under wrong domain folder moved renamed"`
+- Query 3 (consequence): `"createTemplate Unit scope folder Productivity"`
+
+**Before assessing confidence, show this table for every candidate:**
+
+```
+Candidate: [title]
+| # | Angle        | Query                          | Snippets |
+|---|--------------|--------------------------------|----------|
+| 1 | pattern      | "..."                          | N        |
+| 2 | anti-pattern | "..."                          | N        |
+| 3 | consequence  | "..."                          | N        |
+Total distinct snippets: N  →  [HIGH / MEDIUM / LOW]
+```
+
+Snippets must be spread across different queries to count. **5 snippets from
+query 1 and 0 from queries 2 and 3 do NOT qualify for HIGH** — that indicates
+one narrow cluster, not broad confirmation.
 
 **If a query returns 0 or irrelevant results:**
-1. Rephrase with different terminology and retry once
+1. Rephrase with different terminology and retry once, logging both attempts:
+   ```
+   Failed: "[original query]" → 0 results
+   Retry:  "[rephrased query]" → N results
+   ```
 2. If still no results, note the failed query and continue with remaining results
 3. Never mark a lesson UNVERIFIED without having tried at least 3 distinct queries
+4. "No retry attempted" is not acceptable output
 
 **Confidence levels:**
 
@@ -132,7 +181,7 @@ independent Augment confirmation.
 
 | Level  | Criteria |
 |--------|----------|
-| HIGH   | 5+ distinct snippets across Augment queries confirming the pattern exists broadly in the codebase. Diff evidence is supporting signal only — it cannot substitute for Augment confirmation. |
+| HIGH   | 5+ distinct snippets spread across at least 2 of the 3 Augment queries. Diff evidence is supporting signal only. |
 | MEDIUM | 2–4 snippets from Augment queries, OR 1 snippet AND an explicit removal/replacement in the diff. Diff-only evidence with 0 Augment results = LOW regardless of how clear the correction is. |
 | LOW    | 0–1 Augment snippets. Pattern may be valid but lacks independent codebase confirmation. |
 
@@ -175,7 +224,11 @@ Evidence: [one concrete example from the diff]
 |-------|-------------|
 | `frontend` | app/client/web specific — React, MUI, Redux |
 | `backend` | sms/server specific — Parse, Node, API design |
-| `shared` | Applies across both layers |
+| `shared` | Applies to files in more than one top-level project (app/, sms/, lib/, doc/) |
+
+**Layer decision test:** Does this rule apply to files under more than one top-level
+project directory? If yes → `shared`. If the rule only makes sense in one project's
+context even when the TypeScript pattern looks similar → use the more specific layer.
 
 | Scope | When to use |
 |-------|-------------|
@@ -185,6 +238,7 @@ Evidence: [one concrete example from the diff]
 | `domain-model` | How orders/events/classes are represented — relevant everywhere |
 
 **Format constraints:**
+- Title must be 3–5 words. Count before presenting — reword if outside that range.
 - Rule must be actionable when read cold, 6 months from now, by someone who
   never saw this commit
 - If the rule contains "and" connecting two independent instructions, split it
@@ -200,6 +254,12 @@ Evidence: [one concrete example from the diff]
 ---
 
 ## 5. Dedup
+
+**Always write an explicit result block, even when trivial:**
+```
+Step 5 — Dedup: Store empty — all candidates → ➕ NEW
+```
+or list each candidate's match result individually.
 
 Check every candidate against the loaded lessons list. Apply the first match:
 
@@ -238,16 +298,19 @@ Output findings in this order. Never truncate content.
 
 **New lessons** (HIGH and MEDIUM only — see LOW handling below):
 
+Lesson header format: `[N] {CONFIDENCE} · {layer} · {scope}` — append ` [enforce]` when intent is enforce.
+
 ```
-[N] HIGH · frontend · react
-Title: Region MODEL for store hydration only
-Rule:  #region MODEL is reserved exclusively for bring*/selector calls that load
-       domain objects from the Redux store. Never use it for prop destructuring
-       or generic setup.
+[N] HIGH · frontend · react [enforce]
+Title:    Region MODEL for store hydration only          ← verify 3–5 words
+Rule:     #region MODEL is reserved exclusively for bring*/selector calls that load
+          domain objects from the Redux store. Never use it for prop destructuring
+          or generic setup.
 Evidence: Helder moved generic setup out of MODEL in the requirement controller.
-Format:  [v1] {layer: frontend} {scope: react} {confidence: high} {intent: enforce}? {source: BRC-8574}
-Augment: 4 snippets across 3 queries confirming this pattern
-Source:  removal/replacement
+Format:   [v1] {layer: frontend} {scope: react} {confidence: high} {intent: enforce} {source: BRC-8574}
+Augment:  4 snippets across 3 queries confirming this pattern
+Grep:     [structural lessons only — file count and command used]
+Source:   removal/replacement | repeated | single-instance | pre-existing
 ```
 
 **Strengthened:**
@@ -267,6 +330,11 @@ Source:  removal/replacement
 
 **Contradictions:** already resolved above — show final state only
 
+**Dropped candidates** (from Step 2 accounting — listed here for visibility):
+```
+Dropped: [description] — [reason]
+```
+
 **LOW confidence watchlist:**
 These were seen once with no verification. Not saved now as individual lessons.
 Will be re-evaluated by review-lessons — enforced entries are promoted regardless of recurrence.
@@ -281,7 +349,8 @@ review-lessons can read it when promoting entries later.
 
 **Summary:**
 ```
-New:    N (X high, Y medium)
+New:       N (X high, Y medium, Z low)
+Enforced:  E of the above (counted within their confidence bucket, not separately)
 Strengthened: M
 Revisions:    P
 Watchlisted:  Q
