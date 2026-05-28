@@ -30,18 +30,20 @@ Applying lessons by combination:
 
 ## 0. Preflight
 
-Verify both MCP servers are reachable before doing anything else.
+Verify all three prerequisites before doing anything else.
 
 - Bash: `curl -s http://localhost:3111/agentmemory/health`
 - Augment: load the schema via ToolSearch (`select:mcp__augment-context-engine__codebase-retrieval`),
-  then run a trivial natural language query to confirm it responds. Call it directly in all subsequent
-  steps — never route Augment queries through sub-agents.
+  then run a trivial natural language query to confirm it responds.
+  The parent never calls Augment inline after this — step 3 sub-agents and the
+  step 6c adversarial agent call it independently in their own context windows.
+- Bash: `cat ~/.claude/commands/challenge-learning.md > /dev/null && echo "OK" || echo "MISSING"`
 
-If either fails, output exactly this and stop:
+If any check fails, output exactly this and stop:
 
 ```
-STOPPED: [agentmemory / Augment] is not reachable.
-Fix: [run 'agentmemory' in terminal / restart session]
+STOPPED: [agentmemory / Augment / challenge-learning.md] is not reachable.
+Fix: [run 'agentmemory' in terminal / restart session / run: cd ~/code/dotfiles && stow packages/claude]
 ```
 
 ---
@@ -120,94 +122,128 @@ If you drop nothing, write `Dropped: none`. A silent discard is a bug in the pro
 
 ---
 
-## 3. Assess confidence via Augment
+## 3. Assess confidence — parallel sub-agents
 
-**Process candidates one at a time in this exact loop:**
-For each candidate:
-1. Run its 3 queries
-2. Show its confidence table immediately (format below)
-3. State its confidence level
-4. Move to the next candidate
+**Do not run Augment queries inline.** Raw snippet content must never accumulate
+in the parent context. Dispatch ALL candidates in a **single message** as parallel
+Agent calls (`subagent_type: "Explore"`).
 
-Do not batch Augment queries across multiple candidates. A snippet found while
-querying for candidate A may not be counted toward candidate B's confidence table,
-even if it is relevant — run fresh queries for each candidate.
+Each sub-agent handles exactly one candidate and returns ~300 tokens of structured
+output. The parent never sees raw snippets.
 
-For every candidate, run **3 Augment queries from conceptually different angles**.
-The three angles must be distinct entry points into the same idea — not synonym
-rotation. Use these three frames:
+### Build each sub-agent prompt
 
-1. **The pattern** — what you are looking for (positive form)
-2. **The anti-pattern** — what was removed or replaced (negative form / old way)
-3. **A structural or domain consequence** — what breaks or appears elsewhere when
-   the rule is followed or violated
+Construct one prompt per candidate. Each prompt has three parts in order:
 
-Example for a lesson about event order folder placement:
-- Query 1 (pattern): `"Event order folder scope entity primary placement"`
-- Query 2 (anti-pattern): `"order file placed under wrong domain folder moved renamed"`
-- Query 3 (consequence): `"createTemplate Unit scope folder Productivity"`
+**Part A — Candidate**
+State: what the pattern is, what was removed/replaced, one concrete diff example.
 
-**Before assessing confidence, show this table for every candidate:**
+**Part B — Diff excerpt**
+Paste only the diff hunks relevant to this candidate. Omit unrelated hunks.
+
+**Part C — Copy these instructions verbatim:**
 
 ```
+You are assessing confidence for one lesson candidate from a commit diff.
+You have full access to Augment and bash tools.
+
+Step 1 — Load Augment:
+ToolSearch("select:mcp__augment-context-engine__codebase-retrieval"), then run
+a trivial query to confirm it responds.
+
+Step 2 — Run 3 queries from conceptually different angles:
+1. The pattern      — positive form: what you are looking for
+2. The anti-pattern — negative form: what was removed / the old way
+3. Structural/domain consequence — what breaks or appears elsewhere when the
+   rule is followed or violated
+
+Snippets must spread across different queries to count. 5 snippets from query 1
+and 0 from queries 2 and 3 does NOT qualify for HIGH — that is one narrow cluster.
+
+If a query returns 0 or irrelevant results, rephrase and retry once. Log both:
+  Failed: "[original query]" → 0 results
+  Retry:  "[rephrased query]" → N results
+If still no results after retry, note the failed query and continue with the
+remaining queries. Never mark a lesson UNVERIFIED without having tried all
+3 distinct queries. "No retry attempted" is not acceptable output.
+
+Step 3 — Structural check (only for folder placement, file naming, region
+conventions, file-to-folder conversions):
+  find . -type f \( -name "*.ts" -o -name "*.tsx" \) | \
+    xargs grep -l "[key term]" 2>/dev/null | head -20
+  Structural confidence requires Augment signal AND grep ≥ 3 matching files.
+
+Confidence levels:
+  HIGH   — 5+ distinct snippets across ≥ 2 queries. Diff evidence = supporting
+            signal only, cannot substitute. Structural: also requires grep ≥ 3 files.
+  MEDIUM — 2–4 snippets, OR 1 snippet AND an explicit removal/replacement in diff.
+            Diff-only with 0 Augment snippets → LOW regardless.
+  LOW    — 0–1 Augment snippets.
+
+Pre-existing convention: if Augment returns 5+ snippets for a pattern NOT
+touched by the diff, flag as "pre-existing" in output.
+
+Layer:
+  shared   — applies across app/, sms/, doc/ top-level projects
+  frontend — app/client/web specific (React, MUI, Redux)
+  backend  — sms/server specific (Parse, Node, API)
+
+Scope:
+  react        — React lifecycle, hooks, JSX
+  parse        — Parse Server, Piece/Recorded/Argument types
+  ts-universal — any TypeScript codebase, not domain-specific
+  domain-model — depends on Template/Order/Scope/Unit domain meaning
+
+RETURN THIS EXACT FORMAT — NOTHING ELSE. Do not include raw snippet content.
+
 Candidate: [title]
-| # | Angle        | Query                          | Snippets |
-|---|--------------|--------------------------------|----------|
-| 1 | pattern      | "..."                          | N        |
-| 2 | anti-pattern | "..."                          | N        |
-| 3 | consequence  | "..."                          | N        |
+| # | Angle        | Query                          | Snippets | Summary (1 line)      |
+|---|--------------|--------------------------------|----------|-----------------------|
+| 1 | pattern      | "..."                          | N        | [what it confirmed]   |
+| 2 | anti-pattern | "..."                          | N        | [what it confirmed]   |
+| 3 | consequence  | "..."                          | N        | [what it confirmed]   |
 Total distinct snippets: N  →  [HIGH / MEDIUM / LOW]
+[If failed + retried, include:]
+Failed: "[original query]" → 0 results
+Retry:  "[rephrased query]" → N results
+[Structural candidates only, include:]
+Grep: [exact command] → N matching files
+[If pre-existing, include:]
+Pre-existing: flagged — 5+ snippets on pattern not touched by this diff
+
+Confidence: [HIGH / MEDIUM / LOW]
+
+Lesson:
+[v1] {layer: X} {scope: Y} {confidence: Z} {intent: enforce}? {source: [hash]}
+Title: [3–5 words — count before writing]
+Rule:  [full actionable instruction — reads cold 6 months from now]
+Evidence: [one concrete example from the diff]
 ```
 
-Snippets must be spread across different queries to count. **5 snippets from
-query 1 and 0 from queries 2 and 3 do NOT qualify for HIGH** — that indicates
-one narrow cluster, not broad confirmation.
+### After all sub-agents return
 
-**If a query returns 0 or irrelevant results:**
-1. Rephrase with different terminology and retry once, logging both attempts:
-   ```
-   Failed: "[original query]" → 0 results
-   Retry:  "[rephrased query]" → N results
-   ```
-2. If still no results, note the failed query and continue with remaining results
-3. Never mark a lesson UNVERIFIED without having tried at least 3 distinct queries
-4. "No retry attempted" is not acceptable output
+Collect the structured outputs. Do not re-run any Augment queries in the parent.
 
-**Confidence levels:**
+Output a compact audit table before proceeding — required for every run:
 
-Augment verification is **mandatory** for any confidence above LOW. Diff evidence
-(removals, replacements) is supporting signal only — it cannot substitute for
-independent Augment confirmation.
+| Candidate | Confidence | Total snippets | Source type |
+|-----------|------------|----------------|-------------|
+| [title]   | HIGH       | N              | removal/replacement |
 
-| Level  | Criteria |
-|--------|----------|
-| HIGH   | 5+ distinct snippets spread across at least 2 of the 3 Augment queries. Diff evidence is supporting signal only. |
-| MEDIUM | 2–4 snippets from Augment queries, OR 1 snippet AND an explicit removal/replacement in the diff. Diff-only evidence with 0 Augment results = LOW regardless of how clear the correction is. |
-| LOW    | 0–1 Augment snippets. Pattern may be valid but lacks independent codebase confirmation. |
+Do not proceed to Step 4 without this table.
 
-**For structural lessons** (folder placement, file naming, region conventions,
-file-to-folder conversions), Augment semantic search is insufficient alone.
-Also run a targeted bash search to confirm frequency:
+Apply cross-commit recurrence adjustment (only if input had multiple commits):
+- Same candidate seen in 2 commits → elevate its confidence one level
+- Same candidate seen in 3+ commits → always HIGH
 
-```bash
-find . -type f \( -name "*.ts" -o -name "*.tsx" \) | \
-  xargs grep -l "[pattern]" 2>/dev/null | head -20
-```
-
-Structural lesson confidence requires both Augment signal AND grep confirmation
-of at least 3 matching files. Without grep, cap at LOW regardless of Augment results.
-
-For multi-commit input, cross-commit recurrence overrides the above:
-2+ commits → elevate one level. 3+ commits → always HIGH.
-
-**Pre-existing convention check:** if Augment returns 5+ snippets for a pattern
-not touched by this commit, it is already an established convention:
-- Already in store → strengthen, do not propose as new
-- Not in store → propose as HIGH confidence, note it is pre-existing
+Proceed directly to Step 4.
 
 ---
 
 ## 4. Lesson format
+
+Sub-agents from step 3 have already drafted lessons. Verify each draft meets
+the constraints below; adjust wording only if a constraint is violated.
 
 Every lesson must be saved using this exact format. No exceptions.
 
@@ -238,7 +274,7 @@ context even when the TypeScript pattern looks similar → use the more specific
 | `domain-model` | How orders/events/classes are represented — relevant everywhere |
 
 **Format constraints:**
-- Title must be 3–5 words. Count before presenting — reword if outside that range.
+- Title must be 3–5 words. Count before presenting. Reword immediately if outside range — do not explain the constraint, just fix it.
 - Rule must be actionable when read cold, 6 months from now, by someone who
   never saw this commit
 - If the rule contains "and" connecting two independent instructions, split it
@@ -357,10 +393,101 @@ Watchlisted:  Q
 Reinforcement ratio: M/(N+M) = R%
 ```
 
-**Stop here.** Wait for content approval. Nothing executes until section 7.
+---
 
-- To approve all: "save"
+## 6c. Adversarial review (automatic)
+
+After outputting the Summary block, immediately spawn adversarial reviewers in parallel.
+Do not wait for user input — this runs before the stop.
+
+**Step 1 — Read the challenge instructions:**
+
+```bash
+cat ~/.claude/commands/challenge-learning.md
+```
+
+**Step 2 — Assemble per-lesson prompts.** Build one prompt per lesson. Each prompt has
+two parts. Pull query strings and snippet counts from the step 3 sub-agent outputs.
+
+**Part 1 — Single-lesson context block** (one lesson per sub-agent — do not bundle):
+
+```
+## Proposed lessons
+
+LESSON [N]
+Header:    [N] {CONFIDENCE} · {layer} · {scope} [enforce?]
+Title:     [title]
+Rule:      [full rule text]
+Evidence:  [evidence field]
+Diff excerpt: [the specific ± diff lines cited in Evidence — not the full diff, paste only the relevant before/after lines]
+Format:    [format line]
+Queries:
+  Q1 ([angle]): "[query string]" → [N] snippets
+  Q2 ([angle]): "[query string]" → [N] snippets
+  Q3 ([angle]): "[query string]" → [N] snippets
+Grep:      [command and result — structural lessons only]
+Source:    [removal/replacement | repeated | single-instance | pre-existing]
+
+## Dropped candidates
+(none — reviewed by separate sub-agent)
+
+## Watchlist
+(none — reviewed by separate sub-agent)
+
+---
+
+```
+
+**Part 2** — the full content read from `challenge-learning.md` in step 1.
+
+Also build one prompt for dropped candidates and watchlist (skip if both are empty):
+
+```
+## Proposed lessons
+(none — reviewed by per-lesson sub-agents)
+
+## Dropped candidates
+
+DROPPED: [description] — [reason]
+[repeat for each]
+
+## Watchlist
+
+WATCHLIST: "[title]" {intent: enforce}? — [description]
+[repeat for each]
+
+---
+
+```
+Plus the full challenge-learning.md content.
+
+**Step 3 — Dispatch all reviewers in a single message** (one sub-agent per lesson,
+plus one for dropped/watchlist if needed). Each lesson sub-agent challenges exactly
+one lesson and returns one verdict block.
+
+**Step 4 — Aggregate verdicts** in lesson order. Append combined output below:
+
+```
+---
+## Adversarial Review
+[verdict block for lesson 1]
+[verdict block for lesson 2]
+...
+[dropped/watchlist review if applicable]
+---
+```
+
+The parent sees only the sub-agents' final verdict blocks — not their intermediate queries.
+
+---
+
+**Stop here.** Review the proposed lessons and adversarial verdicts above. Nothing executes until section 7.
+
+- To approve all confirmed lessons: "save"
 - To approve selectively: "save 1, 3, 5"
+- To override an adversarial verdict: "override [N] [your decision]"
+- To resolve an UNRESOLVED verdict: "resolve [N] [your reasoning]"
+  Records the resolution and includes the lesson in the next save batch.
 - To promote a LOW lesson immediately: "promote [title]"
   Saves at LOW confidence as a regular lesson — applied based on evidence strength.
 - To enforce a LOW lesson as a team directive: "enforce [title]"
@@ -369,6 +496,11 @@ Reinforcement ratio: M/(N+M) = R%
   evidence justifies saving despite LOW; use enforce when it is a team decision
   independent of evidence.
 - To reword before saving: edit inline, then confirm
+
+**Layer/scope conflict:** If the adversarial reviewer proposes a different layer or
+scope tag than the step 3 sub-agent assigned, the challenger's change requires grep
+evidence that the pattern is absent from the other project context. A tag change
+without such evidence is not adopted — the step 3 tag stands.
 
 ---
 
@@ -383,7 +515,7 @@ Ready to execute:
   REVISIONS (P):  mem_xxx → 'new title'
   WATCHLIST:      N entries
 
-Confirm with 'save' or 'save title1, title3'
+Confirm with 'save' or 'save 1, 3'
 ```
 
 On confirmation, execute in this order:
