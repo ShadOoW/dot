@@ -3,6 +3,30 @@ verdict for each one, then wait for approval before changing anything.
 
 ---
 
+## Memory schema
+
+Lessons stored in agentmemory follow this format:
+
+[v1] {layer} {scope} {confidence} {intent?} {source}
+
+- layer: `frontend` | `backend` | `shared`
+- scope: `react` | `parse` | `ts-universal` | `domain-model`
+- confidence: `high` | `medium` | `low` — how broadly confirmed the pattern is
+  in the codebase via Augment queries and grep
+- intent: `enforce` (optional) — when present, this is a deliberate team
+  decision to establish a standard, not an observation of existing practice.
+  The codebase may not yet be uniform. Apply as a hard rule in all new code.
+  Flag existing violations as technical debt to fix.
+- source: BRC-XXXX ticket or commit hash
+
+Applying lessons by combination:
+- `high` or `medium`, no intent → strong guidance, apply consistently
+- `low`, no intent → suggestion, mention uncertainty if relevant
+- any confidence + `{intent: enforce}` → hard rule, never deviate,
+  flag violations in code you touch
+
+---
+
 ## 0. Preflight
 
 Verify both MCP servers are reachable before doing anything else.
@@ -30,8 +54,9 @@ curl -s http://localhost:3111/agentmemory/memories
 Read every lesson fully, noting the saved date of each where available.
 
 **Watchlist:** check for any entry with `type="watchlist"`. If found, extract
-each description and add it to the evaluation queue — these will be tested
-against Augment to determine if they can be promoted to `type="pattern"`.
+each description and note whether it carries {intent: enforce}. Add to the
+evaluation queue — entries with {intent: enforce} are promoted regardless of
+Augment results.
 
 Output before proceeding:
 
@@ -62,9 +87,14 @@ Example for a theme about type design:
 2. If still no results, note the failed query and continue
 3. Never mark a lesson UNVERIFIED without having tried at least 3 distinct queries
 
-**Watchlist promotion:** for each watchlisted entry, run 3 queries. If found in
-2+ snippets across queries → add to evaluation queue as HIGH confidence.
-If still 0 results → keep in watchlist, do not promote yet.
+**Watchlist promotion:**
+- Entry carries {intent: enforce} → promote immediately to type="pattern"
+  with {intent: enforce} in the saved content, regardless of Augment results.
+  Output: ✅ PROMOTE (enforced) — "title" — team directive, saved regardless of evidence
+- Entry has no intent flag → run 3 Augment queries. Promote if found in 2+
+  snippets. Keep watching if still 0 results.
+  Output: ✅ PROMOTE — "title" — found in X snippets
+          ⏳ KEEP WATCHING — "title" — still 0 results
 
 Output per theme:
 
@@ -83,6 +113,11 @@ Theme 1: [name]
 Apply these four criteria to every lesson. Combine them into one final verdict.
 
 **Accuracy** — compare against Augment snippets from section 2:
+
+**`{intent: enforce}` exception:** if a lesson carries `{intent: enforce}`, skip
+accuracy evaluation entirely. It is a team decision, not an observation — always
+verdict ✅ KEEP regardless of Augment evidence, age, or codebase uniformity.
+Never verdict ❌ DELETE or 🔍 UNVERIFIED on accuracy grounds for an enforced lesson.
 
 | Augment evidence | Verdict |
 |-----------------|---------|
@@ -177,6 +212,7 @@ commit evidence — do not format as ready-to-save rules. List as observations:
 
 **Watchlist promotions:**
 ```
+✅ PROMOTE (enforced) — "title" — team directive, no Augment confirmation needed
 ✅ PROMOTE — "title" — found in X snippets, ready to save as pattern
 ⏳ KEEP WATCHING — "title" — still 0 results, not promoted
 ```
@@ -215,11 +251,11 @@ curl -s -X POST http://localhost:3111/agentmemory/forget \
 **2. Revisions** (delete old entry first, then save new):
 `forget(mem_xxx)` → `memory_save(type="pattern", content="[approved rewrite]")`
 
-**3. Watchlist promotions** (delete old watchlist entry, save promoted lesson,
-re-save remaining unwatchlisted entries):
-`forget(mem_watchlist_id)` →
-`memory_save(type="pattern", content="[promoted lesson]")` →
-`memory_save(type="watchlist", content=[remaining entries])`
+**3. Watchlist promotions** (delete old watchlist entry, save promoted lesson
+   with {intent: enforce} if flagged, re-save remaining entries):
+   forget(mem_watchlist_id) →
+   memory_save(type="pattern", content="[promoted lesson with intent tag if enforced]")
+   memory_save(type="watchlist", content=[remaining entries, preserving their intent flags])
 
 **4. New watchlist entries** (from approved gaps):
 `memory_save(type="watchlist", content="[description]")`

@@ -4,6 +4,30 @@ the other half actionable, split it.
 
 ---
 
+## Memory schema
+
+Lessons stored in agentmemory follow this format:
+
+[v1] {layer} {scope} {confidence} {intent?} {source}
+
+- layer: `frontend` | `backend` | `shared`
+- scope: `react` | `parse` | `ts-universal` | `domain-model`
+- confidence: `high` | `medium` | `low` — how broadly confirmed the pattern is
+  in the codebase via Augment queries and grep
+- intent: `enforce` (optional) — when present, this is a deliberate team
+  decision to establish a standard, not an observation of existing practice.
+  The codebase may not yet be uniform. Apply as a hard rule in all new code.
+  Flag existing violations as technical debt to fix.
+- source: BRC-XXXX ticket or commit hash
+
+Applying lessons by combination:
+- `high` or `medium`, no intent → strong guidance, apply consistently
+- `low`, no intent → suggestion, mention uncertainty if relevant
+- any confidence + `{intent: enforce}` → hard rule, never deviate,
+  flag violations in code you touch
+
+---
+
 ## 0. Preflight
 
 Verify both MCP servers are reachable before doing anything else.
@@ -30,7 +54,9 @@ Fetch all existing lessons:
 curl -s http://localhost:3111/agentmemory/memories
 ```
 
-Read every lesson fully. Then output this block before proceeding:
+Read every lesson fully. Check for any existing watchlist entry — if one covers
+the same topic as a candidate from this diff, prefer tagging or strengthening it
+over creating a duplicate. Then output this block before proceeding:
 
 ```
 Existing lessons cover: [up to 5 themes]
@@ -137,7 +163,7 @@ not touched by this commit, it is already an established convention:
 Every lesson must be saved using this exact format. No exceptions.
 
 ```
-[v1] {layer: [frontend|backend|shared]} {scope: [react|parse|ts-universal|domain-model]} {confidence: [high|medium]} {source: [BRC-XXXX or commit hash]}
+[v1] {layer: [frontend|backend|shared]} {scope: [react|parse|ts-universal|domain-model]} {confidence: [high|medium|low]} {intent: enforce}? {source: [BRC-XXXX or commit hash]}
 Title: [3–5 words]
 Rule: [the full actionable instruction]
 Evidence: [one concrete example from the diff]
@@ -219,7 +245,7 @@ Rule:  #region MODEL is reserved exclusively for bring*/selector calls that load
        domain objects from the Redux store. Never use it for prop destructuring
        or generic setup.
 Evidence: Helder moved generic setup out of MODEL in the requirement controller.
-Format:  [v1] {layer: frontend} {scope: react} {confidence: high} {source: BRC-8574}
+Format:  [v1] {layer: frontend} {scope: react} {confidence: high} {intent: enforce}? {source: BRC-8574}
 Augment: 4 snippets across 3 queries confirming this pattern
 Source:  removal/replacement
 ```
@@ -243,10 +269,15 @@ Source:  removal/replacement
 
 **LOW confidence watchlist:**
 These were seen once with no verification. Not saved now as individual lessons.
-Will be re-evaluated next time a similar pattern appears.
+Will be re-evaluated by review-lessons — enforced entries are promoted regardless of recurrence.
 
-List each with title and one-line description. Save all as one entry:
-`memory_save(type="watchlist")`
+List each with title, one-line description, and intent flag if applicable:
+- "title" {intent: enforce} — description
+- "title" — description
+
+Save all as one entry: memory_save(type="watchlist")
+The {intent: enforce} flag must be preserved in the watchlist content so
+review-lessons can read it when promoting entries later.
 
 **Summary:**
 ```
@@ -261,7 +292,13 @@ Reinforcement ratio: M/(N+M) = R%
 
 - To approve all: "save"
 - To approve selectively: "save 1, 3, 5"
-- To promote a LOW confidence lesson: "promote [title]"
+- To promote a LOW lesson immediately: "promote [title]"
+  Saves at LOW confidence as a regular lesson — applied based on evidence strength.
+- To enforce a LOW lesson as a team directive: "enforce [title]"
+  Saves with {intent: enforce} — confidence stays LOW but the rule is applied as
+  a hard rule in future sessions regardless of confidence. Use promote when the
+  evidence justifies saving despite LOW; use enforce when it is a team decision
+  independent of evidence.
 - To reword before saving: edit inline, then confirm
 
 ---
@@ -272,7 +309,7 @@ Show a dry run before executing — titles only, full content already approved:
 
 ```
 Ready to execute:
-  SAVES (N):      'title 1', 'title 2'
+  SAVES (N): 'title 1' {intent: enforce}, 'title 2'
   STRENGTHENS (M): mem_xxx 'title'
   REVISIONS (P):  mem_xxx → 'new title'
   WATCHLIST:      N entries
@@ -281,7 +318,8 @@ Confirm with 'save' or 'save title1, title3'
 ```
 
 On confirmation, execute in this order:
-1. Saves: `memory_save(type="pattern")` for each approved lesson
+1. Saves: memory_save(type="pattern") for each — include {intent: enforce}
+   in the content string for any lesson promoted via "enforce [title]"
 2. Strengthens: `lesson-strengthen` for each
 3. Revisions: `forget` old ID → `memory_save` new content
 4. Watchlist: `memory_save(type="watchlist", content=[array of descriptions])`
