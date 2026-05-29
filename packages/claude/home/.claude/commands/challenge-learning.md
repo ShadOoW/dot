@@ -84,7 +84,12 @@ property access — the lesson attributes intent incorrectly.
 ```
 Causality check: [causal / coincidental / unclear]
 If not causal: [what actually caused the change]
+Title accuracy: [accurate / misleading — propose revision]
+Evidence accuracy: [accurate / misleading — propose revision]
 ```
+
+If the rule is sound but Title or Evidence misrepresents the diff, propose
+revised text — don't just downgrade confidence.
 
 ### Attack vector 3 — Generalizability
 
@@ -139,12 +144,22 @@ Only run this vector for lessons tagged `{intent: enforce}`.
 not a ranked list. Absence of documentation does not block enforcement if adoption is universal.
 
 **Check 1 — Adoption rate (run first):**
+
+Define the **applicable scope** — the set of files where this rule could
+plausibly apply. That set is the denominator. State it explicitly before
+grepping; if it is truly the whole codebase, say so.
+
 ```bash
-grep -r "[pattern term]" [relevant paths] --include="*.ts" --include="*.tsx" -l | wc -l
-grep -r "[anti-pattern term]" [relevant paths] --include="*.ts" --include="*.tsx" -l | wc -l
+grep -r "[scope predicate]" [paths] --include="*.ts" --include="*.tsx" -l | wc -l
+grep -r "[anti-pattern term]" [paths] --include="*.ts" --include="*.tsx" -l | wc -l
 ```
-If violations are ≤ 2% of total usages → enforce is justified by universal adoption alone.
-Document absence is not a blocker when adoption is near-total.
+
+If violations are ≤ 2% of applicable usages → enforce justified by adoption.
+
+```
+Applicable scope: [predicate]
+Denominator: N | Violations: M (X% within scope)
+```
 
 **Check 2 — Documentation (additional signal, not required):**
 ```bash
@@ -238,6 +253,10 @@ For each verdict, answer internally:
   changing the underlying rule? If yes, propose the rephrasing — do not reject.
 - For CONFIRMED verdicts: did I genuinely try to find an objection, or did I
   default to confirming because the reasoning looked solid?
+
+**Reword validation:** any Title or Rule you propose must obey the same
+constraints as the original — 3–5 word title, no "and" connecting independent
+instructions (split into two lessons if so), actionable when read cold.
 
 Then output:
 

@@ -194,7 +194,9 @@ Scope:
   ts-universal — any TypeScript codebase, not domain-specific
   domain-model — depends on Template/Order/Scope/Unit domain meaning
 
-RETURN THIS EXACT FORMAT — NOTHING ELSE. Do not include raw snippet content.
+RETURN THIS EXACT FORMAT — NOTHING ELSE. No raw snippets, no narrative
+sections, no "summary" or "recommendation" prose. Target ~300 tokens; if
+over 500, rewrite.
 
 Candidate: [title]
 | # | Angle        | Query                          | Snippets | Summary (1 line)      |
@@ -220,6 +222,13 @@ Rule:  [full actionable instruction — reads cold 6 months from now]
 Evidence: [one concrete example from the diff]
 ```
 
+Report exact snippet counts — never "30+" or "many". For large result sets,
+spot-check the top 10 and report `N (X/10 relevant)`.
+
+For `{layer: shared}`, verify the rule appears in both `app/client/web` AND
+`app/base/web` (and `sms/server` if relevant). For `{layer: frontend}`, still
+spot-check `app/base/web`; if it applies there too, retag as `shared`.
+
 ### After all sub-agents return
 
 Collect the structured outputs. Do not re-run any Augment queries in the parent.
@@ -231,6 +240,9 @@ Output a compact audit table before proceeding — required for every run:
 | [title]   | HIGH       | N              | removal/replacement |
 
 Do not proceed to Step 4 without this table.
+
+If any HIGH lesson reports "N+" instead of an exact count, downgrade to MEDIUM
+until the count is exact.
 
 Apply cross-commit recurrence adjustment (only if input had multiple commits):
 - Same candidate seen in 2 commits → elevate its confidence one level
@@ -286,6 +298,9 @@ context even when the TypeScript pattern looks similar → use the more specific
   - Structural: "Files/regions that [condition] belong in [location] because [reason]"
   - Typing: "[Pattern] is wrong because [reason]; use [alternative] instead"
   - Convention: "[Area] is reserved for [purpose] — never use it for [anti-pattern]"
+
+These constraints apply equally to adversarial rewordings from section 6c.
+A reword that violates them must be re-revised or split before adopting.
 
 ---
 
@@ -478,6 +493,19 @@ one lesson and returns one verdict block.
 ```
 
 The parent sees only the sub-agents' final verdict blocks — not their intermediate queries.
+
+**Step 5 — After aggregating verdicts, emit a "Net to save" block** listing
+the post-adversarial state of each lesson. Any demotion to watchlist must
+appear here — never silently demote between proposal and section 7:
+
+```
+Net to save after adversarial review:
+  [N] "title" — CONFIRMED → save as proposed
+  [N] "title" — DOWNGRADE (HIGH→MEDIUM, scope react→ts-universal)
+  [N] "title" — REMOVE ENFORCE
+  [N] "title" — REJECTED → not saving
+  [N] "title" — DEMOTED to watchlist (was MEDIUM)
+```
 
 ---
 
