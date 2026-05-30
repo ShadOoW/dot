@@ -12,16 +12,12 @@ re-verify claims independently. Never trust a claim you have not verified yourse
 
 ## Memory schema
 
-Lessons stored in agentmemory follow this format:
+Confidence and intent definitions — the full schema is in the LESSON header
+injected above these instructions.
 
-[v1] {layer} {scope} {confidence} {intent?} {source}
-
-- layer: `frontend` | `backend` | `shared`
-- scope: `react` | `parse` | `ts-universal` | `domain-model`
 - confidence: `high` | `medium` | `low`
-- intent: `enforce` (optional) — deliberate team directive, hard rule regardless
-  of confidence. Existing violations are tech debt to fix.
-- source: BRC-XXXX or commit hash
+- intent: `enforce` — hard rule regardless of confidence; existing violations
+  are tech debt. Enforce requires adoption-rate justification (see vector 5).
 
 ---
 
@@ -108,6 +104,8 @@ the rule itself is general. Ask: could a developer in a different codebase apply
 rule without knowing what Template, Order, or Scope mean in this domain? If yes →
 `ts-universal`. Do not downgrade a rule's scope just because the evidence is
 domain-specific — only downgrade if the rule itself requires domain knowledge to apply.
+
+**Different scenario ≠ violation:** If other instances use a different approach because they are a structurally different case (e.g., a sync select vs. an async tree select), that is not a violation of the rule — it is a different situation the rule does not govern. Distinguish "this rule does not apply here" from "this rule is violated here" before citing counter-examples.
 
 ```
 Generalizability: [general / feature-specific / consequence of another lesson]

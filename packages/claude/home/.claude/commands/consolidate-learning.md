@@ -68,8 +68,9 @@ back, capture the objection for the postmortem.
 
 Show a dry run, then save. Order: patterns → strengthens → revisions →
 watchlist (as `type="fact"`). Include `{intent: enforce}` in the content
-string for enforced lessons. After each save, run `memory_smart_search`
-by title and confirm the returned mem ID appears.
+string for enforced lessons. For watchlist entries promoted from a prior session,
+include the original `created_at` date so staleness is visible. After each save,
+run `memory_smart_search` by title and confirm the returned mem ID appears.
 
 ---
 

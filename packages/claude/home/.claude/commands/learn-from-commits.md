@@ -188,6 +188,8 @@ anti-pattern query is fuzzy match, not a count — it does not substitute.
   grep -rnE "[violation regex]" [paths] --include="*.tsx" --include="*.ts" | wc -l
   grep -rnE "[applicable scope]" [paths] --include="*.tsx" --include="*.ts" -l | wc -l
 
+Paths must cover files outside the changed diff — searching only within modified files produces false 0% violation rates.
+
 Enforce holds only when one is true:
   (a) violations ≤ 2% of applicable usages, OR
   (b) rule text scopes to new/touched code with tech-debt count named
@@ -219,9 +221,9 @@ Scope:
   ts-universal — any TypeScript codebase, not domain-specific
   domain-model — depends on Template/Order/Scope/Unit domain meaning
 
-RETURN THIS EXACT FORMAT — NOTHING ELSE. No raw snippets, no narrative
-sections, no "summary" or "recommendation" prose. Target ~300 tokens; if
-over 500, rewrite.
+RETURN THIS EXACT FORMAT — NOTHING ELSE. No raw snippets, no narrative sections,
+no "summary" or "recommendation" prose. Hard limit: 400 tokens. If over limit,
+drop prose — keep the table, Lesson block, and any mandatory grep/enforce lines.
 
 Candidate: [title]
 | # | Angle        | Query                          | Snippets | Summary (1 line)      |
@@ -462,7 +464,9 @@ Header:    [N] {CONFIDENCE} · {layer} · {scope} [enforce?]
 Title:     [title]
 Rule:      [full rule text]
 Evidence:  [evidence field]
-Diff excerpt: [the specific ± diff lines cited in Evidence — not the full diff, paste only the relevant before/after lines]
+Diff excerpt: [the specific ± diff lines cited in Evidence — not the full diff,
+paste only the relevant before/after lines. Hard limit: 40 lines. If the hunk
+is longer, include only the lines the Evidence field directly references.]
 Format:    [format line]
 Queries:
   Q1 ([angle]): "[query string]" → [N] snippets
@@ -504,9 +508,11 @@ WATCHLIST: "[title]" {intent: enforce}? — [description]
 ```
 Plus the full challenge-learning.md content.
 
-**Step 3 — Dispatch all reviewers in a single message** (one sub-agent per lesson,
-plus one for dropped/watchlist if needed). Each lesson sub-agent challenges exactly
-one lesson and returns one verdict block.
+**Step 3 — Dispatch all reviewers in a single message.** Default: one sub-agent
+per lesson. Exception: if 2–3 lessons share the same source file and have
+non-overlapping concerns, assign them to one sub-agent — it already loads Augment
+once and the shared file context costs nothing extra. Each sub-agent returns one
+verdict block per lesson it handles. The dropped/watchlist sub-agent is separate.
 
 **Step 4 — Aggregate verdicts** in lesson order. Append combined output below:
 
