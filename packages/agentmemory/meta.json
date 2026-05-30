@@ -5,5 +5,5 @@
     "void": { "xbps": [] }
   },
   "tags": ["ai", "memory"],
-  "os": ["linux", "darwin"]
+  "os": ["linux", "macos"]
 }

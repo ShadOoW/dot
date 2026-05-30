@@ -57,6 +57,27 @@ function describeTarget(target: string): string {
   }
 }
 
+function printLinkSummary(
+  noun: "home" | "system",
+  counts: { newLinks: number; alreadyCount: number; skipped: number },
+  dryRun: boolean,
+) {
+  const { newLinks, alreadyCount, skipped } = counts;
+  if (dryRun) {
+    logInfo(`Would link ${newLinks} ${noun} file(s)${skipped ? `, ${skipped} blocked` : ""}`);
+  } else if (newLinks === 0 && alreadyCount > 0 && skipped === 0) {
+    logSuccess(`All ${alreadyCount} ${noun} file(s) already in place`);
+  } else if (newLinks > 0) {
+    const extras: string[] = [];
+    if (alreadyCount > 0) extras.push(`${alreadyCount} already`);
+    if (skipped > 0) extras.push(`${skipped} blocked`);
+    const suffix = extras.length ? ` (${extras.join(", ")})` : "";
+    logSuccess(`Linked ${newLinks} new ${noun} file(s)${suffix}`);
+  } else if (skipped > 0) {
+    logError(`No ${noun} files linked: ${skipped} blocked`);
+  }
+}
+
 export async function linkPackage(pkg: string, options: LinkOptions = {}): Promise<boolean> {
   const { init: initOverride, dryRun = false, force = false, ignoreHost = false } = options;
   const pkgDir = join(PACKAGES_DIR, pkg);
@@ -152,19 +173,7 @@ export async function linkPackage(pkg: string, options: LinkOptions = {}): Promi
           totalFailures++;
         }
       }
-      if (dryRun) {
-        logInfo(`Would link ${newLinks} home file(s)${skipped ? `, ${skipped} blocked` : ""}`);
-      } else if (newLinks === 0 && alreadyCount > 0 && skipped === 0) {
-        logSuccess(`All ${alreadyCount} home file(s) already in place`);
-      } else if (newLinks > 0) {
-        const extras: string[] = [];
-        if (alreadyCount > 0) extras.push(`${alreadyCount} already`);
-        if (skipped > 0) extras.push(`${skipped} blocked`);
-        const suffix = extras.length ? ` (${extras.join(", ")})` : "";
-        logSuccess(`Linked ${newLinks} new home file(s)${suffix}`);
-      } else if (skipped > 0) {
-        logError(`No files linked: ${skipped} blocked by existing real files`);
-      }
+      printLinkSummary("home", { newLinks, alreadyCount, skipped }, dryRun);
     }
   }
 
@@ -240,19 +249,7 @@ export async function linkPackage(pkg: string, options: LinkOptions = {}): Promi
         console.log(`  ${colors.green("→")} ${target}`);
         newLinks++;
       }
-      if (dryRun) {
-        logInfo(`Would link ${newLinks} system file(s)${skipped ? `, ${skipped} blocked` : ""}`);
-      } else if (newLinks === 0 && alreadyCount > 0 && skipped === 0) {
-        logSuccess(`All ${alreadyCount} system file(s) already in place`);
-      } else if (newLinks > 0) {
-        const extras: string[] = [];
-        if (alreadyCount > 0) extras.push(`${alreadyCount} already`);
-        if (skipped > 0) extras.push(`${skipped} blocked`);
-        const suffix = extras.length ? ` (${extras.join(", ")})` : "";
-        logSuccess(`Linked ${newLinks} new system file(s)${suffix}`);
-      } else if (skipped > 0) {
-        logError(`No system files linked: ${skipped} blocked`);
-      }
+      printLinkSummary("system", { newLinks, alreadyCount, skipped }, dryRun);
     }
   }
 

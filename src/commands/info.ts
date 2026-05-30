@@ -1,8 +1,9 @@
 import { existsSync } from "fs";
 import { join } from "path";
 import { PACKAGES_DIR } from "../lib/config.ts";
-import { collectFiles, detectDistro, getPackageMeta } from "../lib/pkg.ts";
+import { collectFiles, detectDistro, getPackageMeta, detectInit } from "../lib/pkg.ts";
 import { colors, logError } from "../lib/console.ts";
+import { serviceStatus, serviceStateLabel, serviceIcon, enableService, disableService, declaredServices } from "../lib/service.ts";
 
 export async function showPackageInfo(pkg: string): Promise<void> {
   const pkgDir = join(PACKAGES_DIR, pkg);
@@ -26,6 +27,18 @@ export async function showPackageInfo(pkg: string): Promise<void> {
     console.log(`${colors.dim("Hosts:")}    ${meta.hosts.join(", ")}`);
   }
   if (meta.tags.length > 0 || meta.os.length > 0 || meta.hosts.length > 0) console.log("");
+
+  const init = detectInit();
+  const services = await serviceStatus(pkg, init ?? "systemd");
+  if (services.length > 0) {
+    console.log(colors.cyan("Services:"));
+    for (const svc of services) {
+      const scope = svc.init === "systemd" ? `${svc.init}/${svc.scope}` : svc.init;
+      const state = serviceStateLabel(svc.state).padEnd(12);
+      console.log(`  ${serviceIcon(svc.state)} ${svc.name.padEnd(24)} ${state} ${colors.dim(`[${scope}] ${svc.detail}`)}`);
+    }
+    console.log("");
+  }
 
   const distro = detectDistro();
   const distroPackages = meta.packages[distro] ?? meta.packages["linux"];
@@ -93,43 +106,45 @@ export async function runConfigure(pkg: string): Promise<void> {
   process.exit(await proc.exited);
 }
 
-export async function runInitScript(pkg: string, action: "enable" | "disable", init?: string): Promise<void> {
+export async function runInitScript(pkg: string, action: "enable" | "disable", initArg?: string): Promise<void> {
+  const ok = await runInitScriptInternal(pkg, action, initArg);
+  if (!ok) process.exit(1);
+}
+
+export async function runInitScriptInternal(pkg: string, action: "enable" | "disable", initArg?: string): Promise<boolean> {
   const meta = await getPackageMeta(pkg);
-  if (!meta) { logError(`Package "${pkg}" not found`); process.exit(1); }
+  if (!meta) { logError(`Package "${pkg}" not found`); return false; }
 
+  const init = (initArg as Init) ?? detectInit() ?? "systemd";
   const scripts = meta.enableScripts;
-  if (scripts.length === 0) {
-    logError(`No ${action} script for "${pkg}"`);
-    process.exit(1);
-  }
 
-  let scriptName: string;
-  if (scripts.length === 1) {
-    scriptName = scripts[0].name;
-  } else {
-    if (!init) {
-      logError(`Multiple init systems available. Specify --init:`);
-      for (const s of scripts) console.error(`  dot pkg ${pkg} ${action} --init ${s.init}`);
-      process.exit(1);
+  // 1. Try specific script if it exists
+  const found = scripts.find((s) => s.init === init || (!s.init && scripts.length === 1));
+  if (found) {
+    const scriptName = action === "disable" ? found.name.replace("enable-", "disable-") : found.name;
+    const scriptPath = join(PACKAGES_DIR, pkg, `${scriptName}.sh`);
+    if (existsSync(scriptPath)) {
+      const isLaunchd = scriptName.includes("launchd");
+      const cmd = isLaunchd ? ["bash", scriptPath] : ["sudo", "bash", scriptPath];
+      const proc = Bun.spawn(cmd, { stdout: "inherit", stderr: "inherit" });
+      return (await proc.exited) === 0;
     }
-    const found = scripts.find((s) => s.init === init);
-    if (!found) {
-      logError(`Unknown init system "${init}". Available: ${scripts.map((s) => s.init).join(", ")}`);
-      process.exit(1);
+  }
+
+  // 2. Fallback to generic service management if units exist
+  const units = declaredServices(pkg, init);
+  if (units.length > 0) {
+    let allOk = true;
+    for (const { name, scope } of units) {
+      const ok = action === "enable"
+        ? await enableService(pkg, name, init, scope)
+        : await disableService(pkg, name, init, scope);
+      if (!ok) allOk = false;
     }
-    scriptName = found.name;
+    return allOk;
   }
 
-  const baseName = action === "disable" ? scriptName.replace("enable-", "disable-") : scriptName;
-  const scriptPath = join(PACKAGES_DIR, pkg, `${baseName}.sh`);
-  if (!existsSync(scriptPath)) {
-    logError(`Script not found: ${scriptPath}`);
-    process.exit(1);
-  }
-
-  const isLaunchd = scriptName.includes("launchd");
-  const cmd = isLaunchd ? ["bash", scriptPath] : ["sudo", "bash", scriptPath];
-  const proc = Bun.spawn(cmd, { stdout: "inherit", stderr: "inherit" });
-  process.exit(await proc.exited);
+  logError(`No ${action} script or services found for "${pkg}" (init: ${init})`);
+  return false;
 }
 

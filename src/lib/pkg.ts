@@ -20,6 +20,7 @@ export interface PackageMeta {
   cleanSteps: string[];
   os: string[];
   hosts: string[];
+  extends: string[];
 }
 
 export function detectDistro(): string {
@@ -45,7 +46,7 @@ export async function listPackages(): Promise<string[]> {
   return entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
 }
 
-export async function getPackageMeta(name: string): Promise<PackageMeta | null> {
+export async function getPackageMeta(name: string, seen: Set<string> = new Set()): Promise<PackageMeta | null> {
   const pkgDir = join(PACKAGES_DIR, name);
   if (!existsSync(pkgDir)) return null;
 
@@ -55,17 +56,58 @@ export async function getPackageMeta(name: string): Promise<PackageMeta | null> 
     raw = JSON.parse(await readFile(metaPath, "utf-8")) as Record<string, unknown>;
   }
 
-  return {
+  const meta: PackageMeta = {
     name,
     description: (raw.description as string) ?? "",
-    packages: (raw.packages as Record<string, string[]>) ?? {},
+    packages: (raw.packages as PackagesMeta) ?? {},
     tags: (raw.tags as string[]) ?? [],
     configure: existsSync(join(pkgDir, "configure.sh")),
     enableScripts: collectEnableScripts(pkgDir),
     cleanSteps: (raw.cleanSteps as string[]) ?? [],
     os: (raw.os as string[]) ?? [],
     hosts: (raw.hosts as string[]) ?? [],
+    extends: (raw.extends as string[]) ?? [],
   };
+
+  if (meta.extends.length === 0) return meta;
+
+  // Merge parents in declaration order. Cycles and self-references are skipped.
+  seen.add(name);
+  for (const parentName of meta.extends) {
+    if (seen.has(parentName)) continue;
+    const parent = await getPackageMeta(parentName, seen);
+    if (parent) mergeParentMeta(meta, parent);
+  }
+  return meta;
+}
+
+const unique = (xs: string[]): string[] => [...new Set(xs)];
+
+function mergePackages(base: PackagesMeta, over: PackagesMeta): PackagesMeta {
+  const out: PackagesMeta = structuredClone(base);
+  for (const [distro, list] of Object.entries(over)) {
+    const target = (out[distro] ??= {} as PackageList);
+    for (const [pm, names] of Object.entries(list)) {
+      const key = pm as PackageManager;
+      target[key] = unique([...(target[key] ?? []), ...names]);
+    }
+  }
+  return out;
+}
+
+/**
+ * Fold a parent's metadata into a child, in place.
+ * Additive fields (tags, packages, cleanSteps) union; constraint fields
+ * (os, hosts, description) are inherited only when the child leaves them empty,
+ * so a child can always override or narrow what a profile declares.
+ */
+function mergeParentMeta(child: PackageMeta, parent: PackageMeta): void {
+  child.tags = unique([...child.tags, ...parent.tags]);
+  child.cleanSteps = [...parent.cleanSteps, ...child.cleanSteps];
+  child.packages = mergePackages(parent.packages, child.packages);
+  if (!child.description) child.description = parent.description;
+  if (child.os.length === 0) child.os = [...parent.os];
+  if (child.hosts.length === 0) child.hosts = [...parent.hosts];
 }
 
 let cachedHost: string | null = null;

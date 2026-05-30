@@ -1,8 +1,11 @@
 import { defineCommand } from "citty";
-import { appliesToHost, detectHost, getPackageMeta, listPackages } from "../lib/pkg.ts";
+import { appliesToHost, detectHost, detectInit, getPackageMeta, listPackages } from "../lib/pkg.ts";
 import { collectPackageStatus, type PackageStatus } from "../lib/status.ts";
 import { colors, logError, logInfo, logSection, logSuccess } from "../lib/console.ts";
+import { serviceStatus, serviceStateLabel, serviceIcon, type ServiceState } from "../lib/service.ts";
+import { validateAllPackages } from "../lib/schema.ts";
 import { linkPackage } from "./link.ts";
+import { runInitScriptInternal } from "./info.ts";
 
 function summarize(s: PackageStatus): string {
   const total = s.files.length;
@@ -16,6 +19,7 @@ function summarize(s: PackageStatus): string {
 export const doctorCommand = defineCommand({
   meta: { description: "Health-check every package: report broken symlinks and drift" },
   args: {
+    package: { type: "positional", required: false, description: "Package to check (checks all if omitted)" },
     verbose: { type: "boolean", short: "v", description: "Show details for every package, not just ones with issues" },
     quiet: { type: "boolean", short: "q", description: "Suppress per-package output; only print summary + issues" },
     "all-hosts": { type: "boolean", description: "Check packages from all hosts, not just the current one" },
@@ -23,7 +27,14 @@ export const doctorCommand = defineCommand({
     force: { type: "boolean", description: "With --fix, overwrite real files (drift) instead of refusing" },
   },
   async run({ args }) {
-    const pkgs = await listPackages();
+    const allPkgs = await listPackages();
+    const pkgs = args.package ? [args.package] : allPkgs;
+
+    if (args.package && !allPkgs.includes(args.package)) {
+      logError(`Package "${args.package}" not found`);
+      process.exit(1);
+    }
+
     const host = detectHost();
     const statuses: PackageStatus[] = [];
     let excludedByHost = 0;
@@ -35,9 +46,16 @@ export const doctorCommand = defineCommand({
       }
       statuses.push(await collectPackageStatus(name));
     }
-    if (!args.quiet) {
+    if (!args.quiet && !args.package) {
       console.log(`${colors.dim(`host: ${host}${excludedByHost ? `  (${excludedByHost} package(s) excluded — use --all-hosts to include)` : ""}`)}`);
     }
+
+    const init = detectInit() ?? "systemd";
+    const serviceGroups = await Promise.all(statuses.map((s) => serviceStatus(s.name, init)));
+    const services = serviceGroups.flat();
+    const schemaIssues = await validateAllPackages();
+    const schemaErrors = schemaIssues.filter((i) => i.level === "error");
+    const failedServices = services.filter((s) => s.state === "failed" || s.state === "not-enabled");
 
     const withFiles = statuses.filter((s) => s.files.length > 0);
     const withIssues = statuses.filter((s) => s.issues.length > 0);
@@ -81,6 +99,25 @@ export const doctorCommand = defineCommand({
       }
     }
 
+    if (!args.quiet && services.length > 0) {
+      console.log(`\n${colors.bold("Services")} ${colors.dim(`(${init})`)}`);
+      for (const svc of services) {
+        const scope = svc.init === "systemd" ? `${svc.init}/${svc.scope}` : svc.init;
+        const name = `${svc.pkg}:${svc.name}`.padEnd(28);
+        const state = serviceStateLabel(svc.state).padEnd(12);
+        console.log(`  ${serviceIcon(svc.state)} ${name} ${state} ${colors.dim(`[${scope}] ${svc.detail}`)}`);
+      }
+    }
+
+    if (!args.quiet && schemaIssues.length > 0) {
+      console.log(`\n${colors.bold("Schema")}`);
+      for (const i of schemaIssues) {
+        const icon = i.level === "error" ? colors.red("✗") : colors.yellow("!");
+        const loc = i.path ? `${i.pkg} ${colors.dim(i.path)}` : i.pkg;
+        console.log(`  ${icon} ${loc} — ${i.message}`);
+      }
+    }
+
     console.log("");
     logInfo(
       `Summary: ${colors.green(`${healthy.length} healthy`)}, ` +
@@ -88,27 +125,47 @@ export const doctorCommand = defineCommand({
       `${colors.dim(`${unlinked.length} not linked`)}, ` +
       `${colors.red(`${withIssues.length} with issues`)}`,
     );
+    if (services.length > 0) {
+      const running = services.filter((s) => s.state === "running").length;
+      logInfo(`Services: ${colors.green(`${running} running`)}, ${colors.red(`${failedServices.filter(s => s.state === "failed").length} failed`)}, ${services.length} total`);
+    }
+    if (schemaIssues.length > 0) {
+      const warns = schemaIssues.length - schemaErrors.length;
+      logInfo(`Schema: ${colors.red(`${schemaErrors.length} error(s)`)}, ${colors.yellow(`${warns} warning(s)`)}`);
+    }
 
     if (args.fix) {
-      // Fix candidates: packages with broken/drift issues + partially-linked packages with missing files.
-      // Fully unlinked packages are intentionally not linked — leave them alone.
+      // 1. Fix Files
       const toFix = [...new Set([...withIssues, ...partial])];
-      if (toFix.length === 0) {
-        logSuccess("Nothing to fix.");
-        return;
+      if (toFix.length > 0) {
+        logSection(`Fixing ${toFix.length} package(s)…`);
+        let fixed = 0;
+        let failed = 0;
+        for (const s of toFix) {
+          const ok = await linkPackage(s.name, { force: args.force });
+          if (ok) fixed++;
+          else failed++;
+        }
+        console.log("");
+        logInfo(`Fixed: ${fixed} package(s)${failed ? `, ${failed} with remaining issues` : ""}`);
       }
 
-      logSection(`Fixing ${toFix.length} package(s)…`);
-      let fixed = 0;
-      let failed = 0;
-      for (const s of toFix) {
-        const ok = await linkPackage(s.name, { force: args.force });
-        if (ok) fixed++;
-        else failed++;
+      // 2. Fix Services
+      if (failedServices.length > 0) {
+        logSection(`Fixing ${failedServices.length} service(s)…`);
+        const pkgsToEnable = [...new Set(failedServices.map(s => s.pkg))];
+        let fixedSvc = 0;
+        for (const p of pkgsToEnable) {
+          if (await runInitScriptInternal(p, "enable", init)) {
+            fixedSvc++;
+          }
+        }
+        logInfo(`Attempted to enable services for ${fixedSvc}/${pkgsToEnable.length} package(s).`);
       }
-      console.log("");
-      logInfo(`Fixed: ${fixed} package(s)${failed ? `, ${failed} with remaining issues` : ""}`);
-      if (failed > 0) process.exit(1);
+
+      if (toFix.length === 0 && failedServices.length === 0) {
+        logSuccess("Nothing to fix.");
+      }
       return;
     }
 
@@ -116,5 +173,12 @@ export const doctorCommand = defineCommand({
       logError("Doctor found issues. Re-run with -v for full breakdown, then `dot pkg <name> link` to repair, or use --fix to repair automatically.");
       process.exit(1);
     }
+    const realFailed = failedServices.filter(s => s.state === "failed");
+    if (schemaErrors.length > 0 || realFailed.length > 0) {
+      if (schemaErrors.length > 0) logError(`${schemaErrors.length} schema error(s) — fix the offending meta.json files.`);
+      if (realFailed.length > 0) logError(`${realFailed.length} service(s) in failed state.`);
+      process.exit(1);
+    }
   },
 });
+

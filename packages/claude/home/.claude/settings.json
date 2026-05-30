@@ -1,52 +1,52 @@
 {
-  "enabledPlugins" : {
-    "agentmemory@agentmemory" : true,
-    "backend-development@claude-code-workflows" : true,
-    "comprehensive-review@claude-code-workflows" : true,
-    "javascript-typescript@claude-code-workflows" : true,
-    "lua-lsp@claude-plugins-official" : true,
-    "typescript-lsp@claude-plugins-official" : true
-  },
-  "extraKnownMarketplaces" : {
-    "agentmemory" : {
-      "source" : {
-        "repo" : "rohitg00\/agentmemory",
-        "source" : "github"
-      }
-    },
-    "claude-code-workflows" : {
-      "source" : {
-        "repo" : "wshobson\/agents",
-        "source" : "github"
-      }
-    }
-  },
-  "hooks" : {
-    "Notification" : [
+  "hooks": {
+    "Notification": [
       {
-        "hooks" : [
+        "matcher": "",
+        "hooks": [
           {
-            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' notification # muxy-notification-hook",
-            "timeout" : 10,
-            "type" : "command"
+            "type": "command",
+            "command": "'/Applications/Muxy.app/Contents/Resources/Muxy_Muxy.bundle/muxy-claude-hook.sh' notification # muxy-notification-hook",
+            "timeout": 10
           }
-        ],
-        "matcher" : ""
+        ]
       }
     ],
-    "Stop" : [
+    "Stop": [
       {
-        "hooks" : [
+        "matcher": "",
+        "hooks": [
           {
-            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' stop # muxy-notification-hook",
-            "timeout" : 10,
-            "type" : "command"
+            "type": "command",
+            "command": "'/Applications/Muxy.app/Contents/Resources/Muxy_Muxy.bundle/muxy-claude-hook.sh' stop # muxy-notification-hook",
+            "timeout": 10
           }
-        ],
-        "matcher" : ""
+        ]
       }
     ]
   },
-  "skipDangerousModePermissionPrompt" : true,
-  "theme" : "dark-ansi"
+  "enabledPlugins": {
+    "agentmemory@agentmemory": true,
+    "backend-development@claude-code-workflows": true,
+    "comprehensive-review@claude-code-workflows": true,
+    "javascript-typescript@claude-code-workflows": true,
+    "lua-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "agentmemory": {
+      "source": {
+        "source": "github",
+        "repo": "rohitg00/agentmemory"
+      }
+    },
+    "claude-code-workflows": {
+      "source": {
+        "source": "github",
+        "repo": "wshobson/agents"
+      }
+    }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark-ansi"
 }
