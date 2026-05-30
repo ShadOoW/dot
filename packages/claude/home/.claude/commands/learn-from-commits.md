@@ -32,6 +32,9 @@ Applying lessons by combination:
 
 Verify all three prerequisites before doing anything else.
 
+- Bash: `pwd` — confirm you are in the project root.
+  If the path does not contain `bruce`, stop immediately:
+  "STOPPED: wrong working directory. Relaunch Claude Code from the bruce project root."
 - Bash: `curl -s http://localhost:3111/agentmemory/health`
 - Augment: load the schema via ToolSearch (`select:mcp__augment-context-engine__codebase-retrieval`),
   then run a trivial natural language query to confirm it responds.
