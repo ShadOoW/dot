@@ -138,46 +138,41 @@ Tag check: layer=[proposed] → [correct / should be X because Y]
 
 ### Attack vector 5 — Enforce legitimacy
 
-Only run this vector for lessons tagged `{intent: enforce}`.
+Only for lessons tagged `{intent: enforce}`.
 
-`{intent: enforce}` is justified when ANY ONE of these holds — they are OR conditions,
-not a ranked list. Absence of documentation does not block enforcement if adoption is universal.
+Check 1 is mandatory; Checks 2-3 are supporting. Enforce holds only when
+Check 1 passes OR the rule text explicitly scopes to new/touched code
+with a tech-debt count (forward-only). Multi-file refactor in one commit
+is intent, not adoption.
 
-**Check 1 — Adoption rate (run first):**
+**Check 1 — Adoption rate:**
 
-Define the **applicable scope** — the set of files where this rule could
-plausibly apply. That set is the denominator. State it explicitly before
-grepping; if it is truly the whole codebase, say so.
+State the applicable scope (the denominator) before grepping. Design the
+grep to count surviving VIOLATIONS, not positive adoption — exclude
+legitimate non-violations (a default `'0 0 24 24'` is not a violation of
+a magic-number-viewBox rule).
 
 ```bash
 grep -r "[scope predicate]" [paths] --include="*.ts" --include="*.tsx" -l | wc -l
-grep -r "[anti-pattern term]" [paths] --include="*.ts" --include="*.tsx" -l | wc -l
+grep -rE "[violation regex]" [paths] --include="*.ts" --include="*.tsx" -l | wc -l
 ```
 
-If violations are ≤ 2% of applicable usages → enforce justified by adoption.
-
-```
-Applicable scope: [predicate]
-Denominator: N | Violations: M (X% within scope)
-```
-
-**Check 2 — Documentation (additional signal, not required):**
+**Check 2 — Documentation (supporting):**
 ```bash
-grep -r "[key term from lesson rule]" \
-  AGENTS.md README.md docs/ tool/configuration/github/prompts/ 2>/dev/null | head -20
+grep -r "[key term]" AGENTS.md README.md docs/ 2>/dev/null | head -20
 ```
 
-**Check 3 — Deliberate standard:** Did this commit fix the same convention across 3+
-files at once? That signals intentional standardization, not an incidental fix.
-
-`{intent: enforce}` is NOT justified by:
-- A single author fixing their own prior mistake in one file only
-- Personal preference with no team signal and <90% adoption
+**Check 3 — Deliberate standard (supporting):** ≥3 files fixed in this
+commit for the same convention signals intent — but does not justify
+enforce without Check 1 or forward-only scoping.
 
 ```
-Enforce check: [justified by adoption / justified by documentation / justified by deliberate standard / not justified]
-Evidence: [N usages, M violations (M% violation rate) / found at X / not found]
-If not justified: [what would justify it]
+Enforce check:
+  Check 1: [pass X% / fail X% over N usages]
+  Forward-only scoping: [yes / no]
+  Check 2: [found at X / not found]
+  Check 3: [N+ files in commit / no]
+Verdict: [justified / not justified — reason]
 ```
 
 ---

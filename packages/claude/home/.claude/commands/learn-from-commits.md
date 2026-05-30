@@ -53,13 +53,16 @@ Fix: [run 'agentmemory' in terminal / restart session / run: cd ~/code/dotfiles 
 
 ## 1. Load
 
-Fetch all existing lessons:
+Fetch existing lessons and watchlist entries via MCP:
 
-```bash
-curl -s http://localhost:3111/agentmemory/memories
+```
+memory_smart_search(query: "[v1] confidence rule evidence", limit: 50)
+memory_smart_search(query: "watchlist", limit: 20)
 ```
 
-Read every lesson fully. Check for any existing watchlist entry — if one covers
+Do not use `GET /agentmemory/memories` — it filters out recently saved memories.
+
+Read every result fully. Check for any existing watchlist entry — if one covers
 the same topic as a candidate from this diff, prefer tagging or strengthening it
 over creating a duplicate. Then output this block before proceeding:
 
@@ -176,6 +179,25 @@ conventions, file-to-folder conversions):
     xargs grep -l "[key term]" 2>/dev/null | head -20
   Structural confidence requires Augment signal AND grep ≥ 3 matching files.
 
+Step 4 — Enforce gate (MANDATORY if proposing `{intent: enforce}`):
+A ban-motivated rule cannot claim enforce without a surviving-violation
+grep over the applicable scope. Adoption rate is not violation rate;
+design the grep to exclude legitimate non-violations. Augment's Step 2
+anti-pattern query is fuzzy match, not a count — it does not substitute.
+
+  grep -rnE "[violation regex]" [paths] --include="*.tsx" --include="*.ts" | wc -l
+  grep -rnE "[applicable scope]" [paths] --include="*.tsx" --include="*.ts" -l | wc -l
+
+Enforce holds only when one is true:
+  (a) violations ≤ 2% of applicable usages, OR
+  (b) rule text scopes to new/touched code with tech-debt count named
+      (forward-only enforce), OR
+  (c) the anti-pattern is a correctness footgun (silent data loss, crash,
+      security) — confidence ≥ MEDIUM still required.
+
+Multi-file refactor in one commit is intent, not adoption — insufficient
+alone. Otherwise, save as confidence-only.
+
 Confidence levels:
   HIGH   — 5+ distinct snippets across ≥ 2 queries. Diff evidence = supporting
             signal only, cannot substitute. Structural: also requires grep ≥ 3 files.
@@ -215,6 +237,9 @@ Retry:  "[rephrased query]" → N results
 Grep: [exact command] → N matching files
 [If pre-existing, include:]
 Pre-existing: flagged — 5+ snippets on pattern not touched by this diff
+[If proposing {intent: enforce}, include — MANDATORY:]
+Anti-pattern grep: [command] → N violations / M applicable usages (X%)
+Enforce justification: [adoption / forward-only / footgun]
 
 Confidence: [HIGH / MEDIUM / LOW]
 
@@ -560,19 +585,18 @@ On confirmation, execute in this order:
 
 ## 8. Verify
 
-```bash
-curl -s http://localhost:3111/agentmemory/memories
-```
+For each saved lesson, call `memory_smart_search` with the lesson title and
+confirm the mem ID from the save response appears in results.
 
-Confirm:
-- Total count increased by exactly N saves, plus 1 if a watchlist entry was added
-- Each new mem ID is present in the response
+Do not use `GET /agentmemory/memories` — it filters out recently saved memories.
+
+Confirm for each save:
+- The mem ID from the save response appears in smart_search results
 - Saved content matches approved text exactly — not truncated
 
-**If count is wrong:**
-1. Identify which mem IDs from the save calls are absent
-2. Retry those saves once
-3. If retry fails, output: `MANUAL SAVE NEEDED: memory_save(type='pattern', content='...')`
+**If a mem ID is not retrievable:**
+1. Retry that save once
+2. If retry fails, output: `MANUAL SAVE NEEDED: memory_save(type='pattern', content='...')`
 
 **Retrievability check** — for any unusually worded lesson:
 Run 3 Augment queries with genuinely different phrasings. Flag if the lesson
