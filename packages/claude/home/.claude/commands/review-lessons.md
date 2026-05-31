@@ -31,7 +31,7 @@ Applying lessons by combination:
 
 Verify both MCP servers are reachable before doing anything else.
 
-- Bash: `curl -s http://localhost:3111/agentmemory/health`
+- Bash: curl -s http://localhost:3111/agentmemory/health | jq -r '.status'
 - Augment: run a trivial natural language query to confirm it responds
 
 If either fails, output exactly this and stop:

@@ -21,7 +21,7 @@ challenged.
 ## 0. Preflight
 
 - `pwd` must contain `bruce`.
-- `curl -s http://localhost:3111/agentmemory/health`
+- curl -s http://localhost:3111/agentmemory/health | jq -r '.status'
 - A prior learn-from-commits run must exist in this conversation. If
   not: "STOPPED: no learn-from-commits findings to consolidate."
 

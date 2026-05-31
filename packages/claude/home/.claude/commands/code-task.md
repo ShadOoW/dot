@@ -1,272 +1,173 @@
 # code-task.md
 
-Apply the task in $ARGUMENTS using codebase conventions enforced by agentmemory
-and structural templates derived from recent git history.
+Apply the task in $ARGUMENTS. Optimize for first-attempt correctness — no review gates.
 
-**Usage:** `/code-task [absolute path to project] [task description]`
-Example: `/code-task /Users/you/bruce add a Form for creating a new Quota`
-
-**If no coding task is identifiable in $ARGUMENTS**, stop and respond directly.
-
-**Success criterion:** all files written, enforce check clean, audit log complete.
-
-**Audit markers** — `// [lesson: "title"]` and `// [novel: description]` are kept
-in delivered code as the review trail for this workflow.
-
-`{intent: enforce}` = hard rule, never deviate, fix violations on sight.
+**Usage:** `/code-task [absolute path] [task]`
+**Stop if no coding task is identifiable.**
+**Success criterion:** all files written, enforce check clean, tsc clean, audit log complete.
+**Markers:** `// [lesson: "title"]` and `// [novel: description]` stay in delivered code.
+`{intent: enforce}` = hard rule, fix violations on sight.
 
 ---
 
 ## 0. Preflight
 
-Parse $ARGUMENTS: first token ending in a path separator or starting with `/`
-is the project path. Everything after is the task.
+Parse $ARGUMENTS: first `/`-rooted token = project path; remainder = task.
 
 ```bash
-cd [project path]                              # switch to project root
-pwd                                            # confirm path is correct
-git rev-parse --is-inside-work-tree 2>&1       # must not error
-git log --pretty=format: --name-only | grep -v '^$' | head -3   # derive path prefix
-curl -s http://localhost:3111/agentmemory/health
+cd [path] && git rev-parse --is-inside-work-tree 2>&1
+git log --pretty=format: --name-only | grep -v '^$' | head -3
+curl -s http://localhost:3111/agentmemory/health | jq -r '.status'
 ```
 
-The path prefix is the leading path segment(s) common to all files in the git log
-output (e.g. `code/src`). Use this in all grep patterns in step 3 — do not hardcode.
-
-Augment: run one trivial query to confirm it responds. Stop on failure:
-```
-STOPPED: [component] unreachable. Fix: [exact command]
-```
-
-Output:
-```
-Project: [absolute path]
-Path prefix: [derived, e.g. code/src]
-Task: [extracted task description]
-```
+Derive **path prefix** from git log (leading path segment common to all listed files, e.g. `code/src`).
+Stop on failure: `STOPPED: [what] unreachable. Fix: [command]`
 
 ---
 
-## 1. Load lessons
+## 1. Plan + Explore
 
-```
-memory_smart_search(query: "[v1] confidence rule evidence", limit: 50)
-memory_smart_search(query: "{intent: enforce}", limit: 20)
-```
-
-If both return 0, warn and proceed. Hold enforce titles for step 6.
-
-```
-Lessons loaded: N total, E enforced
-Enforce rules: [titles]
-```
-
----
-
-## 2. Understand the task
-
-**Classify every file:**
+Classify every target file:
 
 | Class | Trigger |
 |-------|---------|
 | CREATE | New file |
-| MODIFY line | ≤5 lines, no new named region introduced |
-| MODIFY section | New named region added, OR >20 lines rewritten in one region |
+| MODIFY line | ≤5 lines, no new named region |
+| MODIFY section | New named region OR >20 lines rewritten in one region |
 
-**Paired files:** `index.tsx`, `views.tsx`, and `setup.ts` in the same folder
-form a unit — mark them as paired. They share one template source folder.
+- **Paired:** `index.tsx` + `views.tsx` + `setup.ts` in same folder = one sub-agent unit.
+- **Component type:** name it (e.g. `CreateForm`). Used in lesson queries.
+- **Domain keyword:** first path segment right-of-filename matching `Form|Select|List|Page|Modal|Picker|View|Field`.
+- **Write order:** exporters before importers.
 
-**Write order:** if one file imports types from another in this task,
-write the exporting file first. Otherwise order is free.
+**Read the key files needed to understand the task** — types, related components, existing patterns.
+Do this in the parent thread before dispatching sub-agents.
+The richer the pre-write context, the better the output.
 
-**Component type:** name the component being built or modified
-(e.g. `TreeSelect`, `CreateForm`, `ListPage`). Used in lesson prefetch queries.
-
-**Domain keyword:** scan the target path right-to-left past the filename.
-First segment matching `Form|Select|List|Page|Modal|Picker|View|Field` = domain keyword.
-If none found, omit the second git query in step 3.
-
-```
-Task breakdown:
-  CREATE [path] ([filename]) [↔ paired: paths]
-  MODIFY line [path] — [description]
-  MODIFY section [path] — [section name]
-Component type: [name]
-Write order: [explicit if dependency | any order]
-Domain keywords: [file → keyword | none]
-```
+Output the file plan inline and proceed immediately.
 
 ---
 
-## 3. Template selection — parallel sub-agents
+## 2. Lessons + Templates — parallel
 
-Dispatch for every CREATE and MODIFY section. Paired CREATE = one sub-agent.
+Run A and B in parallel:
 
-### Candidate pool (parent thread — substitute real values, never placeholders)
+**A. Load lessons (parent thread):**
+```
+memory_smart_search("[v1] confidence rule evidence", limit: 50)
+memory_smart_search("{intent: enforce}", limit: 20)
+```
+Hold enforce titles for step 4. Warn if both return 0.
 
-Use the path prefix derived in step 0. Cap each result list at 15 before
-passing to sub-agents — do not pass the full git log output.
+**B. Template sub-agents** — one per CREATE file (paired = one), one per MODIFY section.
 
+Build candidate pool per file in the parent thread (bash only, no Read):
 ```bash
 git log --pretty=format: --name-only \
-  | grep "[PATH_PREFIX].*FILENAME$" \
-  | grep -v '^$' | awk '!seen[$0]++' | head -15
-
-# only when domain keyword exists:
+  | grep "[PATH_PREFIX].*FILENAME$" | grep -v '^$' \
+  | awk '!seen[$0]++' | head -15
+# when domain keyword exists, also:
 git log --pretty=format: --name-only \
-  | grep "[PATH_PREFIX].*DOMAIN.*FILENAME$" \
-  | grep -v '^$' | awk '!seen[$0]++' | head -10
+  | grep "[PATH_PREFIX].*DOMAIN.*FILENAME$" | grep -v '^$' \
+  | awk '!seen[$0]++' | head -10
 ```
+Deduplicate, exclude target files, cap at 15.
 
-Concatenate, deduplicate, exclude target file(s). Pass merged list to sub-agent.
-
-### Sub-agent prompts (fully self-contained — no cross-references)
-
-**CREATE single file:**
+**Sub-agent prompt — CREATE single file:**
 ```
-You are selecting a structural template. Read structure only — ignore logic.
-File: [path]
-Task: [one sentence]
-Candidates (most recent first): [list — max 15 entries]
+Structural template selection — read structure only, ignore logic.
+File: [path] | Task: [one sentence] | Candidates (most recent first): [≤15]
 
-1. Cat candidates in order. Stop after 5 or on clear structural match.
-2. Extract top-level section names and their order.
-3. For any section expected to have more than 3 internal declaration types
-   (e.g. callbacks, effects, state), also extract its internal type order.
-4. If no structural match: run one Augment query —
-   "[component type] redux-form section structure" — and derive the most
-   common section order from results. Mark template as NONE.
-5. If uncertain about within-section order: omit it — do not guess.
+1. Cat candidates in order. Stop after 5 or on clear match.
+2. Extract top-level section names and order.
+3. Sections with >3 internal declaration types: also extract type order.
+4. No match → Augment query "[component type] section structure". Mark NONE.
+5. memory_smart_search("[section] [component type] react", limit:8) for each section.
 
-Return ONLY (200 token limit — abbreviate if needed):
+Return (≤200 tokens):
 Template: [path] | NONE
-Reason: [one line]
-Sections: 1.[name] 2.[name] 3.[name] ...
-Within-section (only for sections with >3 types, if confident):
-  [section]: 1.[type] 2.[type] ...
+Sections: 1.[name] 2.[name] ...
+Within-section (if confident): [section]: 1.[type] 2.[type] ...
+Lessons per section: [section] → [titles] | none
 ```
 
-**CREATE paired (index.tsx / views.tsx / setup.ts):**
+**Sub-agent prompt — CREATE paired (index.tsx / views.tsx / setup.ts):**
 ```
-You are selecting a structural template. Read structure only — ignore logic.
-Files: [list of paired paths] — must come from one source folder.
-Task: [one sentence]
-Candidates (most recent first): [combined list — max 15 entries]
+Structural template selection — read structure only.
+Files: [list] — must come from one source folder. | Candidates: [≤15]
 
-1. Find a source folder containing the same filenames as the target pair.
-2. Cat each file. Check up to 5 folders or stop on clear match.
-3. For index.tsx: extract section order and within-section order for callbacks
-   and effects (if >3 types). For views.tsx and setup.ts: section order only.
-4. If no folder match: run Augment query and derive for each file. Mark NONE.
+1. Find a source folder with the same filenames. Cat up to 5 folders.
+2. index.tsx: section order + within-section type order for callbacks/effects.
+   views.tsx / setup.ts: section order only.
+3. No match → Augment query per file. Mark NONE.
+4. memory_smart_search("[section] [component type] react", limit:8) per section.
 
-Return ONLY (250 token limit):
+Return (≤250 tokens):
 Template folder: [path] | NONE
-Reason: [one line]
-[filename] sections: 1.[name] 2.[name] ...   (one line per file)
-index.tsx [section]: 1.[type] 2.[type] ...   (only if >3 types and confident)
+[filename] sections: 1.[name] 2.[name] ...
+index.tsx [section]: 1.[type] ... (only if >3 types and confident)
+Lessons per section: [section] → [titles] | none
 ```
 
-**MODIFY section:**
+**Sub-agent prompt — MODIFY section:**
 ```
-You are selecting a structural template. Read structure only — ignore logic.
-File: [path]
-Section to add: [name]
-Task: [one sentence]
-Candidates (most recent first): [list — max 15 entries]
+Structural template selection — read structure only.
+File: [path] | Section to add: [name] | Task: [one sentence] | Candidates: [≤15]
 
-1. Cat candidates in order. Check up to 8 files — sections are sparse,
-   search more candidates than for CREATE.
-2. When target section found: extract internal declaration type order and
-   the sections immediately before and after it.
+1. Cat candidates in order. Check up to 8 files.
+2. When target section found: extract internal type order and flanking sections.
+3. memory_smart_search("[section] [component type] react", limit:8).
 
-Return ONLY (120 token limit):
+Return (≤120 tokens):
 Template: [path] | NONE
-Reason: [one line]
 Internal order: 1.[type] 2.[type] ...
 Position: after [section] before [section]
+Lessons: [titles] | none
 ```
 
-### After sub-agents return — STOP HERE
-
-```
-Template verdicts:
-  [path] → [template | NONE] — [reason]
-    Sections: [list]
-    [section]: [within-section types]   (if extracted)
-  [pair] → folder [path | NONE]
-    [filename]: [sections]   (one line per file)
-    index.tsx [section]: [types]   (if extracted)
-  [MODIFY path] → [template | NONE]
-    "[section]": [internal order] after [X] before [Y]
-
-─────────────────────────────────────────
-Reply 'go' to proceed. Include overrides in the same message if needed:
-  template [filename] = [path]
-  order [filename] = ["section 1","section 2","section 3"]
-Questions answered here — only changed verdicts shown before re-confirming.
-─────────────────────────────────────────
-```
+Output template verdicts and lesson map inline, then proceed.
 
 ---
 
-## 4. Lesson prefetch — parallel sub-agents
+## 3. Write
 
-Dispatch on 'go'. Use confirmed section lists (post-override). One sub-agent per file.
+Files in write order. One section at a time. Use sub-agent lesson results — no new memory queries.
 
-```
-Sub-agent: file [path], component type [from step 2], confirmed sections [list].
-For each section:
-  memory_smart_search("[section name] [component type] react", limit: 8)
-Return per section: [applicable lesson titles] | none
-Hard limit: 150 tokens.
-```
+**`// [novel: ...]` — mandatory, no exceptions:**
+- Hardcoded ID, objectId, permission key, or magic value
+- Import from a path containing `DEPRECATED` (check whether a non-deprecated equivalent exists)
+- Enum or type defined locally that may already exist in a library package
+- Any decision a team developer could reasonably make differently
 
----
+**`// [lesson: "title"]`** — only when a developer without that lesson would plausibly write this differently.
 
-## 5. Write
-
-Process files in confirmed write order.
-
-### CREATE and MODIFY section
-
-One section at a time in confirmed order:
-
-1. Use pre-fetched lessons only — no new agentmemory queries during writing.
-   General React and TypeScript knowledge applies freely.
-2. Follow section-level order from template. Where within-section order was
-   extracted, follow it. Where it was not, apply standard conventions for
-   that section type. If genuinely uncertain, use the most conservative
-   approach and mark as novel.
-3. For MODIFY section: follow the internal order from the template verdict exactly.
-4. Audit markers (kept in final output):
-   ```typescript
-   // [lesson: "title"]
-   ```
-   Only when a developer without that lesson would plausibly write this differently.
-   ```typescript
-   // [novel: description]
-   ```
-   Only when no lesson covers it AND a competent team developer might
-   make a different reasonable choice.
-
-### MODIFY line
-
-Write the change. Marker only if an enforce lesson directly applies.
+MODIFY line: write the change; marker only if an enforce lesson directly applies.
 
 ---
 
-## 6. Enforce check
+## 4. Enforce check
 
-Using enforce titles from step 1 (no re-query). Fix violations immediately.
-
+Using enforce titles from 2A. Fix violations immediately.
 ```
 Enforce check:
-  "[title]" — clean | fixed at [function name / description]
+  "[title]" — clean | fixed at [description]
 ```
 
 ---
 
-## 7. Audit log
+## 5. Verify
+
+```bash
+cd [project path] && npx tsc --noEmit 2>&1 | grep "error TS" | head -20
+```
+Fix every type error. Confirm:
+- [ ] Every symbol in written files appears in its import block
+- [ ] Every hardcoded ID, deprecated import, invented type has `// [novel: ...]`
+- [ ] `tsc --noEmit` exits with zero errors
+
+---
+
+## 6. Audit log
 
 ```
 ## Audit log
@@ -274,25 +175,16 @@ Enforce check:
 ### [file]
 Template: [path] | NONE
 Sections: [in write order]
-Lessons applied:
-  - "[title]" — [section]
+Lessons applied: "[title]" — [section] | none
 Enforce fixes: [list] | none
-Novel decisions:
-  - [section]: [description]
+Novel decisions: [section]: [description] | none
 ```
 
----
-
-## 8. Candidate lessons
-
-Only output if novel decisions were logged. Mandatory if they were.
-
+If any novel decisions were logged:
 ```
 ## Candidates for learn-from-commits
 
-CANDIDATE: [section] in [file path]
+CANDIDATE: [section] in [file]
 Pattern: [what was done and why]
-Anti-pattern: [what a competent team developer would likely write instead]
+Anti-pattern: [what a developer writes without this knowledge]
 ```
-
-Pass to the next `learn-from-commits` run as additional context.
