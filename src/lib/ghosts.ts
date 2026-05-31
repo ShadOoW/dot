@@ -1,7 +1,7 @@
 import { readdir, lstat, readlink } from "fs/promises";
 import { existsSync } from "fs";
-import { join, dirname } from "path";
-import { HOME_DIR, PACKAGES_DIR } from "./config.ts";
+import { join } from "path";
+import { HOME_DIR, PACKAGES_DIR, DOTFILES_DIR } from "./config.ts";
 
 export interface GhostItem {
   path: string;
@@ -87,6 +87,57 @@ export async function findGhosts(scanRoot: string = HOME_DIR): Promise<GhostItem
   }
 
   return allGhosts;
+}
+
+/** Shorten an absolute path for display: ~ for home, repo-relative for dotfiles paths. */
+export function shortenPath(p: string): string {
+  if (p.startsWith(DOTFILES_DIR + "/")) return p.slice(DOTFILES_DIR.length + 1);
+  if (p === HOME_DIR) return "~";
+  if (p.startsWith(HOME_DIR + "/")) return "~/" + p.slice(HOME_DIR.length + 1);
+  return p;
+}
+
+/**
+ * Find broken symlinks in system paths (outside HOME_DIR) that point to our dotfiles.
+ * Checks each system file target derived from every package's system/ directory.
+ */
+export async function findSystemGhosts(): Promise<GhostItem[]> {
+  const { listPackages, collectFiles } = await import("./pkg.ts");
+  const packages = await listPackages();
+  const ghosts: GhostItem[] = [];
+  const seen = new Set<string>();
+
+  for (const pkg of packages) {
+    const pkgDir = join(PACKAGES_DIR, pkg);
+    if (!existsSync(join(pkgDir, "system"))) continue;
+
+    for (const init of ["runit", "systemd", "launchd"] as const) {
+      let files;
+      try {
+        files = await collectFiles(pkgDir, "system", init);
+      } catch {
+        continue;
+      }
+      for (const { source: _source, target } of files) {
+        if (seen.has(target)) continue;
+        if (target.startsWith(HOME_DIR)) continue; // handled by findGhosts
+        seen.add(target);
+
+        try {
+          const stat = await lstat(target);
+          if (!stat.isSymbolicLink()) continue;
+          const link = await readlink(target);
+          if (!existsSync(target) && isDotfilesPath(link)) {
+            ghosts.push({ path: target, target: link, type: "file" });
+          }
+        } catch {
+          // path doesn't exist or inaccessible — not a ghost
+        }
+      }
+    }
+  }
+
+  return ghosts;
 }
 
 export function flattenGhosts(ghosts: GhostItem[]): GhostItem[] {

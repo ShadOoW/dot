@@ -2,11 +2,11 @@ import { defineCommand } from "citty";
 import { appliesToHost, detectHost, detectInit, getPackageMeta, listPackages } from "../lib/pkg.ts";
 import { collectPackageStatus, type PackageStatus } from "../lib/status.ts";
 import { colors, logError, logInfo, logSection, logSuccess } from "../lib/console.ts";
-import { serviceStatus, serviceStateLabel, serviceIcon, type ServiceState } from "../lib/service.ts";
+import { serviceStatus, serviceStateLabel, serviceIcon } from "../lib/service.ts";
 import { validateAllPackages } from "../lib/schema.ts";
 import { linkPackage } from "./link.ts";
 import { runInitScriptInternal } from "./info.ts";
-import { findGhosts, flattenGhosts, type GhostItem } from "../lib/ghosts.ts";
+import { findGhosts, findSystemGhosts, flattenGhosts, shortenPath, type GhostItem } from "../lib/ghosts.ts";
 import { rm } from "fs/promises";
 
 function summarize(s: PackageStatus): string {
@@ -67,7 +67,7 @@ export const doctorCommand = defineCommand({
     );
     const healthy = statuses.filter((s) => s.files.length > 0 && s.counts.ok === s.files.length);
 
-    const ghosts = await findGhosts();
+    const [ghosts, systemGhosts] = await Promise.all([findGhosts(), findSystemGhosts()]);
 
     if (!args.quiet) {
       console.log(`\n${colors.bold("Health report")} — ${withFiles.length} packages with files\n`);
@@ -80,9 +80,9 @@ export const doctorCommand = defineCommand({
           console.log(`\n  ${colors.bold(s.name)}  ${colors.dim(summarize(s))}`);
           for (const issue of s.issues) {
             const icon = issue.status === "broken" ? colors.red("✗") : colors.yellow("~");
-            const label = issue.status === "broken" ? "broken symlink" : "not a symlink (drift)";
-            console.log(`    ${icon} ${issue.target}  ${colors.dim(`[${label}]`)}`);
-            if (issue.status === "broken") console.log(`      ${colors.dim(`expected → ${issue.source}`)}`);
+            const label = issue.status === "broken" ? "broken" : "drift";
+            console.log(`    ${icon} ${shortenPath(issue.target)}  ${colors.dim(`[${label}]`)}`);
+            if (issue.status === "broken") console.log(`      ${colors.dim(`→ ${shortenPath(issue.source)}`)}`);
           }
         }
       }
@@ -103,29 +103,41 @@ export const doctorCommand = defineCommand({
       }
     }
 
-    if (!args.quiet && ghosts.length > 0) {
-      console.log(`\n${colors.bold("Ghosts & Orphans")} — ${colors.dim("Broken links or empty folders from deleted repo files")}`);
+    const allHomeGhosts = ghosts;
+    const totalGhosts = allHomeGhosts.length + systemGhosts.length;
 
-      const printGhost = (g: GhostItem, indent: number) => {
-        const icon = g.type === "directory" ? "📁" : "🔗";
+    if (!args.quiet && totalGhosts > 0) {
+      console.log(`\n${colors.bold("Ghosts")} ${colors.dim("— broken links to deleted repo files")}`);
+
+      const printGhost = (g: GhostItem, indent: number, scope?: "system") => {
         const prefix = "  ".repeat(indent);
-        const suffix = g.type === "directory" ? colors.red(" (orphaned folder — will be deleted)") : "";
-        console.log(`${prefix}  ${colors.red("✗")} ${icon} ${g.path}${g.target ? colors.dim(` → ${g.target}`) : suffix}`);
-        if (g.children) {
-          for (const child of g.children) printGhost(child, indent + 1);
+        const short = shortenPath(g.path);
+        if (g.type === "directory") {
+          const count = flattenGhosts(g.children ?? []).length;
+          console.log(`${prefix}  ${colors.red("✗")} ${colors.bold(short + "/")}  ${colors.dim(`${count} ghost${count !== 1 ? "s" : ""}`)}`);
+          if (g.children) {
+            for (const child of g.children) printGhost(child, indent + 1);
+          }
+        } else {
+          const target = g.target ? `  ${colors.dim("→")} ${colors.dim(shortenPath(g.target))}` : "";
+          const tag = scope === "system" ? `  ${colors.dim("[sys]")}` : "";
+          console.log(`${prefix}  ${colors.red("✗")} ${short}${target}${tag}`);
         }
       };
 
-      for (const g of ghosts) printGhost(g, 0);
+      for (const g of allHomeGhosts) printGhost(g, 0);
+      for (const g of systemGhosts) printGhost(g, 0, "system");
     }
 
     if (!args.quiet && services.length > 0) {
-      console.log(`\n${colors.bold("Services")} ${colors.dim(`(${init})`)}`);
+      console.log(`\n${colors.bold("Services")}  ${colors.dim(init)}`);
+      const nameWidth = Math.max(28, ...services.map(s => `${s.pkg}:${s.name}`.length)) + 2;
       for (const svc of services) {
-        const scope = svc.init === "systemd" ? `${svc.init}/${svc.scope}` : svc.init;
-        const name = `${svc.pkg}:${svc.name}`.padEnd(28);
+        const name = `${svc.pkg}:${svc.name}`.padEnd(nameWidth);
         const state = serviceStateLabel(svc.state).padEnd(12);
-        console.log(`  ${serviceIcon(svc.state)} ${name} ${state} ${colors.dim(`[${scope}] ${svc.detail}`)}`);
+        const scope = colors.dim(svc.scope === "user" ? "user" : " sys");
+        const detail = svc.detail ? `  ${colors.dim(svc.detail)}` : "";
+        console.log(`  ${serviceIcon(svc.state)} ${name} ${state} ${scope}${detail}`);
       }
     }
 
@@ -139,15 +151,17 @@ export const doctorCommand = defineCommand({
     }
 
     console.log("");
-    const allGhostsFlat = flattenGhosts(ghosts);
+    const allHomeGhostsFlat = flattenGhosts(allHomeGhosts);
+    const allGhostsFlat = [...allHomeGhostsFlat, ...systemGhosts];
     logInfo(
-      `Summary: ${colors.green(`${healthy.length} healthy`)}, ` +
+      `Packages: ${colors.green(`${healthy.length} healthy`)}, ` +
       `${colors.yellow(`${partial.length} partial`)}, ` +
       `${colors.dim(`${unlinked.length} not linked`)}, ` +
       `${colors.red(`${withIssues.length} with issues`)}`,
     );
     if (allGhostsFlat.length > 0) {
-      logInfo(`System: ${colors.red(`${allGhostsFlat.length} ghosts/orphans`)} — broken links or empty managed folders.`);
+      const sysPart = systemGhosts.length > 0 ? `, ${systemGhosts.length} system` : "";
+      logInfo(`Ghosts: ${colors.red(`${allHomeGhostsFlat.length} home${sysPart}`)} — run with --fix to prune`);
     }
     if (services.length > 0) {
       const running = services.filter((s) => s.state === "running").length;
@@ -192,12 +206,22 @@ export const doctorCommand = defineCommand({
         logSection(`Pruning ${allGhostsFlat.length} ghost(s)…`);
         let pruned = 0;
         for (const g of allGhostsFlat) {
+          const isSystem = !g.path.startsWith(process.env.HOME ?? "/root");
           try {
-            await rm(g.path, { recursive: g.type === "directory" });
-            console.log(`  ${colors.red("removed")} ${g.path}`);
+            if (isSystem) {
+              const args = g.type === "directory" ? ["-rf", g.path] : ["-f", g.path];
+              const r = Bun.spawnSync(["sudo", "rm", ...args], { stdout: "ignore", stderr: "pipe" });
+              if (r.exitCode !== 0) {
+                logError(`Failed to prune ${shortenPath(g.path)}: ${new TextDecoder().decode(r.stderr).trim()}`);
+                continue;
+              }
+            } else {
+              await rm(g.path, { recursive: g.type === "directory" });
+            }
+            console.log(`  ${colors.red("removed")} ${shortenPath(g.path)}`);
             pruned++;
           } catch (e) {
-            logError(`  Failed to prune ${g.path}: ${e instanceof Error ? e.message : String(e)}`);
+            logError(`Failed to prune ${shortenPath(g.path)}: ${e instanceof Error ? e.message : String(e)}`);
           }
         }
         logInfo(`Pruned ${pruned} ghost(s).`);

@@ -99,13 +99,18 @@ async function querySystemd(unit: string, scope: "user" | "system"): Promise<{ s
   const flag = scope === "user" ? ["--user"] : [];
   const enabled = (await run(["systemctl", ...flag, "is-enabled", unit])).out;
   if (enabled === "not-found" || enabled === "") {
-    return { state: "not-enabled", detail: "unit not registered" };
+    return { state: "not-enabled", detail: "not installed" };
   }
   const active = (await run(["systemctl", ...flag, "is-active", unit])).out;
-  if (active === "active") return { state: "running", detail: `enabled=${enabled}` };
-  if (active === "failed") return { state: "failed", detail: `enabled=${enabled}` };
+  if (active === "active") {
+    const detail = enabled === "enabled" ? "" : enabled === "disabled" ? "boot: off" : `boot: ${enabled}`;
+    return { state: "running", detail };
+  }
+  if (active === "failed") {
+    return { state: "failed", detail: enabled !== "enabled" ? `boot: ${enabled}` : "" };
+  }
   if (enabled === "disabled") return { state: "not-enabled", detail: "disabled" };
-  return { state: "stopped", detail: `${active}, enabled=${enabled}` };
+  return { state: "stopped", detail: active };
 }
 
 async function queryLaunchd(label: string): Promise<{ state: ServiceState; detail: string }> {
