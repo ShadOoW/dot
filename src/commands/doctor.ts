@@ -6,6 +6,8 @@ import { serviceStatus, serviceStateLabel, serviceIcon, type ServiceState } from
 import { validateAllPackages } from "../lib/schema.ts";
 import { linkPackage } from "./link.ts";
 import { runInitScriptInternal } from "./info.ts";
+import { findGhosts, flattenGhosts, type GhostItem } from "../lib/ghosts.ts";
+import { rm } from "fs/promises";
 
 function summarize(s: PackageStatus): string {
   const total = s.files.length;
@@ -65,6 +67,8 @@ export const doctorCommand = defineCommand({
     );
     const healthy = statuses.filter((s) => s.files.length > 0 && s.counts.ok === s.files.length);
 
+    const ghosts = await findGhosts();
+
     if (!args.quiet) {
       console.log(`\n${colors.bold("Health report")} — ${withFiles.length} packages with files\n`);
 
@@ -99,6 +103,22 @@ export const doctorCommand = defineCommand({
       }
     }
 
+    if (!args.quiet && ghosts.length > 0) {
+      console.log(`\n${colors.bold("Ghosts & Orphans")} — ${colors.dim("Broken links or empty folders from deleted repo files")}`);
+
+      const printGhost = (g: GhostItem, indent: number) => {
+        const icon = g.type === "directory" ? "📁" : "🔗";
+        const prefix = "  ".repeat(indent);
+        const suffix = g.type === "directory" ? colors.red(" (orphaned folder — will be deleted)") : "";
+        console.log(`${prefix}  ${colors.red("✗")} ${icon} ${g.path}${g.target ? colors.dim(` → ${g.target}`) : suffix}`);
+        if (g.children) {
+          for (const child of g.children) printGhost(child, indent + 1);
+        }
+      };
+
+      for (const g of ghosts) printGhost(g, 0);
+    }
+
     if (!args.quiet && services.length > 0) {
       console.log(`\n${colors.bold("Services")} ${colors.dim(`(${init})`)}`);
       for (const svc of services) {
@@ -119,12 +139,16 @@ export const doctorCommand = defineCommand({
     }
 
     console.log("");
+    const allGhostsFlat = flattenGhosts(ghosts);
     logInfo(
       `Summary: ${colors.green(`${healthy.length} healthy`)}, ` +
       `${colors.yellow(`${partial.length} partial`)}, ` +
       `${colors.dim(`${unlinked.length} not linked`)}, ` +
       `${colors.red(`${withIssues.length} with issues`)}`,
     );
+    if (allGhostsFlat.length > 0) {
+      logInfo(`System: ${colors.red(`${allGhostsFlat.length} ghosts/orphans`)} — broken links or empty managed folders.`);
+    }
     if (services.length > 0) {
       const running = services.filter((s) => s.state === "running").length;
       logInfo(`Services: ${colors.green(`${running} running`)}, ${colors.red(`${failedServices.filter(s => s.state === "failed").length} failed`)}, ${services.length} total`);
@@ -163,7 +187,23 @@ export const doctorCommand = defineCommand({
         logInfo(`Attempted to enable services for ${fixedSvc}/${pkgsToEnable.length} package(s).`);
       }
 
-      if (toFix.length === 0 && failedServices.length === 0) {
+      // 3. Fix Ghosts
+      if (allGhostsFlat.length > 0) {
+        logSection(`Pruning ${allGhostsFlat.length} ghost(s)…`);
+        let pruned = 0;
+        for (const g of allGhostsFlat) {
+          try {
+            await rm(g.path, { recursive: g.type === "directory" });
+            console.log(`  ${colors.red("removed")} ${g.path}`);
+            pruned++;
+          } catch (e) {
+            logError(`  Failed to prune ${g.path}: ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+        logInfo(`Pruned ${pruned} ghost(s).`);
+      }
+
+      if (toFix.length === 0 && failedServices.length === 0 && allGhostsFlat.length === 0) {
         logSuccess("Nothing to fix.");
       }
       return;
