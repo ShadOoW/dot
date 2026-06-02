@@ -1,3 +1,5 @@
 backup/
 .cursor/
 node_modules/
+__pycache__/
+*.pyc
