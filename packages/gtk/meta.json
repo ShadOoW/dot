@@ -1,0 +1,6 @@
+{
+  "description": "GTK 3/4 theming: catppuccin-macchiato theme, candy icons, dark color-scheme (configure.sh applies gsettings)",
+  "tags": ["desktop"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}
