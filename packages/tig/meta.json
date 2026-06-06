@@ -1,0 +1,11 @@
+{
+  "description": "Tig text-mode interface for git",
+  "packages": {
+    "arch": { "pacman": ["tig"] },
+    "void": { "xbps": ["tig"] },
+    "macos": { "brew": ["tig"] }
+  },
+  "tags": ["git", "dev"],
+  "cleanSteps": [],
+  "os": ["linux", "macos"]
+}

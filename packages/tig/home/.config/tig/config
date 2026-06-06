@@ -1,0 +1,26 @@
+# Tig configuration — Tokyo Night, tuned for readability.
+#
+# The one real problem with the inherited terminal colours was the selected
+# (cursor) line: a bright background with dim text, nearly unreadable. We pin it
+# to dark text on the theme's cyan so the current commit is both obvious AND
+# legible. Colours use the 256-palette indices, which map to our Tokyo Night
+# terminal theme (color6 = cyan #7dcfff, color0 = #414868, etc.).
+
+# --- the readability fix: selected / cursor line ---
+color cursor       color0  color6  bold
+
+# --- title bars (active vs blurred view) ---
+color title-focus  color0  color4  bold
+color title-blur   color7  color8
+
+# --- ref decorations on the log view, kept visually distinct ---
+color main-head    color1  default  bold
+color main-ref     color2  default
+color main-remote  color6  default
+color main-tag     color3  default
+color main-local-tag color3 default
+
+# --- diff view ---
+color diff-add     color2  default
+color diff-del     color1  default
+color diff-chunk   color5  default
