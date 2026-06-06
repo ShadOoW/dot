@@ -9,6 +9,7 @@ import { listPackages } from "./pkg.ts";
 export const OS_VALUES = ["linux", "macos", "windows"] as const;
 export const DISTROS = ["arch", "void", "macos", "linux"] as const;
 export const PACKAGE_MANAGERS = ["brew", "xbps", "cargo", "pacman", "yay"] as const;
+export const INIT_SYSTEMS = ["systemd", "runit", "launchd"] as const;
 export const META_KEYS = [
   "description",
   "packages",
@@ -17,6 +18,7 @@ export const META_KEYS = [
   "os",
   "hosts",
   "extends",
+  "services",
 ] as const;
 
 export type SchemaLevel = "error" | "warn";
@@ -85,6 +87,32 @@ export function validateMeta(
       if (target === pkg) err("extends", "a package cannot extend itself");
       else if (knownPackages && !knownPackages.has(target)) {
         err("extends", `extends unknown package "${target}"`);
+      }
+    }
+  }
+
+  if ("services" in raw) {
+    if (!isObject(raw.services)) {
+      err("services", "must be an object keyed by init system (systemd, runit, launchd)");
+    } else {
+      for (const [init, list] of Object.entries(raw.services)) {
+        if (!(INIT_SYSTEMS as readonly string[]).includes(init)) {
+          warn(`services.${init}`, `unknown init "${init}" (valid: ${INIT_SYSTEMS.join(", ")})`);
+        }
+        if (!Array.isArray(list)) {
+          err(`services.${init}`, "must be an array of { name, scope? } entries");
+          continue;
+        }
+        list.forEach((entry, i) => {
+          if (!isObject(entry)) {
+            err(`services.${init}[${i}]`, "must be an object with a name");
+            return;
+          }
+          if (typeof entry.name !== "string") err(`services.${init}[${i}].name`, "must be a string");
+          if ("scope" in entry && entry.scope !== "user" && entry.scope !== "system") {
+            err(`services.${init}[${i}].scope`, 'must be "user" or "system"');
+          }
+        });
       }
     }
   }

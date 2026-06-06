@@ -1,148 +1,150 @@
 # ncmpcpp key bindings
-# Run ./stow.sh after modifying to apply changes
+# Symlinked via `dot pkg ncmpcpp link` — edits apply on next ncmpcpp launch.
+# NOTE: action lines MUST be indented under their def_key, otherwise ncmpcpp
+# aborts with "invalid line" (see /usr/share/doc/ncmpcpp/bindings).
 
 # =============================================================================
 # Volume Control
 # =============================================================================
 # Arrow keys for volume (hold for continuous change)
 def_key "shift-up"
-volume_up
+  volume_up
 
 def_key "shift-down"
-volume_down
+  volume_down
 
 # Alternative: +/- for volume
 def_key "+"
-volume_up
+  volume_up
 
 def_key "-"
-volume_down
+  volume_down
 
 # =============================================================================
 # Seeking - Standard (10 seconds, see seek_time in config)
 # =============================================================================
 def_key "right"
-seek_forward
+  seek_forward
 
 def_key "left"
-seek_backward
+  seek_backward
 
 # Alternative: f/b keys
 def_key "f"
-seek_forward
+  seek_forward
 
 def_key "b"
-seek_backward
+  seek_backward
 
 # =============================================================================
 # Fast Seeking - 60 seconds (6x base seek_time)
 # =============================================================================
 def_key "shift-right"
-seek_forward
-seek_forward
-seek_forward
-seek_forward
-seek_forward
-seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
 
 def_key "shift-left"
-seek_backward
-seek_backward
-seek_backward
-seek_backward
-seek_backward
-seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
 
 def_key "shift-f"
-seek_forward
-seek_forward
-seek_forward
-seek_forward
-seek_forward
-seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
+  seek_forward
 
 def_key "shift-b"
-seek_backward
-seek_backward
-seek_backward
-seek_backward
-seek_backward
-seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
+  seek_backward
 
 # =============================================================================
 # Playback Controls
 # =============================================================================
 def_key "space"
-pause
+  pause
 
 def_key "s"
-stop
+  stop
 
 def_key "."
-next
+  next
 
 def_key ","
-previous
+  previous
 
 def_key "backspace"
-replay_song
+  replay_song
 
 # =============================================================================
 # Playback Modes
 # =============================================================================
 def_key "r"
-toggle_repeat
+  toggle_repeat
 
 def_key "z"
-toggle_random
+  toggle_random
 
 def_key "y"
-toggle_single
+  toggle_single
 
 def_key "R"
-toggle_consume
+  toggle_consume
 
 # =============================================================================
 # Navigation
 # =============================================================================
 def_key "o"
-jump_to_playing_song
+  jump_to_playing_song
 
 def_key "ctrl-i"
-next_screen
+  next_screen
 
 def_key "ctrl-q"
-previous_screen
+  previous_screen
 
 # =============================================================================
 # Playlist
 # =============================================================================
 def_key "c"
-clear_playlist
+  clear_playlist
 
 def_key "C"
-crop_playlist
+  crop_playlist
 
 def_key "A"
-add
+  add
 
 def_key "S"
-save_playlist
+  save_playlist
 
 # =============================================================================
 # Visualizer
 # =============================================================================
 def_key "v"
-show_visualizer
+  show_visualizer
 
 # =============================================================================
 # Other
 # =============================================================================
 def_key "u"
-update_database
+  update_database
 
 def_key "ctrl-h"
-show_help
+  show_help
 
 def_key "q"
-quit
+  quit

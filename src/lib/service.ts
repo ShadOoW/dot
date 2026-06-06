@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import { basename, join } from "path";
 import { PACKAGES_DIR } from "./config.ts";
 import { detectInit } from "./pkg.ts";
@@ -44,22 +44,27 @@ export function serviceIcon(state: ServiceState): string {
   }
 }
 
-/** 
- * Service units a package declares, for the given init system.
- * Standard path: system/<init>/... (following agentmemory standard)
+/**
+ * Service units a package declares, for the given init system. Two sources:
+ *  1. Unit files the package *ships* under system/<init>/... (custom daemons
+ *     the repo must provide because no distro does — prettierd, litellm, …).
+ *  2. Units declared in meta.json `services` — for distro-provided units the
+ *     package only wants enabled + tracked, without forking a copy of the unit
+ *     (e.g. mpd's hardened /usr/lib/systemd/user/mpd.service).
+ * Both feed the same enable/disable + doctor paths; entries are de-duplicated.
  */
 export function declaredServices(pkg: string, init: Init): { name: string; scope: "user" | "system" }[] {
   const pkgDir = join(PACKAGES_DIR, pkg);
   const out: { name: string; scope: "user" | "system" }[] = [];
+  const add = (name: string, scope: "user" | "system") => {
+    if (!out.some((x) => x.name === name && x.scope === scope)) out.push({ name, scope });
+  };
 
   const addUnits = (dir: string, scope: "user" | "system") => {
     if (!existsSync(dir)) return;
     for (const f of readdirSync(dir)) {
       if (f.endsWith(".service") || f.endsWith(".timer") || f.endsWith(".socket") || f.endsWith(".path") || f.endsWith(".mount") || (init === "launchd" && f.endsWith(".plist"))) {
-        const name = init === "launchd" ? basename(f, ".plist") : f;
-        if (!out.some((x) => x.name === name && x.scope === scope)) {
-          out.push({ name, scope });
-        }
+        add(init === "launchd" ? basename(f, ".plist") : f, scope);
       }
     }
   };
@@ -67,7 +72,7 @@ export function declaredServices(pkg: string, init: Init): { name: string; scope
   if (init === "runit") {
     const svDir = join(pkgDir, "system/runit/etc/sv");
     if (existsSync(svDir)) {
-      for (const name of readdirSync(svDir)) out.push({ name, scope: "system" });
+      for (const name of readdirSync(svDir)) add(name, "system");
     }
   } else if (init === "systemd") {
     addUnits(join(pkgDir, "system/systemd/etc/systemd/user"), "user");
@@ -76,7 +81,33 @@ export function declaredServices(pkg: string, init: Init): { name: string; scope
     addUnits(join(pkgDir, "system/launchd/Library/LaunchAgents"), "user");
   }
 
+  for (const { name, scope } of metaDeclaredServices(pkgDir, init)) add(name, scope);
   return out;
+}
+
+/**
+ * Services declared in meta.json under `services.<init>`, e.g.
+ *   "services": { "systemd": [{ "name": "mpd.service", "scope": "user" }] }
+ * Only the current init's entries are returned. `scope` defaults to "user" for
+ * launchd, "system" otherwise (the conventional default for each init).
+ * Note: extends-inherited declarations are not resolved here — like the shipped
+ * unit scan, this reads the package's own meta.json.
+ */
+function metaDeclaredServices(pkgDir: string, init: Init): { name: string; scope: "user" | "system" }[] {
+  const metaPath = join(pkgDir, "meta.json");
+  if (!existsSync(metaPath)) return [];
+  let raw: { services?: Record<string, { name?: unknown; scope?: unknown }[]> };
+  try {
+    raw = JSON.parse(readFileSync(metaPath, "utf-8"));
+  } catch {
+    return [];
+  }
+  const decl = raw.services?.[init];
+  if (!Array.isArray(decl)) return [];
+  const defaultScope: "user" | "system" = init === "launchd" ? "user" : "system";
+  return decl
+    .filter((e): e is { name: string; scope?: unknown } => typeof e?.name === "string")
+    .map((e) => ({ name: e.name, scope: e.scope === "user" || e.scope === "system" ? e.scope : defaultScope }));
 }
 
 async function run(cmd: string[]): Promise<{ code: number; out: string }> {
