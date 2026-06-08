@@ -207,12 +207,17 @@ export const ASSETS: AssetDef[] = [
   {
     kind: "git-installer",
     name: "Tokyonight-GTK",
-    description: "Tokyonight GTK theme (dark, blue accent)",
+    description: "Tokyonight GTK3 theme + libadwaita (GTK4/Nautilus) + matching icon theme",
     remote: "https://github.com/Fausto-Korpsvart/Tokyonight-GTK-Theme.git",
     installDir: join(HOME_DIR, ".local/share/tokyonight-gtk"),
     installCmd: [
       "git submodule update --init --recursive",
-      "cd themes && ./install.sh --color dark --theme default --dest ~/.local/share/themes",
+      // GTK3 theme + --libadwaita links the gtk-4.0 theme into ~/.config so
+      // libadwaita apps (Nautilus) follow it instead of generic Adwaita-dark.
+      "cd themes && ./install.sh --color dark --theme default --libadwaita --dest ~/.local/share/themes",
+      // Icon themes ship as ready dirs (no installer) — symlink into ~/.local/share/icons
+      // (symlink, not copy: keeps a single 161M source updated by `git pull`).
+      'mkdir -p ~/.local/share/icons && ln -sfn "$PWD/icons/Tokyonight-Dark" ~/.local/share/icons/Tokyonight-Dark && ln -sfn "$PWD/icons/Tokyonight-Dark-Cyan" ~/.local/share/icons/Tokyonight-Dark-Cyan',
     ],
   },
   {

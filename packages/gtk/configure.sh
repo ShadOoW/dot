@@ -26,8 +26,8 @@ set_key() {
 
 echo "Applying GTK interface settings…"
 set_key color-scheme "prefer-dark"
-set_key gtk-theme "catppuccin-macchiato-sky-standard+default"
-set_key icon-theme "candy-icons"
+set_key gtk-theme "Tokyonight-Dark"
+set_key icon-theme "Tokyonight-Dark"
 set_key cursor-theme "Bibata-Original-Classic"
 set_key font-name "Source Sans 3 11"
 
