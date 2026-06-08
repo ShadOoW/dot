@@ -27,8 +27,9 @@ lines_scrolled = "5"
 # Highlight current song better
 current_item_inactive_column_prefix = "$(magenta)"
 current_item_inactive_column_suffix = "$(end)"
-now_playing_prefix = "$(red)❯$(yellow)❯$(green)❯ $(magenta)"
-now_playing_suffix = ""
+# Reverse video: zero text width so the title column never shifts
+now_playing_prefix = "$r"
+now_playing_suffix = "$/r"
 
 # Auto-play settings
 # These settings ensure next songs play automatically in any mode
@@ -77,13 +78,14 @@ active_window_border = "magenta"
 song_window_title_format = "Now Playing - {%a - }{%t}|{%f}"
 
 # Custom formats with special indicators for currently playing
-# Library is largely untagged (yt-dlp rips) → drop the dead Artist column and
-# give the title/filename the full width instead of a half-empty two-column view.
-song_columns_list_format = "(100)[magenta]{t|f}"
+# Narrow indicator column (shows length for normal rows; ❯❯❯ fills it for the
+# playing song so the title column stays at a fixed position).
+song_columns_list_format = "(5)[yellow]{l}(95)[magenta]{t|f}"
 
 # Use special formatting for current song with leading indicator
 song_list_format = "{file}"
-current_item_prefix = "$(red)❯$(yellow)❯$(green)❯ $b"
+# Same 4-char visual width as now_playing_prefix so both states align
+current_item_prefix = "$(red)❯$(yellow)❯$(green)❯$(end) $b"
 current_item_suffix = "$/b"
 
 # Adding special alternative format for currently playing item
