@@ -1,0 +1,8 @@
+{
+  "description": "prettierd — Prettier daemon + shared config/plugins consumed by nvim (conform.nvim)",
+  "packages": {
+    "arch": { "pacman": ["prettierd"] }
+  },
+  "tags": ["dev"],
+  "os": ["linux"]
+}
