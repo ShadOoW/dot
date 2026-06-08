@@ -60,6 +60,19 @@ zdrag() {
   ripdrag "$(fzf)"
 }
 
+rgaf() {
+  local RG_PREFIX="rga --files-with-matches"
+  local file
+  file="$(
+    FZF_DEFAULT_COMMAND="$RG_PREFIX ${*:-}" \
+      fzf --sort \
+      --preview="[[ ! -z {} ]] && rga --pretty --context 5 {q} {}" \
+      --phony -q "${*:-}" \
+      --bind "change:reload:$RG_PREFIX {q}" \
+      --preview-window="70%:wrap"
+  )" && nvim "$file"
+}
+
 copycommitmsg() {
   local ref="${1:-HEAD}"
   local msg
