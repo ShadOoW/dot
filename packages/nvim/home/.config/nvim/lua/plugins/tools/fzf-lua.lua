@@ -277,6 +277,16 @@ return {
       },
       { '<leader>sg', function() fzf.live_grep(picker_opts('Live Grep', '󰩉')) end, 'Live grep' },
       {
+        '<leader>sA',
+        function()
+          fzf.live_grep(picker_opts('Search All (rga)', '󰩉', {
+            cmd = 'rga',
+            rg_opts = '--column --line-number --no-heading --color=always --smart-case --max-columns=4096 -g \'!.git\' -g \'!node_modules\' -g \'!venv\' -g \'!.venv\'',
+          }))
+        end,
+        'Search all file types (rga)',
+      },
+      {
         '<leader>sw',
         function() fzf.grep_cword(picker_opts('Grep Word', '󰩉')) end,
         'Grep word under cursor',
