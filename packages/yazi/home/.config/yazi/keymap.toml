@@ -61,6 +61,17 @@ on = "f"
 run = "plugin jump-to-char"
 desc = "Jump to char"
 
+# ── fr.yazi search (s prefix = search, mirrors <leader>s in nvim) ────────────
+[[mgr.prepend_keymap]]
+on = ["s", "g"]
+run = "plugin fr rg"
+desc = "Search file content (rg + bat preview)"
+
+[[mgr.prepend_keymap]]
+on = ["s", "a"]
+run = "plugin fr rga"
+desc = "Search all file types (rga: PDFs, archives, Office)"
+
 # ── Smart filter (continuous / auto-enter unique dir) ───────────────────────
 [[mgr.prepend_keymap]]
 on = "<C-f>"
