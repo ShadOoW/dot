@@ -106,7 +106,7 @@ export const sourceUpdateCommand = defineCommand({
   async run({ args }) {
     const check = args.check ?? false;
     const ok = await withAI(args.ai ?? false, async (step) => {
-      logDesc("Builds and updates source tools: pkgbuilds, fnm, anyzig, ly, and zinit.");
+      logDesc("Builds and updates source tools: pkgbuilds, fnm, anyzig, ly, iwmenu, and zinit.");
       logSection("source tools");
       return runGroup("source", check, step);
     });

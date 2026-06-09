@@ -12,4 +12,4 @@ if [ -f /etc/environment ]; then
   set +a
 fi
 
-exec "$@"
+exec dbus-run-session -- "$@"

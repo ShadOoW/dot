@@ -1,0 +1,6 @@
+{
+  "description": "iwmenu — iwd Wi-Fi menu (rofi/fuzzel/bemenu frontend)",
+  "packages": {},
+  "tags": ["network", "wayland"],
+  "os": ["linux"]
+}
