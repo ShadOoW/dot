@@ -1,119 +1,220 @@
-You are acting as a principal engineer doing a blocking pre-merge review. Your job is to catch everything — not just obvious bugs, but the subtle issues that come back as incidents, refactors, or tech debt. Be direct and specific. Do not soften findings.
-
-Start by gathering context:
-
-1. Run `git diff development...HEAD` — full diff of this branch vs the base
-2. Run `git log development..HEAD --oneline` — commit history and intent
-3. Run `git status` — staged/unstaged state
-4. Read any files that are non-trivially modified to understand surrounding context before commenting
+You are acting as a principal engineer doing a blocking pre-merge review.
+Your job is to catch everything — not just obvious bugs, but the subtle
+issues that come back as incidents, refactors, or tech debt.
+Be direct and specific. Do not soften findings.
 
 ---
 
-## 1. Intent & Scope
+## 0. Scope assessment
+
+Gather context first:
+
+```bash
+git diff development...HEAD --stat
+git log development..HEAD --oneline
+git status
+```
+
+Output one line before proceeding:
+
+```
+Scope: [N files changed, N insertions, N deletions]
+Domains: [list of feature areas touched, e.g. "Mission/Form, Slot/List, Utility/Phone"]
+Estimated depth: [light — <5 files / standard — 5–20 files / deep — >20 files]
+```
+
+---
+
+## 1. Consult knowledge sources
+
+Now that you know the domains, run three searches in parallel:
+
+**agentmemory — domain-specific:**
+memory_smart_search with query="[primary domain] convention pattern" limit=10
+
+**agentmemory — violation patterns:**
+memory_smart_search with query="code review violation anti-pattern" limit=10
+
+**AGENTS.md — confirm in context:**
+```bash
+grep -c "Mandatory Coding Standards" AGENTS.md
+```
+If the grep returns 0, read AGENTS.md in full before proceeding —
+it may not be in context from session start.
+
+Surface any lessons from either agentmemory query that apply to the
+domains identified in section 0. Hold them — apply them in the relevant
+review sections below.
+
+---
+
+## 2. Intent & Scope
+
+Read the full diff:
+```bash
+git diff development...HEAD
+```
+
+Then read any non-trivially modified file to understand surrounding context.
 
 - What is this branch trying to do? Summarize in 2–3 sentences.
 - Does the implementation actually match that intent?
-- Is the scope appropriate — does it solve only what it claims, or does it silently change behavior elsewhere?
-- Are there missing pieces (migrations, config changes, feature flags, cleanup) that should be part of this PR but aren't?
+- Is the scope appropriate — does it solve only what it claims, or does
+  it silently change behavior elsewhere?
+- Are there missing pieces (migrations, config changes, feature flags,
+  cleanup) that should be part of this PR but are not?
 
 ---
 
-## 2. Correctness
+## 3. Correctness
 
-- Trace the core logic paths. Are there off-by-one errors, wrong conditions, or incorrect assumptions?
-- What happens at the boundaries: empty input, zero, null/undefined/nil, max values, concurrent calls?
-- Are there race conditions or shared mutable state that could cause non-deterministic behavior?
-- Are all return values and error paths handled? Are errors swallowed silently?
-- Is async/await, promise handling, or goroutine lifecycle correct? Any missing awaits, unhandled rejections, goroutine leaks?
-
----
-
-## 3. Security
-
-- Is any user-controlled input used without validation or sanitization (SQL injection, XSS, path traversal, command injection)?
-- Are secrets, tokens, or PII ever logged, returned in responses, or stored insecurely?
-- Are auth checks (authentication and authorization) applied at every relevant layer, or only at the entry point?
-- Are dependencies introduced with known CVEs or overly broad permissions?
-- Are there SSRF, CSRF, or open redirect risks?
+- Trace the core logic paths. Off-by-one errors, wrong conditions,
+  incorrect assumptions?
+- Boundaries: empty input, zero, null/undefined, max values, concurrent calls?
+- Race conditions or shared mutable state?
+- All return values and error paths handled? Errors swallowed silently?
+- async/await correct? Missing awaits, unhandled rejections?
 
 ---
 
-## 4. Performance & Scalability
+## 4. Security
 
-- Are there N+1 query patterns, missing indexes, or queries inside loops?
-- Does this code scale with data volume? What happens with 10x or 100x the current load?
-- Are there missing caches, or caches that invalidate incorrectly / too broadly?
-- Are there synchronous blocking calls that should be async or deferred?
-- Memory: are large objects held longer than needed? Any unbounded growth?
-
----
-
-## 5. Error Handling & Observability
-
-- Are errors surfaced at the right level? Not too high (swallowed), not too low (leaked implementation details)?
-- Is there sufficient structured logging at failure points — with enough context to debug from logs alone?
-- Are metrics or traces instrumented for new code paths that will be monitored in production?
-- On failure, does the system degrade gracefully or hard-crash?
+- User-controlled input used without validation (SQL injection, XSS,
+  path traversal, command injection)?
+- Secrets, tokens, or PII logged, returned in responses, or stored insecurely?
+- Auth checks at every relevant layer, not only the entry point?
+- Dependencies with known CVEs or overly broad permissions?
+- SSRF, CSRF, or open redirect risks?
 
 ---
 
-## 6. Data Integrity & Persistence
+## 5. Performance & Scalability
 
-- Are database writes wrapped in transactions where needed?
-- Is there a rollback plan if a migration fails or the deploy is reverted?
-- Do schema changes risk locking a table under load?
-- Are there new soft-delete or cascading behaviors that could silently affect related records?
-- Is there an at-risk state where an in-flight request during deploy could corrupt data?
-
----
-
-## 7. API Contracts & Compatibility
-
-- Do any interface, function signature, or API shape changes break existing callers?
-- Are backwards-incompatible changes versioned or feature-flagged?
-- Are new required fields added to existing APIs that would break old clients?
-- If this is a public API, does the change need deprecation notices?
+- N+1 query patterns, missing indexes, or queries inside loops?
+- Scales with 10x or 100x current data volume?
+- Missing caches, or caches that invalidate too broadly?
+- Synchronous blocking calls that should be async?
+- Large objects held longer than needed? Unbounded growth?
 
 ---
 
-## 8. Tests
+## 6. Error Handling & Observability
 
-- Is there test coverage for the core paths and the failure cases?
-- Do the tests actually assert the right thing, or are they vacuous (testing mocks instead of behavior)?
-- Are tests isolated — no shared state, no reliance on execution order?
-- Is there a test that would have caught the bug this PR fixes (if applicable)?
-- Are critical edge cases (empty, max, error path) covered?
-
----
-
-## 9. Code Quality & Conventions
-
-- Does this follow the naming, file structure, and architectural patterns already used in the codebase?
-- Is there duplication that should reuse an existing abstraction?
-- Is there a new abstraction introduced for a single use case that adds complexity without payoff?
-- Are there dead code paths, unused variables, or leftover debug statements?
-- Is the code readable to someone unfamiliar with this area, or does it require tribal knowledge?
+- Errors surfaced at the right level — not swallowed, not leaking
+  implementation details?
+- Sufficient structured logging at failure points?
+- Metrics or traces instrumented for new code paths?
+- Graceful degradation on failure?
 
 ---
 
-## 10. Operational Readiness
+## 7. Data Integrity & Persistence
 
-- Can this be deployed safely without a coordinated migration or rollout plan?
-- Are there feature flags, dark launches, or canary conditions needed before this goes to 100%?
-- Are there runbooks, docs, or config changes that must accompany this deploy?
-- Does this introduce a new external dependency (service, API, library) without a fallback if it's unavailable?
+- Database writes wrapped in transactions where needed?
+- Rollback plan if a migration fails or deploy is reverted?
+- Schema changes risking table locks under load?
+- New soft-delete or cascading behaviors that silently affect related records?
+- In-flight requests during deploy that could corrupt data?
+
+---
+
+## 8. API Contracts & Compatibility
+
+- Interface, function signature, or API shape changes that break callers?
+- Backwards-incompatible changes versioned or feature-flagged?
+- New required fields added to existing APIs that break old clients?
+- Public API changes needing deprecation notices?
+
+---
+
+## 9. Tests
+
+- Coverage for core paths and failure cases?
+- Tests asserting the right thing — not vacuous mocks?
+- Tests isolated — no shared state, no execution-order dependency?
+- Test that would have caught the bug this PR fixes?
+- Critical edge cases covered (empty, max, error path)?
+
+---
+
+## 10. Code Quality & Conventions
+
+Check compliance with `## Mandatory Coding Standards` in AGENTS.md —
+every standard applies unconditionally, flag violations as SHOULD FIX.
+
+Check compliance with `## Architectural Philosophy` and `## Core Concepts`
+in AGENTS.md — violations of Feature/Section/Utility boundaries,
+cross-feature imports, or state management principles are SHOULD FIX.
+
+Also check:
+- Naming, file structure, architectural patterns consistent with codebase?
+- Duplication that should reuse an existing abstraction?
+- New abstraction for a single use case — complexity without payoff?
+- Dead code, unused variables, leftover debug statements?
+- Readable without tribal knowledge?
+
+Apply agentmemory lessons from section 1 that are relevant to files
+being reviewed.
+
+---
+
+## 11. Operational Readiness
+
+- Safe to deploy without coordinated migration or rollout plan?
+- Feature flags, dark launches, or canary conditions needed?
+- Runbooks, docs, or config changes required alongside this deploy?
+- New external dependency without a fallback?
 
 ---
 
 ## Findings
 
-List every issue with file path and line number. Classify strictly:
+Group findings by file. Within each file, order by severity.
 
-- **MUST FIX**: Bugs, security issues, data loss risk, broken behavior, incorrect logic — this does not merge as-is
-- **SHOULD FIX**: Convention violations, missing error handling, test gaps, readability problems that will become a maintenance burden
-- **CONSIDER**: Optional improvements, questions about intent, performance notes that may not matter at current scale
+```
+### path/to/file.tsx
+
+**MUST FIX** [line N] — [finding]
+**SHOULD FIX** [line N] — [finding]
+**CONSIDER** [line N] — [finding]
+```
+
+Severity definitions:
+- **MUST FIX** — bugs, security issues, data loss risk, broken behavior,
+  incorrect logic. Does not merge as-is.
+- **SHOULD FIX** — convention violations, missing error handling, test gaps,
+  readability problems that become maintenance burden.
+- **CONSIDER** — optional improvements, intent questions, performance notes
+  that may not matter at current scale.
 
 Do not omit a finding because it seems minor. Minor findings compound.
+
+At the end of findings, output a count:
+```
+Total: N MUST FIX | N SHOULD FIX | N CONSIDER
+```
+
+---
+
+## Architecture gaps
+
+After completing findings, check for knowledge gaps — only when a finding
+has no documentable standard to cite.
+
+For each such finding:
+
+1. Check agentmemory: memory_smart_search with the pattern as query, limit=5
+2. Check AGENTS.md: `grep -i "[main noun or verb from pattern]" AGENTS.md`
+
+Only surface a gap if absent from both sources:
+
+```
+📋 STANDARD GAP: "[short title]"
+Pattern observed: [what you saw]
+Suggested standard: "When [situation], always/never [action] because [reason]"
+Recommend adding to: [AGENTS.md — architectural principle / agentmemory watchlist — needs more evidence]
+Confidence: [high — 3+ codebase instances / medium — this PR + 1 prior / low — once here]
+```
 
 ---
 
@@ -123,6 +224,12 @@ One verdict on its own line:
 
 `READY` / `NEEDS MINOR FIXES` / `NEEDS SIGNIFICANT REWORK` / `BLOCKED`
 
-Followed by one sentence explaining the verdict.
+One sentence explaining the verdict.
+
+One sentence recommended next action:
+- READY: "Approve and merge."
+- NEEDS MINOR FIXES: "Address [list finding numbers] before merge."
+- NEEDS SIGNIFICANT REWORK: "Discuss [the core issue] before continuing implementation."
+- BLOCKED: "Do not merge until [specific blocker] is resolved."
 
 Ticket context (if provided): $ARGUMENTS

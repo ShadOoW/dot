@@ -4,7 +4,7 @@ Apply the task in $ARGUMENTS. Optimize for first-attempt correctness — no revi
 
 **Usage:** `/code-task [absolute path] [task]`
 **Stop if no coding task is identifiable.**
-**Success criterion:** all files written, enforce check clean, tsc clean, audit log complete.
+**Success criterion:** all files written, enforce check clean, tsc clean, i18n complete, audit log complete.
 **Markers:** `// [lesson: "title"]` and `// [novel: description]` stay in delivered code.
 `{intent: enforce}` = hard rule, fix violations on sight.
 
@@ -25,9 +25,22 @@ Stop on failure: `STOPPED: [what] unreachable. Fix: [command]`
 
 ---
 
-## 1. Plan + Explore
+## 1. Lessons
 
-Classify every target file:
+Load lessons **before any file exploration**. Wait for results.
+
+```
+memory_smart_search("[v1] confidence rule evidence", limit: 50)
+memory_smart_search("{intent: enforce}", limit: 20)
+```
+
+Hold enforce titles for step 4. Warn if both return 0.
+
+---
+
+## 2. Plan + Explore
+
+**A. Plan files:**
 
 | Class | Trigger |
 |-------|---------|
@@ -35,109 +48,36 @@ Classify every target file:
 | MODIFY line | ≤5 lines, no new named region |
 | MODIFY section | New named region OR >20 lines rewritten in one region |
 
-- **Paired:** `index.tsx` + `views.tsx` + `setup.ts` in same folder = one sub-agent unit.
+- **Paired:** `index.tsx` + `views.tsx` + `setup.ts` in same folder = one unit.
 - **Component type:** name it (e.g. `CreateForm`). Used in lesson queries.
-- **Domain keyword:** first path segment right-of-filename matching `Form|Select|List|Page|Modal|Picker|View|Field`.
 - **Write order:** exporters before importers.
 
-**Read the key files needed to understand the task** — types, related components, existing patterns.
-Do this in the parent thread before dispatching sub-agents.
-The richer the pre-write context, the better the output.
+**B. Explore — read in this order, stop when sufficient:**
+
+1. **Mirror file:** the closest existing counterpart (e.g. `MissionTemplate/index.tsx` when building `AssignmentTemplate/index.tsx`). Read fully.
+2. **Parent file:** the controller or view you are modifying. Read only the sections you will edit.
+3. **Types:** grep for key interfaces — read only the relevant declaration block.
+
+**Hard limit: at most 5 full file reads in the parent thread.** Use `grep`/`bash` for everything else.
 
 Output the file plan inline and proceed immediately.
 
 ---
 
-## 2. Lessons + Templates — parallel
-
-Run A and B in parallel:
-
-**A. Load lessons (parent thread):**
-```
-memory_smart_search("[v1] confidence rule evidence", limit: 50)
-memory_smart_search("{intent: enforce}", limit: 20)
-```
-Hold enforce titles for step 4. Warn if both return 0.
-
-**B. Template sub-agents** — one per CREATE file (paired = one), one per MODIFY section.
-
-Build candidate pool per file in the parent thread (bash only, no Read):
-```bash
-git log --pretty=format: --name-only \
-  | grep "[PATH_PREFIX].*FILENAME$" | grep -v '^$' \
-  | awk '!seen[$0]++' | head -15
-# when domain keyword exists, also:
-git log --pretty=format: --name-only \
-  | grep "[PATH_PREFIX].*DOMAIN.*FILENAME$" | grep -v '^$' \
-  | awk '!seen[$0]++' | head -10
-```
-Deduplicate, exclude target files, cap at 15.
-
-**Sub-agent prompt — CREATE single file:**
-```
-Structural template selection — read structure only, ignore logic.
-File: [path] | Task: [one sentence] | Candidates (most recent first): [≤15]
-
-1. Cat candidates in order. Stop after 5 or on clear match.
-2. Extract top-level section names and order.
-3. Sections with >3 internal declaration types: also extract type order.
-4. No match → Augment query "[component type] section structure". Mark NONE.
-5. memory_smart_search("[section] [component type] react", limit:8) for each section.
-
-Return (≤200 tokens):
-Template: [path] | NONE
-Sections: 1.[name] 2.[name] ...
-Within-section (if confident): [section]: 1.[type] 2.[type] ...
-Lessons per section: [section] → [titles] | none
-```
-
-**Sub-agent prompt — CREATE paired (index.tsx / views.tsx / setup.ts):**
-```
-Structural template selection — read structure only.
-Files: [list] — must come from one source folder. | Candidates: [≤15]
-
-1. Find a source folder with the same filenames. Cat up to 5 folders.
-2. index.tsx: section order + within-section type order for callbacks/effects.
-   views.tsx / setup.ts: section order only.
-3. No match → Augment query per file. Mark NONE.
-4. memory_smart_search("[section] [component type] react", limit:8) per section.
-
-Return (≤250 tokens):
-Template folder: [path] | NONE
-[filename] sections: 1.[name] 2.[name] ...
-index.tsx [section]: 1.[type] ... (only if >3 types and confident)
-Lessons per section: [section] → [titles] | none
-```
-
-**Sub-agent prompt — MODIFY section:**
-```
-Structural template selection — read structure only.
-File: [path] | Section to add: [name] | Task: [one sentence] | Candidates: [≤15]
-
-1. Cat candidates in order. Check up to 8 files.
-2. When target section found: extract internal type order and flanking sections.
-3. memory_smart_search("[section] [component type] react", limit:8).
-
-Return (≤120 tokens):
-Template: [path] | NONE
-Internal order: 1.[type] 2.[type] ...
-Position: after [section] before [section]
-Lessons: [titles] | none
-```
-
-Output template verdicts and lesson map inline, then proceed.
-
----
-
 ## 3. Write
 
-Files in write order. One section at a time. Use sub-agent lesson results — no new memory queries.
+Files in write order. One section at a time. Apply loaded lessons.
 
-**`// [novel: ...]` — mandatory, no exceptions:**
-- Hardcoded ID, objectId, permission key, or magic value
-- Import from a path containing `DEPRECATED` (check whether a non-deprecated equivalent exists)
-- Enum or type defined locally that may already exist in a library package
-- Any decision a team developer could reasonably make differently
+**After writing each file — novel scan (run before moving to the next file):**
+Scan every line written. Add `// [novel: description]` on the line for each:
+- Hardcoded string literal, ID, objectId, magic value, or language code
+- Any `as X` type cast
+- Import from a path containing `DEPRECATED`
+- Local enum or type that may already exist in a library package
+- Constant borrowed from a sibling module rather than defined in this file or a shared location
+- New prop whose name uses a different convention than its siblings in the same interface
+- Behavioral change in a file outside your current session's writes (even when fixing a type error)
+- New i18n key reference — immediately add the key to the translation file before continuing
 
 **`// [lesson: "title"]`** — only when a developer without that lesson would plausibly write this differently.
 
@@ -147,7 +87,7 @@ MODIFY line: write the change; marker only if an enforce lesson directly applies
 
 ## 4. Enforce check
 
-Using enforce titles from 2A. Fix violations immediately.
+Using enforce titles from step 1. Fix violations immediately.
 ```
 Enforce check:
   "[title]" — clean | fixed at [description]
@@ -160,24 +100,30 @@ Enforce check:
 ```bash
 cd [project path] && npx tsc --noEmit 2>&1 | grep "error TS" | head -20
 ```
-Fix every type error. Confirm:
+
+Fix every type error **in files you wrote this session**.
+If `tsc` surfaces errors in files you did not write: list them in the audit log as "out-of-scope errors" — do not fix them silently.
+
+Confirm:
 - [ ] Every symbol in written files appears in its import block
-- [ ] Every hardcoded ID, deprecated import, invented type has `// [novel: ...]`
-- [ ] `tsc --noEmit` exits with zero errors
+- [ ] Every `// [novel: ...]` from the post-write scans is present
+- [ ] Every new i18n key has a corresponding translation entry
+- [ ] `tsc --noEmit` exits with zero errors in files you wrote
 
 ---
 
-## 6. Audit log
+## 6. Audit log — do not end the task without this
 
 ```
 ## Audit log
 
 ### [file]
-Template: [path] | NONE
+Mirror used: [path] | NONE
 Sections: [in write order]
 Lessons applied: "[title]" — [section] | none
 Enforce fixes: [list] | none
 Novel decisions: [section]: [description] | none
+Out-of-scope errors: [file:line error] | none
 ```
 
 If any novel decisions were logged:
