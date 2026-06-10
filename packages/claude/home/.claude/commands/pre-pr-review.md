@@ -63,6 +63,10 @@ Then read any non-trivially modified file to understand surrounding context.
   it silently change behavior elsewhere?
 - Are there missing pieces (migrations, config changes, feature flags,
   cleanup) that should be part of this PR but are not?
+- If a feature's last entry point is removed (menu action, route, modal
+  trigger): verify its source files, `Modal/index.tsx` registration, and
+  translation keys are gone too. Run `grep -r "FeatureName" src/ res/` —
+  any hit is a SHOULD FIX.
 
 ---
 
@@ -148,9 +152,13 @@ cross-feature imports, or state management principles are SHOULD FIX.
 
 Also check:
 - Naming, file structure, architectural patterns consistent with codebase?
+  This includes local variables and inline callback parameters — single-letter
+  or abbreviated names (`r`, `s`, `req`) violate the Naming standard.
 - Duplication that should reuse an existing abstraction?
 - New abstraction for a single use case — complexity without payoff?
 - Dead code, unused variables, leftover debug statements?
+- Any `change(field, value)` call in a `views.tsx` is a Redux dispatch and
+  violates "Feature Index Loads Data, Views Render Only" — flag as SHOULD FIX.
 - Readable without tribal knowledge?
 
 Apply agentmemory lessons from section 1 that are relevant to files
