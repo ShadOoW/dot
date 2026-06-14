@@ -26,3 +26,7 @@ group-by=category
 background-color=#2d5a27ff
 default-timeout=8000
 group-by=app-name
+
+[app-name=Vivaldi summary~="Download"]
+ignore-timeout=1
+default-timeout=2000
