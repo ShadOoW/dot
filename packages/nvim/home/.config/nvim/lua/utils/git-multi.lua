@@ -13,6 +13,14 @@ M.git_status_multi = function(opts)
     fzf_opts = {
       ['--bind'] = 'ctrl-y:execute-silent(echo {+} | clipboard-copy)',
     },
+    actions = {
+      ['default'] = require('fzf-lua.actions').file_edit,
+      ['ctrl-d'] = function(selected)
+        if not selected or #selected == 0 then return end
+        local file = selected[1]:gsub('^%s*[MADRCU?!]%s*[MADRCU?!]?%s+', ''):gsub('^%s+', '')
+        vim.cmd('DiffviewOpen -- ' .. vim.fn.fnameescape(file))
+      end,
+    },
   })
 end
 

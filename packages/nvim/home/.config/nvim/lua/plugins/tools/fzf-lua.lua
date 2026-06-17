@@ -358,7 +358,7 @@ return {
         '<leader>ss',
         function() git_multi.git_status_multi() end,
         'Git status',
-        opts = { desc = 'Git status <Enter>=edit <C-d>=diffview <C-t>=tab' },
+        opts = { desc = 'Git status  <Enter>=edit <C-d>=diffview' },
       },
       {
         '<leader>sS',

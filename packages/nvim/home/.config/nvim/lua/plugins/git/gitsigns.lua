@@ -105,7 +105,7 @@ return {
         vim.notify('  Diff review mode OFF', vim.log.levels.INFO, { title = 'Git' })
       end
 
-      map('n', '<leader>gm', function()
+      map('n', '<leader>rm', function()
         _diff_mode = not _diff_mode
         if _diff_mode then
           review_on()

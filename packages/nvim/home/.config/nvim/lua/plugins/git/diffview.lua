@@ -80,7 +80,9 @@ return {
     })
   end,
   keys = {
-    { '<leader>gv', '<cmd>DiffviewOpen<cr>', desc = 'Open diffview' },
-    { '<leader>gV', '<cmd>DiffviewFileHistory %<cr>', desc = 'File history (diffview)' },
+    { '<leader>rv', '<cmd>DiffviewOpen<cr>',              desc = 'Review working tree' },
+    { '<leader>rh', '<cmd>DiffviewFileHistory %<cr>',     desc = 'Review file history' },
+    { '<leader>rl', '<cmd>DiffviewOpen HEAD~1..HEAD<cr>', desc = 'Review last commit' },
+    { '<leader>rf', '<cmd>DiffviewFileHistory<cr>',       desc = 'Review repo history' },
   },
 }

@@ -54,6 +54,10 @@ return {
           group = 'Git',
         },
         {
+          '<leader>r',
+          group = 'Review',
+        },
+        {
           '<leader>t',
           group = 'Tags & Symbols',
         },
