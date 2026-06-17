@@ -18,9 +18,9 @@ export PRETTIERD_DEFAULT_CONFIG="$HOME/.config/prettierd/.prettierrc"
 # OS/distro — single source of truth, available in all shell contexts
 if [[ "$(uname)" == "Darwin" ]]; then
   export _DISTRO=macos
-elif [[ -f /etc/void-release ]]; then
+elif grep -q '^ID=void' /etc/os-release 2>/dev/null || [[ -f /etc/void-release ]]; then
   export _DISTRO=void
-elif [[ -f /etc/arch-release ]]; then
+elif grep -q '^ID=arch' /etc/os-release 2>/dev/null || [[ -f /etc/arch-release ]]; then
   export _DISTRO=arch
 else
   export _DISTRO=linux

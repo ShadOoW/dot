@@ -10,4 +10,5 @@ return {
   require('plugins.tools.yanky'),
   require('plugins.tools.grug-far'),
   require('plugins.tools.ts-errors'),
+  require('plugins.tools.tv'),
 }

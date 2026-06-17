@@ -1,10 +1,11 @@
 import { defineCommand } from "citty";
+import { confirm } from "@clack/prompts";
 import { existsSync } from "fs";
 import { join } from "path";
 import { PACKAGES_DIR } from "../lib/config.ts";
-import { appliesToHost, collectFiles, detectHost, getPackageMeta, listPackages } from "../lib/pkg.ts";
+import { appliesToHost, collectFiles, detectDistro, detectHost, getPackageMeta, listPackages } from "../lib/pkg.ts";
 import { checkFileStatus, type FileStatus } from "../lib/status.ts";
-import { colors, logError, logInfo, logWarn } from "../lib/console.ts";
+import { colors, logError, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
 import { linkPackage, unlinkPackage } from "./link.ts";
 import { showPackageInfo, runConfigure, runInitScript } from "./info.ts";
 
@@ -132,6 +133,40 @@ async function dispatch(pkg: string, action: string, args: DispatchArgs): Promis
   return HANDLERS[action](pkg, args);
 }
 
+// ─── bulk helpers ────────────────────────────────────────────────────────────
+
+function appliesToCurrentOS(meta: { os?: string[] }): boolean {
+  if (!meta.os || meta.os.length === 0) return true;
+  const distro = detectDistro();
+  const osCategory = distro === "macos" ? "macos" : "linux";
+  return meta.os.includes(osCategory) || meta.os.includes(distro);
+}
+
+async function collectAllPackages(ignoreHost: boolean): Promise<{
+  included: string[];
+  skippedHost: string[];
+  skippedOS: string[];
+  noFiles: string[];
+}> {
+  const host = detectHost();
+  const allPkgs = await listPackages();
+  const included: string[] = [];
+  const skippedHost: string[] = [];
+  const skippedOS: string[] = [];
+  const noFiles: string[] = [];
+
+  for (const name of allPkgs) {
+    const pkgDir = join(PACKAGES_DIR, name);
+    const meta = await getPackageMeta(name);
+    if (meta && !appliesToCurrentOS(meta)) { skippedOS.push(name); continue; }
+    if (!ignoreHost && meta && !appliesToHost(meta, host)) { skippedHost.push(name); continue; }
+    const files = [...await collectFiles(pkgDir, "home"), ...await collectFiles(pkgDir, "system")];
+    if (files.length === 0) { noFiles.push(name); continue; }
+    included.push(name);
+  }
+  return { included, skippedHost, skippedOS, noFiles };
+}
+
 // ─── command ─────────────────────────────────────────────────────────────────
 
 export const pkgCommand = defineCommand({
@@ -143,6 +178,7 @@ export const pkgCommand = defineCommand({
     force: { type: "boolean", description: "Allow link to overwrite real (non-symlink) files" },
     "ignore-host": { type: "boolean", description: "Link even if meta.hosts excludes this host" },
     tag: { type: "string", description: "Apply action to all packages with this tag" },
+    all: { type: "boolean", description: "Apply action to every package matching current host/OS" },
   },
   async run({ args, rawArgs }) {
     const dispatchArgs: DispatchArgs = {
@@ -152,6 +188,46 @@ export const pkgCommand = defineCommand({
       force: args.force ?? false,
       ignoreHost: args["ignore-host"] ?? false,
     };
+
+    if (args.all) {
+      const positionals = rawArgs.filter((a) => !a.startsWith("-"));
+      const action = positionals[0] ?? "link";
+
+      const { included, skippedHost, skippedOS, noFiles } = await collectAllPackages(dispatchArgs.ignoreHost);
+
+      if (included.length === 0) {
+        logError("No packages matched current host/OS filters.");
+        process.exit(1);
+      }
+
+      logSection(`dot pkg --all ${action}`);
+      logInfo(`Host: ${detectHost()} | OS: ${detectDistro()}`);
+      console.log(`\n${colors.bold("Packages to process")} (${included.length}):`);
+      for (const name of included) console.log(`  ${colors.green("•")} ${name}`);
+      if (skippedHost.length > 0)
+        console.log(`\n${colors.dim(`Skipped (other host): ${skippedHost.join(", ")}`)}`);
+      if (skippedOS.length > 0)
+        console.log(`${colors.dim(`Skipped (other OS): ${skippedOS.join(", ")}`)}`);
+      if (noFiles.length > 0)
+        console.log(`${colors.dim(`Skipped (no files): ${noFiles.join(", ")}`)}`);
+      console.log("");
+
+      if (!dispatchArgs.dryRun && !dispatchArgs.yes) {
+        const proceed = await confirm({ message: `${action} ${included.length} package(s)?` });
+        if (!proceed) { logInfo("Aborted."); return; }
+      }
+
+      let ok = 0, failed = 0;
+      for (const name of included) {
+        const result = await dispatch(name, action, dispatchArgs);
+        if (result) ok++; else failed++;
+      }
+      console.log("");
+      if (failed === 0) logSuccess(`${ok} package(s) ${action}ed successfully.`);
+      else logError(`${failed} package(s) failed, ${ok} succeeded.`);
+      if (failed > 0) process.exit(1);
+      return;
+    }
 
     if (args.tag) {
       // Filter out the tag value from positionals (it's consumed by --tag)
@@ -195,6 +271,7 @@ export const pkgCommand = defineCommand({
 Usage: dot pkg <package> [action] [flags]
        dot pkg status
        dot pkg --tag <tag> [action]
+       dot pkg --all [action]
 
 Actions:
   info        Show package metadata and file list (default)
@@ -212,6 +289,7 @@ Flags:
   --ignore-host          Link even if meta.hosts excludes this host
   -y, --yes              Skip unlink confirmation
   --tag <tag>            Apply action to all packages with this tag
+  --all                  Apply action to all packages for current host/OS
 
 Available packages:
   ${pkgs.join("  ")}

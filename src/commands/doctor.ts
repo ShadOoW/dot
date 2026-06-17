@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
 import { appliesToHost, detectHost, detectInit, getPackageMeta, listPackages } from "../lib/pkg.ts";
-import { collectPackageStatus, type PackageStatus } from "../lib/status.ts";
+import { checkFileStatus, collectPackageStatus, type PackageStatus } from "../lib/status.ts";
 import { colors, logError, logInfo, logSection, logSuccess } from "../lib/console.ts";
 import { serviceStatus, serviceStateLabel, serviceIcon } from "../lib/service.ts";
 import { validateAllPackages } from "../lib/schema.ts";
@@ -27,6 +27,7 @@ export const doctorCommand = defineCommand({
     "all-hosts": { type: "boolean", description: "Check packages from all hosts, not just the current one" },
     fix: { type: "boolean", description: "Re-link packages with broken symlinks or missing links" },
     force: { type: "boolean", description: "With --fix, overwrite real files (drift) instead of refusing" },
+    score: { type: "boolean", description: "Print health score (linked files / total expected) and exit" },
   },
   async run({ args }) {
     const allPkgs = await listPackages();
@@ -87,14 +88,24 @@ export const doctorCommand = defineCommand({
         }
       }
 
+      if (partial.length > 0) {
+        console.log(`\n${colors.yellow(`${partial.length} package(s) partially linked:`)}`);
+        for (const s of partial) {
+          console.log(`\n  ${colors.bold(s.name)}  ${colors.dim(summarize(s))}`);
+          for (const { source, target } of s.files) {
+            const st = checkFileStatus(source, target);
+            if (st === "missing") {
+              console.log(`    ${colors.yellow("?")} ${shortenPath(target)}  ${colors.dim("[not linked]")}`);
+              console.log(`      ${colors.dim(`→ ${shortenPath(source)}`)}`);
+            }
+          }
+        }
+      }
+
       if (args.verbose) {
         if (healthy.length > 0) {
           console.log(`\n${colors.green("Healthy:")}`);
           for (const s of healthy) console.log(`  ${colors.green("✓")} ${s.name}  ${colors.dim(summarize(s))}`);
-        }
-        if (partial.length > 0) {
-          console.log(`\n${colors.yellow("Partially linked:")}`);
-          for (const s of partial) console.log(`  ${colors.yellow("~")} ${s.name}  ${colors.dim(summarize(s))}`);
         }
         if (unlinked.length > 0) {
           console.log(`\n${colors.dim("Not linked:")}`);
@@ -150,14 +161,26 @@ export const doctorCommand = defineCommand({
       }
     }
 
+    const totalFiles = withFiles.reduce((sum, s) => sum + s.files.length, 0);
+    const totalOk = withFiles.reduce((sum, s) => sum + s.counts.ok, 0);
+    const healthScore = totalFiles > 0 ? Math.round((totalOk / totalFiles) * 100) : 100;
+
+    if (args.score) {
+      const scoreColor = healthScore === 100 ? colors.green : healthScore >= 80 ? colors.yellow : colors.red;
+      console.log(`\nHealth score: ${scoreColor(`${healthScore}%`)}  ${colors.dim(`(${totalOk}/${totalFiles} files linked)`)}`);
+      process.exit(healthScore < 100 ? 1 : 0);
+    }
+
     console.log("");
     const allHomeGhostsFlat = flattenGhosts(allHomeGhosts);
     const allGhostsFlat = [...allHomeGhostsFlat, ...systemGhosts];
+    const scoreColor = healthScore === 100 ? colors.green : healthScore >= 80 ? colors.yellow : colors.red;
     logInfo(
       `Packages: ${colors.green(`${healthy.length} healthy`)}, ` +
       `${colors.yellow(`${partial.length} partial`)}, ` +
       `${colors.dim(`${unlinked.length} not linked`)}, ` +
-      `${colors.red(`${withIssues.length} with issues`)}`,
+      `${colors.red(`${withIssues.length} with issues`)}` +
+      `  ${scoreColor(`[${healthScore}%]`)}`,
     );
     if (allGhostsFlat.length > 0) {
       const sysPart = systemGhosts.length > 0 ? `, ${systemGhosts.length} system` : "";

@@ -28,7 +28,6 @@ vim.api.nvim_create_autocmd('FileType', {
       'DiffviewFiles', -- Diffview files
       'DiffviewFileHistory', -- Diffview history
       'Outline', -- Symbol outline
-      'TelescopePrompt', -- Telescope
       'trouble', -- Diagnostics
       'sagaoutline', -- LSP Saga outline
     }
@@ -117,15 +116,14 @@ vim.api.nvim_create_autocmd('FileChangedShellPost', {
   end,
 })
 
--- Handle tmux focus events properly
-vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter' }, {
-  group = file_reload_group,
-  desc = 'Handle tmux focus detection',
-  callback = function()
-    -- Force a redraw to ensure proper focus detection in tmux
-    vim.cmd('redraw!')
-  end,
-})
+-- Force redraw when re-focusing from tmux (FocusGained only, not BufEnter)
+if os.getenv('TMUX') then
+  vim.api.nvim_create_autocmd('FocusGained', {
+    group = file_reload_group,
+    desc = 'Force redraw on tmux focus regain',
+    callback = function() vim.cmd('redraw!') end,
+  })
+end
 
 -- Terminal focus handling for better tmux integration
 vim.api.nvim_create_autocmd('TermEnter', {

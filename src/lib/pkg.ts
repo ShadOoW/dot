@@ -25,6 +25,11 @@ export interface PackageMeta {
 
 export function detectDistro(): string {
   if (process.platform === "darwin") return "macos";
+  try {
+    const rel = readFileSync("/etc/os-release", "utf-8");
+    if (/^ID=void/m.test(rel)) return "void";
+    if (/^ID=arch/m.test(rel)) return "arch";
+  } catch { /* fall through to legacy checks */ }
   if (existsSync("/etc/void-release")) return "void";
   if (existsSync("/etc/arch-release")) return "arch";
   return "linux";

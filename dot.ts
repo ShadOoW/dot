@@ -9,6 +9,7 @@ import { docsCommand } from "./src/commands/docs.ts";
 import { toolsCommand } from "./src/commands/tools/index.ts";
 import { cacheCommand } from "./src/commands/cache.ts";
 import { doctorCommand } from "./src/commands/doctor.ts";
+import { statusCommand } from "./src/commands/status.ts";
 import { graphCommand } from "./src/commands/graph.ts";
 import { completionsCommand } from "./src/commands/completions.ts";
 
@@ -25,6 +26,7 @@ const main = defineCommand({
     docs: docsCommand,
     tools: toolsCommand,
     cache: cacheCommand,
+    status: statusCommand,
     doctor: doctorCommand,
     graph: graphCommand,
     completions: completionsCommand,
