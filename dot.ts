@@ -12,6 +12,7 @@ import { doctorCommand } from "./src/commands/doctor.ts";
 import { statusCommand } from "./src/commands/status.ts";
 import { graphCommand } from "./src/commands/graph.ts";
 import { completionsCommand } from "./src/commands/completions.ts";
+import { wgCommand } from "./src/commands/wg.ts";
 
 const main = defineCommand({
   meta: {
@@ -30,6 +31,7 @@ const main = defineCommand({
     doctor: doctorCommand,
     graph: graphCommand,
     completions: completionsCommand,
+    wg: wgCommand,
   },
 });
 

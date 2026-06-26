@@ -10,6 +10,20 @@ import type { StepCallback } from "../lib/updaters/index.ts";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
+async function withSudoLoop<T>(run: () => Promise<T>): Promise<T> {
+  const init = Bun.spawnSync(["sudo", "-v"], { stdio: ["inherit", "inherit", "inherit"] });
+  if (init.exitCode !== 0) throw new Error("sudo: authentication failed");
+  // Refresh every 55s — well within the default 5-minute sudo timeout
+  const timer = setInterval(() => {
+    Bun.spawnSync(["sudo", "-v"], { stdio: ["pipe", "pipe", "pipe"] });
+  }, 55_000);
+  try {
+    return await run();
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 function kernelHint() {
   if (!commandExists("vkpurge")) return;
   const raw = Bun.spawnSync(["vkpurge", "list"], { stdout: "pipe", stderr: "pipe" });
@@ -69,13 +83,14 @@ async function withAI(useAI: boolean, run: (step?: StepCallback) => Promise<bool
 
 const checkFlag = { type: "boolean" as const, description: "Show what would update without making changes" };
 const aiFlag = { type: "boolean" as const, description: "Analyse output with AI after completion" };
+const sudoloopFlag = { type: "boolean" as const, description: "Keep sudo credentials alive for the entire run (useful on slow connections)" };
 
 export const systemUpdateCommand = defineCommand({
   meta: { description: "Update system packages (xbps/pacman+yay/brew, flatpak) and self-updating runtimes" },
-  args: { check: checkFlag, ai: aiFlag },
+  args: { check: checkFlag, ai: aiFlag, sudoloop: sudoloopFlag },
   async run({ args }) {
     const check = args.check ?? false;
-    const ok = await withAI(args.ai ?? false, async (step) => {
+    const body = async () => withAI(args.ai ?? false, async (step) => {
       const distro = detectDistro();
       const pm = distro === "void" ? "xbps" : distro === "arch" ? "pacman + yay" : distro === "macos" ? "brew" : "system packages";
       logDesc(`Updates system packages via ${pm}, flatpak, bun, deno, and rustup.`);
@@ -83,6 +98,7 @@ export const systemUpdateCommand = defineCommand({
       if (!check) kernelHint();
       return result;
     });
+    const ok = (args.sudoloop ?? false) ? await withSudoLoop(body) : await body();
     if (!ok) process.exit(1);
   },
 });
@@ -121,6 +137,7 @@ export const updateCommand = defineCommand({
     check: checkFlag,
     info: { type: "boolean", description: "Show installed versions without updating" },
     ai: aiFlag,
+    sudoloop: sudoloopFlag,
   },
   subCommands: {
     system: systemUpdateCommand,
@@ -132,7 +149,7 @@ export const updateCommand = defineCommand({
     if (args.info) { showInfo(); return; }
     if (args.all || args.check) {
       const check = args.check ?? false;
-      const ok = await withAI(args.ai ?? false, async (step) => {
+      const body = async () => withAI(args.ai ?? false, async (step) => {
         let ok = true;
         for (const group of ["system", "global", "source"] as const) {
           if (group === "source") logSection("source tools");
@@ -141,6 +158,7 @@ export const updateCommand = defineCommand({
         if (!check) kernelHint();
         return ok;
       });
+      const ok = (args.sudoloop ?? false) ? await withSudoLoop(body) : await body();
       if (!ok) process.exit(1);
       return;
     }
@@ -153,15 +171,17 @@ Subcommands:
   source    Update pkgbuilds, fnm, anyzig, ly, zinit
 
 Flags:
-  --all     Run all three subcommands
-  --check   Show what would update without making changes
-  --info    Show currently installed versions
-  --ai      Analyse output with AI after completion
+  --all        Run all three subcommands
+  --check      Show what would update without making changes
+  --info       Show currently installed versions
+  --ai         Analyse output with AI after completion
+  --sudoloop   Keep sudo credentials alive for the entire run (for slow connections)
 
 Examples:
   dot update system
   dot update --all
   dot update --all --ai
+  dot update --all --sudoloop
   dot update system --ai
   dot update --check
   dot update --info

@@ -1,22 +1,5 @@
-timeout 900 swaylock \
-  --screenshots \
-  --clock \
-  --indicator \
-  --indicator-radius 100 \
-  --indicator-thickness 7 \
-  --effect-pixelate 5 \ 
-  --effect-vignette 0.2:0.2 \
-  --ring-color 7dcfff \
-  --key-hl-color 7dcfff \
-  --line-color 00000000 \
-  --inside-color 00000088 \
-  --separator-color 00000000 \
-  --grace 2 \
-  --fade-in 0.1
+timeout 900 'swaylock --screenshots --clock --indicator --indicator-radius 100 --indicator-thickness 7 --effect-pixelate 5 --effect-vignette 0.2:0.2 --ring-color 7dcfff --key-hl-color 7dcfff --line-color 00000000 --inside-color 00000088 --separator-color 00000000 --grace 2 --fade-in 0.1'
 
 timeout 1200 'swaymsg "output * power off"' resume 'swaymsg "output * power on"'
 
-before-sleep swaylock \
-  --screenshots \
-  --clock \
-  --indicator
+before-sleep 'swaylock --screenshots --clock --indicator'
