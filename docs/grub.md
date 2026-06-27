@@ -32,12 +32,28 @@ sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 ## Intel GPU + Wayland
 
-Add to `GRUB_CMDLINE_LINUX_DEFAULT` if using Intel GPU:
+For Intel Gen9+ GPU (i915) with Wayland, add to `GRUB_CMDLINE_LINUX_DEFAULT`:
 
 ```
 i915.enable_psr=0 i915.enable_fbc=0
 ```
 
+- `i915.enable_psr=0` - Disables Panel Self Refresh (causes flip hangs on Gen9+)
+- `i915.enable_fbc=0` - Disables Framebuffer Compression
+
 ## NVIDIA
 
-See `dot docs nvidia` for NVIDIA-specific kernel parameters.
+For hybrid Intel+NVIDIA setups, full `GRUB_CMDLINE_LINUX_DEFAULT`:
+
+```
+loglevel=3 i915.enable_psr=0 i915.enable_fbc=0 nvidia-drm.modeset=1 nvidia.NVreg_PreserveVideoMemoryAllocations=0
+```
+
+- `nvidia-drm.modeset=1` - Enable DRM modesetting for NVIDIA
+- `nvidia.NVreg_PreserveVideoMemoryAllocations=0` - Prevents memory leaks with suspend/resume
+
+After editing `/etc/default/grub`, regenerate config:
+
+```
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+```
