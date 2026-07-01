@@ -177,14 +177,18 @@ being reviewed.
 
 ## Findings
 
+Assign every finding a **global sequential ID** — `[F1]`, `[F2]`, `[F3]` …
+incrementing across all files without resetting per file. This lets the user
+reference findings by ID in follow-up messages ("fix F1, F3" / "explain F4").
+
 Group findings by file. Within each file, order by severity.
 
 ```
 ### path/to/file.tsx
 
-**MUST FIX** [line N] — [finding]
-**SHOULD FIX** [line N] — [finding]
-**CONSIDER** [line N] — [finding]
+[F1] **MUST FIX** [line N] — [finding]
+[F2] **SHOULD FIX** [line N] — [finding]
+[F3] **CONSIDER** [line N] — [finding]
 ```
 
 Severity definitions:
@@ -197,9 +201,9 @@ Severity definitions:
 
 Do not omit a finding because it seems minor. Minor findings compound.
 
-At the end of findings, output a count:
+At the end of findings, output a count that groups IDs by severity:
 ```
-Total: N MUST FIX | N SHOULD FIX | N CONSIDER
+Total: N MUST FIX (F1, F2) | N SHOULD FIX (F3, F4) | N CONSIDER (F5)
 ```
 
 ---
@@ -236,7 +240,7 @@ One sentence explaining the verdict.
 
 One sentence recommended next action:
 - READY: "Approve and merge."
-- NEEDS MINOR FIXES: "Address [list finding numbers] before merge."
+- NEEDS MINOR FIXES: "Address [F1], [F3] before merge."
 - NEEDS SIGNIFICANT REWORK: "Discuss [the core issue] before continuing implementation."
 - BLOCKED: "Do not merge until [specific blocker] is resolved."
 
