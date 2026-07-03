@@ -131,13 +131,22 @@ back to the file-based memory (MEMORY.md index and its memory files) and
 note the fallback in the report.
 
 **AGENTS.md — confirm in context:**
-
+The canonical AGENTS.md may live at a monorepo root ABOVE cwd — a
+subproject `AGENTS.md` is often a scaffold stub without the standards.
+Walk upward from cwd for the nearest `AGENTS.md` containing
+`## Mandatory Coding Standards`:
 ```bash
-grep -c "Mandatory Coding Standards" AGENTS.md
+dir=$PWD
+while [ "$dir" != "/" ]; do
+  if [ -f "$dir/AGENTS.md" ] && grep -q "Mandatory Coding Standards" "$dir/AGENTS.md"; then
+    echo "$dir/AGENTS.md"; break
+  fi
+  dir=$(dirname "$dir")
+done
 ```
-
-If the grep returns 0, read AGENTS.md in full before proceeding —
-it may not be in context from session start.
+Read that file in full before proceeding, even if it feels like it may
+already be in context. If no match is found, read every `AGENTS.md`
+between cwd and the git root.
 
 Surface any lessons from either agentmemory query that apply to the
 domains identified in section 0. Hold them — apply them in the relevant
