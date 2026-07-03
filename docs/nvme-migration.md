@@ -2,22 +2,25 @@
 
 ## Status
 
-| Phase                                                                    | Status                             |
-| ------------------------------------------------------------------------ | ---------------------------------- |
-| 0. System investigation & planning                                       | ✅ Done                            |
-| 1a. Back up /boot and /boot/efi                                          | ✅ Done                            |
-| 1b. Back up btrfs subvolumes (@arch, @arch-var, @void, @void-var, @home) | ✅ Done                            |
-| 1c. Back up /data subdirs                                                | ✅ Done (partial — see gaps below) |
-| 1d. Back up @nix (9.9 GB)                                                | ⬜ **Missing — do before wipe**    |
-| 1e. Back up Steam userdata (100 MB)                                      | ⬜ **Missing — do before wipe**    |
-| 1f. Save exact partition table (sgdisk)                                  | ⬜ **Missing — do before wipe**    |
-| 2. Sanitize NVMe                                                         | ⬜ Pending                         |
-| 3. Repartition with new layout                                           | ⬜ Pending                         |
-| 4. Restore /boot and /boot/efi with original UUIDs                       | ⬜ Pending                         |
-| 5. Create btrfs + XFS filesystems and restore subvolumes                 | ⬜ Pending                         |
-| 6. Migrate @arch-var/@void-var content to XFS                            | ⬜ Pending                         |
-| 7. Update fstab + /etc/grub.d/06_custom; regen initramfs + grub.cfg      | ⬜ Pending                         |
-| 8. Boot test & validate health                                           | ⬜ Pending                         |
+| Phase                                                                    | Status  |
+| ------------------------------------------------------------------------ | ------- |
+| 0. System investigation & planning                                       | ✅ Done |
+| 1a. Back up /boot and /boot/efi                                          | ✅ Done |
+| 1b. Back up btrfs subvolumes (@arch, @arch-var, @void, @void-var, @home) | ✅ Done |
+| 1c. Back up /data subdirs                                                | ✅ Done |
+| 1d. Back up @nix (9.9 GB)                                                | ✅ Done |
+| 1e. Back up Steam userdata (100 MB)                                      | ✅ Done |
+| 1f. Save exact partition table (sgdisk)                                  | ✅ Done |
+| 2. Sanitize NVMe                                                         | ✅ Done |
+| 3. Repartition with new layout                                           | ✅ Done |
+| 4. Restore /boot and /boot/efi with original UUIDs                       | ✅ Done |
+| 5. Create btrfs + XFS filesystems and restore subvolumes                 | ✅ Done |
+| 6. Migrate @arch-var/@void-var content to XFS                            | ✅ Done |
+| 7. Update fstab + /etc/grub.d/06_custom; regen initramfs + grub.cfg      | ✅ Done |
+| 8. Boot test & validate health                                           | ✅ Done |
+
+**Migration complete.** The gap that let the original thermal incident go unnoticed —
+no hardware monitoring — is tracked separately in [`docs/hw-monitoring.md`](./hw-monitoring.md).
 
 ---
 
@@ -595,6 +598,10 @@ systemctl status lidarr prowlarr
 | `/var` (logs, pacman db) on btrfs | XFS `/mnt/xfs/var-arch/`          |
 
 Additionally: monitor NVMe temps after migration. If sensor 1 still hits 55°C+ under Immich load, consider `nvme set-feature` to lower thermal throttle threshold or improve case airflow.
+
+This monitoring is now in place — see [`docs/hw-monitoring.md`](./hw-monitoring.md) (Netdata-based
+NVMe/SMART/thermal/disk-fill/memory alerting, `packages/hw-monitor`), built specifically to close
+the "nothing was watching for this" gap this incident exposed.
 
 Consider enabling `zram` for swap to avoid OOM situations without adding NVMe write pressure.
 
