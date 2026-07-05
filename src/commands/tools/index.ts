@@ -6,6 +6,7 @@ import { HOME_DIR } from "../../lib/config.ts";
 import { colors, logInfo } from "../../lib/console.ts";
 import { compressCommand } from "./compress.ts";
 import { recordCommand } from "./record.ts";
+import { passphraseCommand } from "./passphrase.ts";
 
 const chroootCommand = defineCommand({
   meta: { description: "Display the Void Linux chroot recovery instructions" },
@@ -36,6 +37,7 @@ export const toolsCommand = defineCommand({
     compress: compressCommand,
     record: recordCommand,
     chroot: chroootCommand,
+    passphrase: passphraseCommand,
   },
   async run() {
     console.log(`
@@ -45,12 +47,14 @@ Subcommands:
   compress <input> [output]   Batch compress images (PNG, JPEG, WebP, GIF→WebP)
   record                     Record screen (Wayland/wf-recorder)
   chroot                      Show Void Linux chroot recovery instructions
+  passphrase                  Generate a secure diceware passphrase
 
 Examples:
   dot tools compress ~/screenshots/
   dot tools compress ~/photos/ ~/photos-compressed/ --quality high --dry-run
   dot tools record --mode monitor --quality high
   dot tools chroot
+  dot tools passphrase --words 6
 `);
   },
 });
