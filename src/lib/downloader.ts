@@ -91,14 +91,14 @@ export async function downloadAndExtract(
     sourceDir = join(extractDir, entries[0].name);
   }
 
-  const cpCmd = `cp -r "${sourceDir}/." "${destDir}/"`;
+  const cpArgs = ["cp", "-r", `${sourceDir}/.`, `${destDir}/`];
   if (sudo) {
     Bun.spawnSync(["sudo", "mkdir", "-p", destDir]);
-    const cp = Bun.spawnSync(["sudo", "sh", "-c", cpCmd]);
+    const cp = Bun.spawnSync(["sudo", ...cpArgs]);
     if (cp.exitCode !== 0) throw new Error("Copy to dest failed");
   } else {
     await mkdir(destDir, { recursive: true });
-    const cp = Bun.spawnSync(["sh", "-c", cpCmd]);
+    const cp = Bun.spawnSync(cpArgs);
     if (cp.exitCode !== 0) throw new Error("Copy to dest failed");
   }
 
