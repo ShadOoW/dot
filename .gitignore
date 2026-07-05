@@ -1,5 +1,6 @@
 backup/
 .cursor/
+.serena/
 node_modules/
 __pycache__/
 *.pyc
