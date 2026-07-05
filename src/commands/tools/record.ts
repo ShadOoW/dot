@@ -2,7 +2,8 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { mkdir, unlink } from "fs/promises";
 import { dirname, join, resolve } from "path";
-import { colors, commandExists, logError, logSuccess, logWarn } from "../../lib/console.ts";
+import { colors, commandExists, formatBytes, logError, logSuccess, logWarn } from "../../lib/console.ts";
+import { run } from "../../lib/spawn.ts";
 
 type Quality = "high" | "medium" | "low";
 
@@ -19,23 +20,8 @@ function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 }
 
-function formatBytes(bytes: number): string {
-  for (const unit of ["B", "KB", "MB", "GB"]) {
-    if (Math.abs(bytes) < 1024) return `${bytes.toFixed(1)} ${unit}`;
-    bytes /= 1024;
-  }
-  return `${bytes.toFixed(1)} TB`;
-}
-
-async function exec(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const proc = Bun.spawn([cmd, ...args], { stdout: "pipe", stderr: "pipe" });
-  const [stdout, stderr] = await Promise.all([proc.stdout.text(), proc.stderr.text()]);
-  const exitCode = await proc.exited;
-  return { stdout, stderr, exitCode };
-}
-
 async function getSwayWindows(): Promise<Array<{ id: string; app_id: string; title: string; rect: { x: number; y: number; width: number; height: number } }>> {
-  const result = await exec("swaymsg", ["-t", "get_tree", "-r"]);
+  const result = await run(["swaymsg", "-t", "get_tree", "-r"]);
   if (result.exitCode !== 0) return [];
   try {
     const tree = JSON.parse(result.stdout);
@@ -60,7 +46,7 @@ async function getSwayWindows(): Promise<Array<{ id: string; app_id: string; tit
 }
 
 async function getHyprWindows(): Promise<Array<{ id: string; app_id: string; title: string; rect: { x: number; y: number; width: number; height: number } }>> {
-  const result = await exec("hyprctl", ["-j", "clients"]);
+  const result = await run(["hyprctl", "-j", "clients"]);
   if (result.exitCode !== 0) return [];
   try {
     const clients = JSON.parse(result.stdout);
@@ -104,7 +90,7 @@ async function pickWindow(): Promise<string | null> {
 }
 
 async function pickMonitor(): Promise<string | null> {
-  const result = await exec("wf-recorder", ["--list-output"]);
+  const result = await run(["wf-recorder", "--list-output"]);
   if (result.exitCode !== 0) {
     logError("Failed to list outputs. Is wf-recorder installed?");
     return null;
@@ -214,7 +200,7 @@ export const recordCommand = defineCommand({
         process.exit(1);
       }
       console.log(`${colors.dim("Select area with mouse, press Enter to confirm...")}`);
-      const slurpResult = await exec("slurp", []);
+      const slurpResult = await run(["slurp"]);
       if (slurpResult.exitCode !== 0 || !slurpResult.stdout.trim()) {
         console.log("Area selection cancelled.");
         process.exit(0);

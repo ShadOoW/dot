@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import { run, spawnInherit } from "../lib/spawn.ts";
 import { colors, logError, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
 
 const WG_CONF = "/data/ops/state/wireguard/wg0.conf";
@@ -9,22 +10,10 @@ const BARZAKH_EXIT_IP = "138.201.90.131";
 const ALLOWED_FULL = "0.0.0.0/0, ::/0";
 const ALLOWED_SPLIT = "10.10.0.0/24";
 
-async function run(cmd: string[]): Promise<{ code: number; out: string }> {
-  const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
-  const out = await new Response(proc.stdout).text();
-  const err = await new Response(proc.stderr).text();
-  return { code: await proc.exited, out: (out + err).trim() };
-}
-
-async function runVerbose(cmd: string[]): Promise<number> {
-  const proc = Bun.spawnSync(cmd, { stdout: "inherit", stderr: "inherit" });
-  return proc.exitCode ?? 1;
-}
-
 /** Live AllowedIPs from the kernel via `wg show` — reflects what's actually routing. */
 async function getLiveMode(): Promise<"full" | "split" | "down"> {
   const r = await run(["sudo", WG_BIN, "show", "wg0", "allowed-ips"]);
-  if (r.code !== 0) return "down";
+  if (r.exitCode !== 0) return "down";
   if (r.out.includes("0.0.0.0/0")) return "full";
   if (r.out.includes("10.10.0.0/24")) return "split";
   return "down";
@@ -32,14 +21,14 @@ async function getLiveMode(): Promise<"full" | "split" | "down"> {
 
 /** Run a start/stop/restart against the wireguard service on whichever init is active. */
 async function svcAction(action: "start" | "stop" | "restart"): Promise<number> {
-  const isSystemd = (await run(["test", "-d", "/run/systemd/system"])).code === 0;
-  if (isSystemd) return runVerbose(["sudo", "systemctl", action, "wireguard.service"]);
-  return runVerbose(["sudo", "sv", action, "/var/service/wireguard"]);
+  const isSystemd = (await run(["test", "-d", "/run/systemd/system"])).exitCode === 0;
+  if (isSystemd) return (await spawnInherit(["sudo", "systemctl", action, "wireguard.service"])).exitCode;
+  return (await spawnInherit(["sudo", "sv", action, "/var/service/wireguard"])).exitCode;
 }
 
 async function isTunnelUp(): Promise<boolean> {
   const r = await run(["ping", "-c", "1", "-W", "3", BARZAKH_IP]);
-  return r.code === 0;
+  return r.exitCode === 0;
 }
 
 async function testStatus(): Promise<void> {
@@ -59,7 +48,7 @@ async function testStatus(): Promise<void> {
 
   if (mode === "full") {
     const r = await run(["curl", "-s", "--max-time", "5", "ifconfig.me"]);
-    const ip = r.code === 0 ? r.out.trim() : "timeout";
+    const ip = r.exitCode === 0 ? r.out.trim() : "timeout";
     const exitOk = ip === BARZAKH_EXIT_IP;
     console.log(`  ${exitOk ? colors.green("✓") : colors.red("✗")} exit IP  ${ip}  ${
       exitOk ? colors.dim("(barzakh)") : colors.red(`expected ${BARZAKH_EXIT_IP} — routing not applied`)
@@ -67,7 +56,7 @@ async function testStatus(): Promise<void> {
   }
 
   const wgShow = await run(["sudo", WG_BIN, "show", "wg0"]);
-  if (wgShow.code === 0) {
+  if (wgShow.exitCode === 0) {
     const handshakeLine = wgShow.out.split("\n").find((l) => l.includes("latest handshake"));
     if (handshakeLine) {
       console.log(`  ${colors.dim("handshake")}  ${handshakeLine.split(":").slice(1).join(":").trim()}`);

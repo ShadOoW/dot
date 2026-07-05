@@ -14,6 +14,14 @@ function shellEscape(args: string[]): string {
   }).join(" ");
 }
 
+/** Spawn and capture output. `out` is trimmed stdout+stderr for quick checks. */
+export async function run(cmd: string[], opts: SpawnOpts = {}): Promise<{ exitCode: number; stdout: string; stderr: string; out: string }> {
+  const proc = Bun.spawn(cmd, { ...opts, stdout: "pipe", stderr: "pipe" });
+  const [stdout, stderr] = await Promise.all([proc.stdout.text(), proc.stderr.text()]);
+  const exitCode = await proc.exited;
+  return { exitCode, stdout, stderr, out: (stdout + stderr).trim() };
+}
+
 export async function spawnInherit(cmd: string[], opts: SpawnOpts = {}): Promise<{ exitCode: number }> {
   if (!capturing) {
     const r = Bun.spawnSync(cmd, { stdout: "inherit", stderr: "inherit", ...opts });

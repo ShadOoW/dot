@@ -3,6 +3,7 @@ import { basename, join } from "path";
 import { PACKAGES_DIR } from "./config.ts";
 import { detectInit } from "./pkg.ts";
 import { colors, logInfo, logError } from "./console.ts";
+import { run } from "./spawn.ts";
 
 export type Init = "runit" | "systemd" | "launchd";
 
@@ -110,17 +111,9 @@ function metaDeclaredServices(pkgDir: string, init: Init): { name: string; scope
     .map((e) => ({ name: e.name, scope: e.scope === "user" || e.scope === "system" ? e.scope : defaultScope }));
 }
 
-async function run(cmd: string[]): Promise<{ code: number; out: string }> {
-  const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const code = await proc.exited;
-  return { code, out: (stdout + stderr).trim() };
-}
-
 async function queryRunit(name: string): Promise<{ state: ServiceState; detail: string }> {
   const r = await run(["sv", "status", name]);
-  if (r.code !== 0) return { state: "not-enabled", detail: "not in service dir" };
+  if (r.exitCode !== 0) return { state: "not-enabled", detail: "not in service dir" };
   if (r.out.startsWith("run:")) return { state: "running", detail: r.out.split(";")[0] };
   if (r.out.startsWith("down:")) return { state: "stopped", detail: r.out.split(";")[0] };
   return { state: "unknown", detail: r.out };
@@ -146,7 +139,7 @@ async function querySystemd(unit: string, scope: "user" | "system"): Promise<{ s
 
 async function queryLaunchd(label: string): Promise<{ state: ServiceState; detail: string }> {
   const r = await run(["launchctl", "list", label]);
-  if (r.code !== 0) return { state: "not-enabled", detail: "not loaded" };
+  if (r.exitCode !== 0) return { state: "not-enabled", detail: "not loaded" };
   const pidLine = r.out.split("\n").find((l) => l.includes("\"PID\""));
   return pidLine && !pidLine.includes("= 0")
     ? { state: "running", detail: "loaded" }
@@ -176,14 +169,14 @@ export async function enableService(pkg: string, name: string, init: Init, scope
   if (init === "systemd") {
     const flag = scope === "user" ? ["--user"] : [];
     const r = await run(["systemctl", ...flag, "enable", "--now", name]);
-    if (r.code !== 0) { logError(`Failed to enable ${name}: ${r.out}`); return false; }
+    if (r.exitCode !== 0) { logError(`Failed to enable ${name}: ${r.out}`); return false; }
   } else if (init === "runit") {
     const r = await run(["sudo", "ln", "-sf", `/etc/sv/${name}`, `/var/service/${name}`]);
-    if (r.code !== 0) { logError(`Failed to link runit service ${name}: ${r.out}`); return false; }
+    if (r.exitCode !== 0) { logError(`Failed to link runit service ${name}: ${r.out}`); return false; }
   } else if (init === "launchd") {
     // Standard path for launchd: Library/LaunchAgents (user scope)
     const r = await run(["launchctl", "load", join(process.env.HOME!, "Library/LaunchAgents", `${name}.plist`)]);
-    if (r.code !== 0) { logError(`Failed to load launchd agent ${name}: ${r.out}`); return false; }
+    if (r.exitCode !== 0) { logError(`Failed to load launchd agent ${name}: ${r.out}`); return false; }
   }
   return true;
 }
@@ -194,13 +187,13 @@ export async function disableService(pkg: string, name: string, init: Init, scop
   if (init === "systemd") {
     const flag = scope === "user" ? ["--user"] : [];
     const r = await run(["systemctl", ...flag, "disable", "--now", name]);
-    if (r.code !== 0) { logError(`Failed to disable ${name}: ${r.out}`); return false; }
+    if (r.exitCode !== 0) { logError(`Failed to disable ${name}: ${r.out}`); return false; }
   } else if (init === "runit") {
     const r = await run(["sudo", "rm", "-f", `/var/service/${name}`]);
-    if (r.code !== 0) { logError(`Failed to remove runit service ${name}: ${r.out}`); return false; }
+    if (r.exitCode !== 0) { logError(`Failed to remove runit service ${name}: ${r.out}`); return false; }
   } else if (init === "launchd") {
     const r = await run(["launchctl", "unload", join(process.env.HOME!, "Library/LaunchAgents", `${name}.plist`)]);
-    if (r.code !== 0) { logError(`Failed to unload launchd agent ${name}: ${r.out}`); return false; }
+    if (r.exitCode !== 0) { logError(`Failed to unload launchd agent ${name}: ${r.out}`); return false; }
   }
   return true;
 }
