@@ -6,25 +6,7 @@ import { ASSETS, type AssetDef, syncAsset, type LogFn } from "../assets/definiti
 import { getLatestRelease } from "../lib/github.ts";
 import { getInstalledVersion, readManifest, setInstalledVersion } from "../lib/manifest.ts";
 import { colors, commandExists, logError, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
-
-// ─── concurrency ─────────────────────────────────────────────────────────────
-
-function semaphore(limit: number) {
-  let running = 0;
-  const queue: (() => void)[] = [];
-  return function<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const run = async () => {
-        running++;
-        try { resolve(await fn()); } catch (e) { reject(e); } finally {
-          running--;
-          queue.shift()?.();
-        }
-      };
-      running < limit ? run() : queue.push(run);
-    });
-  };
-}
+import { Semaphore } from "../lib/semaphore.ts";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -241,7 +223,7 @@ export const assetsSyncCommand = defineCommand({
     const manifest = await readManifest();
     const opts = { force, manifest };
 
-    const throttle = semaphore(SYNC_CONCURRENCY);
+    const throttle = new Semaphore(SYNC_CONCURRENCY);
     let synced = 0;
     let skipped = 0;
     let failed = 0;
@@ -249,7 +231,7 @@ export const assetsSyncCommand = defineCommand({
     // Kick off all jobs concurrently (up to SYNC_CONCURRENCY at a time),
     // flushing each asset's buffered output as it completes.
     await Promise.all(toSync.map((asset) =>
-      throttle(async () => {
+      throttle.with(async () => {
         const result = await performSync(asset, opts);
         for (const line of result.lines) console.log(line);
         if (result.synced) synced++;

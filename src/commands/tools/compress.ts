@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import { appendFile, mkdir, readdir, rename, unlink, writeFile } from "fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "path";
 import { colors, formatBytes, logError, logInfo, logWarn } from "../../lib/console.ts";
+import { Semaphore } from "../../lib/semaphore.ts";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -25,23 +26,6 @@ const QUALITY_PRESETS: Record<Quality, { png: string; jpeg: number; webp: number
   medium: { png: "65-82", jpeg: 82, webp: 82, gif: 82 },
   low:    { png: "50-70", jpeg: 70, webp: 70, gif: 70 },
 };
-
-// ─── semaphore ────────────────────────────────────────────────────────────────
-
-class Semaphore {
-  private queue: Array<() => void> = [];
-  private count: number;
-  constructor(max: number) { this.count = max; }
-  acquire(): Promise<void> {
-    if (this.count > 0) { this.count--; return Promise.resolve(); }
-    return new Promise((r) => this.queue.push(r));
-  }
-  release() {
-    const next = this.queue.shift();
-    if (next) next();
-    else this.count++;
-  }
-}
 
 // ─── utilities ────────────────────────────────────────────────────────────────
 
