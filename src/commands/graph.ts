@@ -3,7 +3,7 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 import { PACKAGES_DIR } from "../lib/config.ts";
 import { appliesToHost, collectFiles, detectHost, detectInit, getPackageMeta, listPackages } from "../lib/pkg.ts";
-import { declaredServices, type Init } from "../lib/service.ts";
+import { serviceStatus, type Init } from "../lib/service.ts";
 import { colors, logError, logInfo } from "../lib/console.ts";
 
 interface PkgNode {
