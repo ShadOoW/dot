@@ -42,3 +42,10 @@ repos:
         entry: kdlfmt format
         files: \.kdl$
         exclude: ^backup/
+
+      - id: tsc
+        name: tsc
+        language: system
+        entry: bun x tsc --noEmit
+        pass_filenames: false
+        types: [ts]

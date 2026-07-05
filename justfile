@@ -2,7 +2,7 @@
 format: _format-lua _format-shell _format-python _format-data _format-kdl
 
 # Check formatting without making changes (CI-safe)
-check: _check-lua _check-shell _check-python _check-data _check-kdl
+check: _check-lua _check-shell _check-python _check-data _check-kdl _check-ts
 
 # Install pre-commit hooks and verify tools are available
 setup:
@@ -52,3 +52,6 @@ _check-data:
 
 _check-kdl:
 	kdlfmt format --check packages/zellij/config.kdl
+
+_check-ts:
+	bun x tsc --noEmit
