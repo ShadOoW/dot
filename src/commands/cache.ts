@@ -5,6 +5,7 @@ import { dirname, join } from "path";
 import { HOME_DIR } from "../lib/config.ts";
 import { commandExists, logDesc, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
 import { analyzeWithAI, captureInProcess, CACHE_SYSTEM_PROMPT } from "../lib/ai.ts";
+import { spawnInherit } from "../lib/spawn.ts";
 
 // ─── cleaners ────────────────────────────────────────────────────────────────
 
@@ -12,7 +13,7 @@ async function cleanXbps(): Promise<boolean> {
   if (!commandExists("xbps-install")) return true;
   logSection("xbps");
   const p = commandExists("doas") ? "doas" : "sudo";
-  Bun.spawnSync([p, "xbps-remove", "-O"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit([p, "xbps-remove", "-O"]);
   return true;
 }
 
@@ -26,10 +27,10 @@ async function cleanPacman(): Promise<boolean> {
     { stdout: "pipe", stderr: "pipe" }
   );
   if (commandExists("paccache")) {
-    Bun.spawnSync([p, "paccache", "-rk1"], { stdout: "inherit", stderr: "inherit" });
-    Bun.spawnSync([p, "paccache", "-ruk0"], { stdout: "inherit", stderr: "inherit" });
+    await spawnInherit([p, "paccache", "-rk1"]);
+    await spawnInherit([p, "paccache", "-ruk0"]);
   } else {
-    Bun.spawnSync([p, "pacman", "-Sc", "--noconfirm"], { stdout: "inherit", stderr: "inherit" });
+    await spawnInherit([p, "pacman", "-Sc", "--noconfirm"]);
   }
   return true;
 }
@@ -37,21 +38,21 @@ async function cleanPacman(): Promise<boolean> {
 async function cleanYay(): Promise<boolean> {
   if (!commandExists("yay")) return true;
   logSection("yay");
-  Bun.spawnSync(["yay", "-Sc", "--noconfirm"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit(["yay", "-Sc", "--noconfirm"]);
   return true;
 }
 
 async function cleanFlatpak(): Promise<boolean> {
   if (!commandExists("flatpak")) return true;
   logSection("flatpak");
-  Bun.spawnSync(["flatpak", "uninstall", "--unused", "-y"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit(["flatpak", "uninstall", "--unused", "-y"]);
   return true;
 }
 
 async function cleanGo(): Promise<boolean> {
   if (!commandExists("go")) return true;
   logSection("go");
-  Bun.spawnSync(["go", "clean", "-cache", "-testcache", "-fuzzcache", "-modcache"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit(["go", "clean", "-cache", "-testcache", "-fuzzcache", "-modcache"]);
   return true;
 }
 
@@ -89,14 +90,14 @@ async function cleanCargo(): Promise<boolean> {
     logWarn("cargo-cache not found — install with: cargo install cargo-cache");
     return true;
   }
-  Bun.spawnSync(["cargo", "cache", "--autoclean"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit(["cargo", "cache", "--autoclean"]);
   return true;
 }
 
 async function cleanNpm(): Promise<boolean> {
   if (!commandExists("npm")) return true;
   logSection("npm");
-  Bun.spawnSync(["npm", "cache", "clean", "--force"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit(["npm", "cache", "clean", "--force"]);
   return true;
 }
 
@@ -117,14 +118,14 @@ async function cleanPip(): Promise<boolean> {
   const pip = commandExists("pip") ? "pip" : commandExists("pip3") ? "pip3" : null;
   if (!pip) return true;
   logSection("pip");
-  Bun.spawnSync([pip, "cache", "purge"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit([pip, "cache", "purge"]);
   return true;
 }
 
 async function cleanUv(): Promise<boolean> {
   if (!commandExists("uv")) return true;
   logSection("uv");
-  Bun.spawnSync(["uv", "cache", "clean"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit(["uv", "cache", "clean"]);
   return true;
 }
 
@@ -159,7 +160,7 @@ async function cleanDocker(): Promise<boolean> {
   const ping = Bun.spawnSync(["docker", "info"], { stdout: "ignore", stderr: "ignore" });
   if (ping.exitCode !== 0) return true;
   logSection("docker");
-  Bun.spawnSync(["docker", "system", "prune", "-f"], { stdout: "inherit", stderr: "inherit" });
+  await spawnInherit(["docker", "system", "prune", "-f"]);
   return true;
 }
 
