@@ -7,6 +7,7 @@ import { colors, logInfo } from "../../lib/console.ts";
 import { compressCommand } from "./compress.ts";
 import { recordCommand } from "./record.ts";
 import { passphraseCommand } from "./passphrase.ts";
+import { claudeResumeCommand } from "./claude-resume.ts";
 
 const chrootCommand = defineCommand({
   meta: { description: "Display the Void Linux chroot recovery instructions" },
@@ -38,8 +39,12 @@ export const toolsCommand = defineCommand({
     record: recordCommand,
     chroot: chrootCommand,
     passphrase: passphraseCommand,
+    "claude-resume": claudeResumeCommand,
   },
-  async run() {
+  async run({ rawArgs }) {
+    // citty runs this parent handler after a subcommand too — only print
+    // usage when no subcommand was given (same guard as update.ts).
+    if (rawArgs.some((a) => !a.startsWith("-"))) return;
     console.log(`
 Usage: dot tools <subcommand>
 
@@ -48,6 +53,7 @@ Subcommands:
   record                     Record screen (Wayland/wf-recorder)
   chroot                      Show Void Linux chroot recovery instructions
   passphrase                  Generate a secure diceware passphrase
+  claude-resume               Inject a prompt into a claude kitty window after a delay
 
 Examples:
   dot tools compress ~/screenshots/
@@ -55,6 +61,8 @@ Examples:
   dot tools record --mode monitor --quality high
   dot tools chroot
   dot tools passphrase --words 6
+  dot tools claude-resume --in 4h --text "continue"
+  dot tools claude-resume --auto
 `);
   },
 });
