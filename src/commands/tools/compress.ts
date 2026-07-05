@@ -202,8 +202,8 @@ export const compressCommand = defineCommand({
     verbose: { type: "boolean", description: "Print result for every file" },
     log: { type: "string", description: "Write per-file TSV log to FILE" },
   },
-  async run({ args, rawArgs }) {
-    const positional = rawArgs.filter((a) => !a.startsWith("-") && !Object.values(args).includes(a));
+  async run({ args }) {
+    const positional = args._ ?? [];
 
     const inputPath = positional[0];
     const outputPath = positional[1] ?? `${inputPath?.replace(/\/$/, "")}-compressed`;
@@ -246,8 +246,14 @@ Examples:
       process.exit(1);
     }
 
-    const maxWorkers = Math.min(parseInt(args.workers ?? "8"), navigator.hardwareConcurrency ?? 4);
-    const timeoutMs = parseInt(args.timeout ?? "120") * 1000;
+    const requestedWorkers = parseInt(args.workers ?? "8", 10);
+    const maxWorkers = Math.max(1, Math.min(Number.isFinite(requestedWorkers) ? requestedWorkers : 8, navigator.hardwareConcurrency ?? 4));
+    const timeoutSec = parseInt(args.timeout ?? "120", 10);
+    if (!Number.isFinite(timeoutSec) || timeoutSec <= 0) {
+      logError(`Invalid --timeout "${args.timeout}": must be a positive number of seconds`);
+      process.exit(1);
+    }
+    const timeoutMs = timeoutSec * 1000;
     const dryRun = args["dry-run"] ?? false;
     const resume = args.resume ?? false;
     const noGifConvert = args["no-gif-convert"] ?? false;
