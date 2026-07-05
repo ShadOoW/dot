@@ -3,7 +3,7 @@ import { join } from "path";
 import { PACKAGES_DIR } from "../lib/config.ts";
 import { collectFiles, detectDistro, getPackageMeta, detectInit } from "../lib/pkg.ts";
 import { colors, logError } from "../lib/console.ts";
-import { serviceStatus, serviceStateLabel, serviceIcon, enableService, disableService, declaredServices } from "../lib/service.ts";
+import { serviceStatus, serviceStateLabel, serviceIcon, enableService, disableService, declaredServices, type Init } from "../lib/service.ts";
 
 export async function showPackageInfo(pkg: string): Promise<void> {
   const pkgDir = join(PACKAGES_DIR, pkg);
