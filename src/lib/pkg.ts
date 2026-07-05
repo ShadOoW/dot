@@ -52,8 +52,8 @@ export async function listPackages(): Promise<string[]> {
   return entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
 }
 
-export async function getPackageMeta(name: string, seen: Set<string> = new Set()): Promise<PackageMeta | null> {
-  const pkgDir = join(PACKAGES_DIR, name);
+export async function getPackageMeta(name: string, seen: Set<string> = new Set(), packagesDir: string = PACKAGES_DIR): Promise<PackageMeta | null> {
+  const pkgDir = join(packagesDir, name);
   if (!existsSync(pkgDir)) return null;
 
   let raw: Record<string, unknown> = {};
@@ -86,7 +86,7 @@ export async function getPackageMeta(name: string, seen: Set<string> = new Set()
   seen.add(name);
   for (const parentName of meta.extends) {
     if (seen.has(parentName)) continue;
-    const parent = await getPackageMeta(parentName, seen);
+    const parent = await getPackageMeta(parentName, seen, packagesDir);
     if (parent) mergeParentMeta(meta, parent);
   }
   return meta;

@@ -55,3 +55,4 @@ _check-kdl:
 
 _check-ts:
 	bun x tsc --noEmit
+	bun test
