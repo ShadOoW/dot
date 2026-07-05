@@ -30,12 +30,10 @@ export async function captureInProcess(fn: () => Promise<boolean>): Promise<{ ok
     parts.push(text.replace(ANSI_RE, "").replace(/\r\n?/g, "\n"));
   };
 
-  // @ts-expect-error — intentional stream tap
   process.stdout.write = (chunk: Uint8Array | string, ...rest: unknown[]) => {
     tap(chunk);
     return origOut(chunk as string, ...(rest as []));
   };
-  // @ts-expect-error — intentional stream tap
   process.stderr.write = (chunk: Uint8Array | string, ...rest: unknown[]) => {
     tap(chunk);
     return origErr(chunk as string, ...(rest as []));
