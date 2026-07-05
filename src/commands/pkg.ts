@@ -114,13 +114,12 @@ interface DispatchArgs {
 }
 
 // Each handler returns true on success, false on failure (drives exit code).
-// process.exit-ing handlers (configure, enable, disable) return Promise<never>.
 const HANDLERS: Record<Action, (pkg: string, a: DispatchArgs) => Promise<boolean>> = {
-  info:      async (pkg) => { await showPackageInfo(pkg); return true; },
+  info:      (pkg) => showPackageInfo(pkg),
   link:      (pkg, a) => linkPackage(pkg, { init: a.init, dryRun: a.dryRun, force: a.force, ignoreHost: a.ignoreHost }),
   unlink:    (pkg, a) => unlinkPackage(pkg, { init: a.init, dryRun: a.dryRun, skipConfirm: a.yes }),
   status:    (pkg) => showPackageStatus(pkg),
-  configure: async (pkg) => { await runConfigure(pkg); return true; },
+  configure: (pkg) => runConfigure(pkg),
   enable:    async (pkg, a) => { await runInitScript(pkg, "enable", a.init); return true; },
   disable:   async (pkg, a) => { await runInitScript(pkg, "disable", a.init); return true; },
 };

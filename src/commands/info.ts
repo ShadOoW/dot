@@ -5,15 +5,15 @@ import { collectFiles, detectDistro, getPackageMeta, detectInit } from "../lib/p
 import { colors, logError } from "../lib/console.ts";
 import { serviceStatus, serviceStateLabel, serviceIcon, enableService, disableService, declaredServices, type Init } from "../lib/service.ts";
 
-export async function showPackageInfo(pkg: string): Promise<void> {
+export async function showPackageInfo(pkg: string): Promise<boolean> {
   const pkgDir = join(PACKAGES_DIR, pkg);
   if (!existsSync(pkgDir)) {
     logError(`Package "${pkg}" not found`);
-    process.exit(1);
+    return false;
   }
 
   const meta = await getPackageMeta(pkg);
-  if (!meta) { logError(`Could not read package info for "${pkg}"`); process.exit(1); }
+  if (!meta) { logError(`Could not read package info for "${pkg}"`); return false; }
 
   console.log(`\n${colors.bold(pkg)}${meta.description ? ` — ${meta.description}` : ""}\n`);
 
@@ -90,20 +90,22 @@ export async function showPackageInfo(pkg: string): Promise<void> {
     for (const step of meta.cleanSteps) console.log(`  ${step}`);
     console.log("");
   }
+
+  return true;
 }
 
-export async function runConfigure(pkg: string): Promise<void> {
+export async function runConfigure(pkg: string): Promise<boolean> {
   const scriptPath = join(PACKAGES_DIR, pkg, "configure.sh");
   if (!existsSync(scriptPath)) {
     logError(`No configure.sh found for "${pkg}"`);
-    process.exit(1);
+    return false;
   }
 
   const r = Bun.spawnSync(["sudo", "-v"], { stdout: "ignore", stderr: "ignore" });
-  if (r.exitCode !== 0) { logError("sudo required"); process.exit(1); }
+  if (r.exitCode !== 0) { logError("sudo required"); return false; }
 
   const proc = Bun.spawn(["bash", scriptPath], { stdout: "inherit", stderr: "inherit" });
-  process.exit(await proc.exited);
+  return (await proc.exited) === 0;
 }
 
 export async function runInitScript(pkg: string, action: "enable" | "disable", initArg?: string): Promise<void> {
