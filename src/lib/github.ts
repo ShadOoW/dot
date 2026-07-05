@@ -70,16 +70,3 @@ async function _getLatestRelease(repo: string): Promise<ReleaseInfo | null> {
 export function findAsset(release: ReleaseInfo, pattern: RegExp): ReleaseAsset | undefined {
   return release.assets.find((a) => pattern.test(a.name));
 }
-
-export async function getLatestCommit(repo: string): Promise<string | null> {
-  try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/commits/HEAD`, {
-      headers: { Accept: "application/vnd.github+json" },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { sha: string };
-    return data.sha.slice(0, 8);
-  } catch {
-    return null;
-  }
-}

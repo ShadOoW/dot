@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { appendFile, mkdir, readdir, rename, unlink, writeFile } from "fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "path";
-import { colors, formatBytes, logError, logInfo, logWarn } from "../../lib/console.ts";
+import { colors, commandExists, formatBytes, logError, logInfo, logWarn } from "../../lib/console.ts";
 import { Semaphore } from "../../lib/semaphore.ts";
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -28,10 +28,6 @@ const QUALITY_PRESETS: Record<Quality, { png: string; jpeg: number; webp: number
 };
 
 // ─── utilities ────────────────────────────────────────────────────────────────
-
-function toolAvailable(tool: string): boolean {
-  return Bun.spawnSync(["which", tool], { stdout: "ignore", stderr: "ignore" }).exitCode === 0;
-}
 
 async function checkMagicBytes(path: string, ext: string): Promise<boolean> {
   try {
@@ -271,7 +267,7 @@ Examples:
     const missingTools = new Set<string>();
     for (const ext of presentExts) {
       const tool = toolMap[ext];
-      if (tool) (toolAvailable(tool) ? availableTools : missingTools).add(tool);
+      if (tool) (commandExists(tool) ? availableTools : missingTools).add(tool);
     }
     if (missingTools.size > 0) logWarn(`Tools not found (files will be copied): ${[...missingTools].join(", ")}`);
 

@@ -203,7 +203,7 @@ async function performSync(
     succeed(`${asset.name} → ${version}`);
     return { name: asset.name, lines, synced: true, skipped: false };
   } catch (e) {
-    fail(`Failed to sync ${asset.name}: ${e}`);
+    fail(`Failed to sync ${asset.name}: ${e instanceof Error ? e.message : String(e)}`);
     return { name: asset.name, lines, synced: false, skipped: false };
   }
 }

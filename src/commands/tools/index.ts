@@ -8,7 +8,7 @@ import { compressCommand } from "./compress.ts";
 import { recordCommand } from "./record.ts";
 import { passphraseCommand } from "./passphrase.ts";
 
-const chroootCommand = defineCommand({
+const chrootCommand = defineCommand({
   meta: { description: "Display the Void Linux chroot recovery instructions" },
   async run() {
     const scriptPath = join(HOME_DIR, "shell/chroot-void.sh");
@@ -36,7 +36,7 @@ export const toolsCommand = defineCommand({
   subCommands: {
     compress: compressCommand,
     record: recordCommand,
-    chroot: chroootCommand,
+    chroot: chrootCommand,
     passphrase: passphraseCommand,
   },
   async run() {
