@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, rename, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { HOME_DIR } from "./config.ts";
 
@@ -20,7 +20,9 @@ async function loadCache(): Promise<Cache> {
 
 async function saveCache(cache: Cache): Promise<void> {
   await mkdir(dirname(CACHE_FILE), { recursive: true });
-  await writeFile(CACHE_FILE, JSON.stringify(cache, null, 2));
+  const tmp = `${CACHE_FILE}.tmp`;
+  await writeFile(tmp, JSON.stringify(cache, null, 2));
+  await rename(tmp, CACHE_FILE);
 }
 
 const _inFlight = new Map<string, Promise<ReleaseInfo | null>>();
