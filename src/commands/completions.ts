@@ -2,6 +2,9 @@ import { defineCommand } from "citty";
 import { getPackageMeta, listPackages } from "../lib/pkg.ts";
 import { ASSETS } from "../assets/definitions.ts";
 import { logError } from "../lib/console.ts";
+// Import cycle with registry.ts — safe because REGISTRY is only accessed
+// inside generateZsh() at command time, never at module top level.
+import { REGISTRY } from "./registry.ts";
 
 async function collectTags(pkgs: string[]): Promise<string[]> {
   const tags = new Set<string>();
@@ -10,6 +13,16 @@ async function collectTags(pkgs: string[]): Promise<string[]> {
     if (meta) for (const tag of meta.tags) tags.add(tag);
   }
   return [...tags].sort();
+}
+
+// Build `_describe` entries ('name:description') from a citty subCommands map,
+// so completion lists stay in sync with the real command tree.
+function describeEntries(cmds: Record<string, unknown>, indent: string): string[] {
+  return Object.entries(cmds).map(([name, cmd]) => {
+    const meta = (cmd as { meta?: { description?: string } }).meta;
+    const desc = (meta?.description ?? "").replace(/'/g, "");
+    return `${indent}'${name}:${desc}'`;
+  });
 }
 
 async function generateZsh(): Promise<string> {
@@ -41,15 +54,7 @@ async function generateZsh(): Promise<string> {
     "    cmd)",
     "      local -a subcmds",
     "      subcmds=(",
-    "        'pkg:Manage dotfile packages'",
-    "        'update:Update system and packages'",
-    "        'kernel:Manage old kernels'",
-    "        'assets:Manage fonts, icons, themes, and cursors'",
-    "        'docs:Browse setup documentation'",
-    "        'tools:Development and system utilities'",
-    "        'cache:Clean package manager and tool caches'",
-    "        'doctor:Health-check every package'",
-    "        'completions:Generate shell completion scripts'",
+    ...describeEntries(REGISTRY, "        "),
     "      )",
     "      _describe 'subcommand' subcmds",
     "      ;;",
@@ -143,9 +148,7 @@ async function generateZsh(): Promise<string> {
     "",
     "  if [[ $state == subcmd ]]; then",
     "    local -a subcmds=(",
-    "      'compress:Batch compress images (PNG, JPEG, WebP, GIF→WebP)'",
-    "      'record:Record screen (Wayland/wf-recorder)'",
-    "      'chroot:Show Void Linux chroot recovery instructions'",
+    ...describeEntries((REGISTRY.tools as { subCommands?: Record<string, unknown> }).subCommands ?? {}, "      "),
     "    )",
     "    _describe 'subcommand' subcmds",
     "  fi",
