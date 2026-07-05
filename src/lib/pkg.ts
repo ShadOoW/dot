@@ -3,6 +3,7 @@ import { existsSync, lstatSync, readFileSync, readlinkSync } from "fs";
 import { hostname } from "os";
 import { join } from "path";
 import { PACKAGES_DIR, HOME_DIR } from "./config.ts";
+import { logWarn } from "./console.ts";
 
 export type FileEntry = { source: string; target: string };
 
@@ -58,7 +59,12 @@ export async function getPackageMeta(name: string, seen: Set<string> = new Set()
   let raw: Record<string, unknown> = {};
   const metaPath = join(pkgDir, "meta.json");
   if (existsSync(metaPath)) {
-    raw = JSON.parse(await readFile(metaPath, "utf-8")) as Record<string, unknown>;
+    try {
+      raw = JSON.parse(await readFile(metaPath, "utf-8")) as Record<string, unknown>;
+    } catch (e) {
+      logWarn(`${name}/meta.json: invalid JSON — ${(e as Error).message}`);
+      return null;
+    }
   }
 
   const meta: PackageMeta = {
