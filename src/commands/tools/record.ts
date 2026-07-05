@@ -253,7 +253,7 @@ export const recordCommand = defineCommand({
     };
 
     process.on("SIGINT", handleSignal);
-    process.on("SIGTERM", () => stopRecording());
+    process.on("SIGTERM", stopRecording);
 
     const exitCode = await proc.exited;
 
@@ -262,7 +262,7 @@ export const recordCommand = defineCommand({
     }
 
     process.off("SIGINT", handleSignal);
-    process.off("SIGTERM", () => stopRecording());
+    process.off("SIGTERM", stopRecording);
 
     if (existsSync(outputPath) && Bun.file(outputPath).size > 0) {
       const size = Bun.file(outputPath).size;
