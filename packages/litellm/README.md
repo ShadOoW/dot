@@ -32,7 +32,7 @@ Service script: `/etc/sv/litellm/run`
 
 Symlink chain:
 
-- `/var/service/litellm` → `/etc/sv/litellm` → `/home/shad/.config/dotfiles/packages/litellm/system/runit/etc/sv/litellm`
+- `/var/service/litellm` → `/etc/sv/litellm` → `/data/config/dot/packages/litellm/system/runit/etc/sv/litellm`
 
 ## Systemd
 

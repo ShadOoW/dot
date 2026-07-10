@@ -22,19 +22,19 @@ Select multiple items with `Space`, then act on them.
 
 ## Go-to (`g…`)
 
-| Key   | Target             |
-| ----- | ------------------ |
-| `gh`  | ~                  |
-| `gc`  | ~/.config          |
-| `gC`  | ~/.config/dotfiles |
-| `go`  | /mnt/backup/code   |
-| `gdd` | /data              |
-| `gdc` | /data/code         |
-| `gdw` | /data/downloads    |
-| `gds` | /data/screens      |
-| `gdm` | /data/media        |
-| `gdo` | /data/ops          |
-| `gdS` | /data/stash        |
+| Key   | Target           |
+| ----- | ---------------- |
+| `gh`  | ~                |
+| `gc`  | ~/.config        |
+| `gC`  | /data/config/dot |
+| `go`  | /mnt/backup/code |
+| `gdd` | /data            |
+| `gdc` | /data/code       |
+| `gdw` | /data/downloads  |
+| `gds` | /data/screens    |
+| `gdm` | /data/media      |
+| `gdo` | /data/ops        |
+| `gdS` | /data/stash      |
 
 ## Files
 

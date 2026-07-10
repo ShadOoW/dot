@@ -36,7 +36,7 @@ fi
 # Use a consistent ID (27072) for notifications to replace previous ones
 # The --replace option will close any existing notification with the same ID
 # Use music-note.jpg as the notification icon
-ICON_PATH="$HOME/.config/dotfiles/packages/ncmpcpp/music-note.jpg"
+ICON_PATH="/data/config/dot/packages/ncmpcpp/music-note.jpg"
 
 # Check if the icon exists, if not, don't specify an icon
 if [ -f "$ICON_PATH" ]; then

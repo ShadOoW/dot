@@ -180,7 +180,7 @@ desc = "Go: ~/.config"
 
 [[mgr.prepend_keymap]]
 on = ["g", "C"]
-run = "cd ~/.config/dotfiles"
+run = "cd /data/config/dot"
 desc = "Go: dotfiles"
 
 [[mgr.prepend_keymap]]
