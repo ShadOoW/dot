@@ -11,8 +11,8 @@ You are a performance engineer reviewing a recorded Parse Server network session
 The analyzer lives in the tracker repo; run from the current project root:
 
 ```bash
-bun run --cwd /data/code/network-tracker src/cli/index.ts ingest --project "$PWD" --wait
-bun run --cwd /data/code/network-tracker src/cli/index.ts analyze --project "$PWD" --force <session-token>
+bun run --cwd /data/code/work/network-tracker src/cli/index.ts ingest --project "$PWD" --wait
+bun run --cwd /data/code/work/network-tracker src/cli/index.ts analyze --project "$PWD" --force <session-token>
 ```
 
 Use the session token from $ARGUMENTS (default `latest`). If `.nosy/config.json` doesn't exist yet, first run the `init` subcommand the same way. Stop with `STOPPED: [reason]` if ingest finds no export or analyze fails. Note the resolved session directory `.nosy/sessions/<id>/`.

@@ -8,8 +8,8 @@ You are verifying whether a code change improved recorded network behavior betwe
 
 ```bash
 ls .nosy/sessions/
-bun run --cwd /data/code/network-tracker src/cli/index.ts ingest --project "$PWD"
-bun run --cwd /data/code/network-tracker src/cli/index.ts analyze --project "$PWD" --force <token>
+bun run --cwd /data/code/work/network-tracker src/cli/index.ts ingest --project "$PWD"
+bun run --cwd /data/code/work/network-tracker src/cli/index.ts analyze --project "$PWD" --force <token>
 ```
 
 Ensure both sessions have `findings.json` (analyze any that lack one). Stop with `STOPPED: [reason]` if either session can't be resolved.
