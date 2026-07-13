@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "'/Applications/Muxy.app/Contents/Resources/Muxy_Muxy.bundle/muxy-claude-hook.sh' notification # muxy-notification-hook",
+            "command": "h='/Applications/Muxy.app/Contents/Resources/Muxy_Muxy.bundle/muxy-claude-hook.sh'; [ -x \"$h\" ] && \"$h\" notification || true # muxy-notification-hook",
             "timeout": 10
           }
         ]
@@ -18,7 +18,34 @@
         "hooks": [
           {
             "type": "command",
-            "command": "'/Applications/Muxy.app/Contents/Resources/Muxy_Muxy.bundle/muxy-claude-hook.sh' stop # muxy-notification-hook",
+            "command": "h='/Applications/Muxy.app/Contents/Resources/Muxy_Muxy.bundle/muxy-claude-hook.sh'; [ -x \"$h\" ] && \"$h\" stop || true # muxy-notification-hook",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "\"$HOME/.local/bin/claude-turn-done\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.local/bin/claude-turn-snapshot\" turn-base",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.local/bin/claude-turn-snapshot\" session-base",
             "timeout": 10
           }
         ]
