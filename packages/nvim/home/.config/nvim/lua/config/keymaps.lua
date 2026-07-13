@@ -176,6 +176,18 @@ keymap.v('J', ':m \'>+1<CR>gv=gv', 'Move selection down')
 keymap.v('K', ':m \'<-2<CR>gv=gv', 'Move selection up')
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- Review - <leader>r  (Claude Code turn review · see utils/claude-review.lua)
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Plugin-owned keys live in their specs: rr/rR (review.nvim annotate),
+-- rv/rl (codediff working tree / last commit), rh/rf (diffview history).
+
+keymap.n('<leader>rc', function() require('utils.claude-review').review_turn() end, 'Review Claude turn')
+keymap.n('<leader>rC', function() require('utils.claude-review').review_session() end, 'Review Claude session')
+keymap.n('<leader>ri', function() require('utils.claude-review').toggle_inline() end, 'Toggle inline turn review')
+keymap.n('<leader>rs', function() require('utils.claude-review').send() end, 'Send clipboard to Claude')
+keymap.x('<leader>rs', function() require('utils.claude-review').send_visual() end, 'Send selection to Claude')
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- Tmux Integration
 -- ═══════════════════════════════════════════════════════════════════════════════
 

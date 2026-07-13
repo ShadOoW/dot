@@ -69,6 +69,7 @@ require('utils.reload')
 require('utils.session')
 require('utils.browser')
 require('utils.tmux').setup()
+require('utils.agent-watch').setup()
 
 -- Fix: Use single column for both absolute and relative numbers
 vim.api.nvim_create_autocmd({ 'UIEnter', 'BufReadPost', 'WinEnter' }, {
