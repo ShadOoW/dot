@@ -1,0 +1,13 @@
+# /etc/resolv.conf — managed by dot (packages/dns). VOID ONLY (runit; no
+# systemd-resolved). Installed as a REAL file by configure.sh. This is the resolver
+# config that every glibc (files dns) AND musl / c-ares app reads directly, so it
+# must always list at least one reachable nameserver. See docs/dns.md.
+
+# --- AdGuard Home (desktop-local resolver) ---
+# Not enabled yet. Once AdGuard answers on 127.0.0.1:53, uncomment the next line
+# (it MUST be first) to route through it; the router stays as failover.
+#nameserver 127.0.0.1
+
+# MikroTik router (does DoH upstream; verified working)
+nameserver 192.168.88.1
+options edns0

@@ -1,0 +1,10 @@
+{
+  "description": "DNS resolution: dhcpcd nohook + resolv.conf ownership (systemd-resolved on Arch, static on Void)",
+  "packages": {
+    "arch": { "pacman": ["dhcpcd"] },
+    "void": { "xbps": ["dhcpcd"] }
+  },
+  "tags": ["network", "dns", "system"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}
