@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /opt/awsvpnclient/Service/ACVC.GTK.Service 2>&1

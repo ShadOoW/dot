@@ -1,0 +1,10 @@
+{
+  "description": "AWS VPN Client launcher (SAML browser fix) + Void runit service",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] }
+  },
+  "tags": ["network", "vpn"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}
