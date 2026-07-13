@@ -1,0 +1,10 @@
+#!/bin/sh
+# Claude Code Stop hook: signal "turn finished" to any editor watching this
+# repo. nvim's utils/agent-watch.lua polls <git-dir>/claude/turn-done and
+# notifies the user to review. File-based on purpose: no socket discovery,
+# works with any number of nvim instances (or none).
+
+cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
+gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null) || exit 0
+mkdir -p "$gitdir/claude" 2>/dev/null || exit 0
+date +%s >"$gitdir/claude/turn-done"

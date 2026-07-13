@@ -14,7 +14,7 @@ export const bunGlobalUpdater: Updater = {
     logSection("bun global");
     const lockfile = join(HOME_DIR, ".bun/install/global/bun.lock");
     if (existsSync(lockfile)) Bun.file(lockfile).delete();
-    const r = await spawnInherit(["bun", "update", "-g"]);
+    const r = await spawnInherit(["bun", "update", "-g", "--latest"]);
     return r.exitCode === 0;
   },
 };
