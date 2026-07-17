@@ -14,20 +14,33 @@ export interface ClaudeWindow {
   isSelf: boolean;
 }
 
-interface KittyFgProcess {
+export interface KittyFgProcess {
   pid?: number;
   cwd?: string;
   cmdline?: string[];
 }
 
-interface KittyWindow {
+export interface KittyWindow {
   id: number;
+  pid?: number;
   title?: string;
+  cwd?: string;
+  is_focused?: boolean;
   foreground_processes?: KittyFgProcess[];
 }
 
-interface KittyOsWindow {
-  tabs?: Array<{ windows?: KittyWindow[] }>;
+export interface KittyTab {
+  id?: number;
+  title?: string;
+  is_focused?: boolean;
+  windows?: KittyWindow[];
+}
+
+export interface KittyOsWindow {
+  id?: number;
+  wm_class?: string;
+  is_focused?: boolean;
+  tabs?: KittyTab[];
 }
 
 /**
@@ -56,6 +69,12 @@ export function liveSockets(): string[] {
   const own = process.env.KITTY_LISTEN_ON;
   if (own) sockets.sort((a, b) => (a === own ? -1 : b === own ? 1 : 0));
   return sockets;
+}
+
+/** PID of the kitty instance behind a `unix:/tmp/kitty-<pid>` socket. */
+export function socketPid(socket: string): number | null {
+  const m = socket.match(/^unix:\/tmp\/kitty-(\d+)$/);
+  return m ? Number(m[1]) : null;
 }
 
 /** `kitten @ ls` against one socket; null on timeout, error, or bad JSON. */

@@ -1,0 +1,88 @@
+{
+  "workspaces": {
+    "bruce": {
+      "description": "Bruce staffing platform dev",
+      "path": "/data/code/work/bruce",
+      "workspace": 3,
+      "left": [
+        {
+          "name": "claude",
+          "kind": "kitty",
+          "cmd": "claude-work"
+        },
+        {
+          "name": "api",
+          "kind": "app",
+          "exec": "insomnia",
+          "appId": "insomnia"
+        }
+      ],
+      "right": {
+        "widthPpt": 50,
+        "tabs": [
+          {
+            "title": "debug",
+            "cmd": "npm run debug",
+            "cwd": "app/client/web/code"
+          },
+          {
+            "title": "dev",
+            "cmd": "bun cli.ts dev",
+            "cwd": "app/client/web/code"
+          },
+          {
+            "title": "git"
+          }
+        ]
+      }
+    },
+    "dotfiles": {
+      "description": "System dotfiles configuration",
+      "path": "/data/config/dot",
+      "workspace": "current",
+      "left": [
+        {
+          "name": "claude",
+          "kind": "kitty",
+          "cmd": "claude-work"
+        },
+        {
+          "name": "editor",
+          "kind": "kitty",
+          "cmd": "nvim ."
+        }
+      ],
+      "right": {
+        "tabs": [
+          {
+            "title": "shell"
+          }
+        ]
+      }
+    },
+    "nvim": {
+      "description": "Neovim configuration",
+      "path": "/data/config/dot/packages/nvim",
+      "workspace": "current",
+      "left": [
+        {
+          "name": "editor",
+          "kind": "kitty",
+          "cmd": "nvim init.lua"
+        }
+      ]
+    },
+    "kitty": {
+      "description": "Kitty terminal configuration",
+      "path": "/data/config/dot/packages/kitty",
+      "workspace": "current",
+      "left": [
+        {
+          "name": "editor",
+          "kind": "kitty",
+          "cmd": "nvim home/.config/kitty/kitty.conf"
+        }
+      ]
+    }
+  }
+}

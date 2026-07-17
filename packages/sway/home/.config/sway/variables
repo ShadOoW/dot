@@ -9,10 +9,11 @@ set {
     $clipboard ~/.config/fuzzel-scripts/clipboard.sh
     $clipboard_delete ~/.config/fuzzel-scripts/clipboard.sh --delete
     $images ~/.config/fuzzel-scripts/images.sh
-    $projects ~/.config/kitty/scripts/project-manager.sh
+    $projects dot tools workspace --pick
     
     # Scratchpad settings
     $sp_terminal "~/.config/sway/scripts/toggle-scratchpad.sh terminal app_id terminal-mark 'kitty --app-id terminal-mark'"
+    $sp_btw "~/.config/sway/scripts/toggle-scratchpad.sh btw app_id btw-scratch 'kitty --app-id btw-scratch'"
     $sp_music "~/.config/sway/scripts/toggle-scratchpad.sh music app_id music-mark 'kitty --app-id music-mark ncmpcpp'"
     $sp_explorer "~/.config/sway/scripts/toggle-scratchpad.sh explorer app_id yazi-explorer 'kitty --app-id yazi-explorer yazi'"
     $sp_chatgpt "~/.config/sway/scripts/toggle-scratchpad.sh chatgpt app_id org.qutebrowser.qutebrowser 'qutebrowser https://chatgpt.com'"

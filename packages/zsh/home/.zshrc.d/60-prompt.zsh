@@ -18,7 +18,16 @@ esac
 # Arrows turn red when the last command failed (%(?...) = exit-status ternary).
 _arrows='%(?.%F{red}❯%F{yellow}❯%F{green}❯.%F{red}❯❯❯)%f'
 
-PROMPT="${_distro_icon} %B%F{blue}%c%f%b ${_arrows} "
+# Background-job cue: when this shell owns jobs, show live per-state counts so a
+# parked job (a paused Claude agent, say) isn't forgotten. $_bgz_jobs is rebuilt
+# every prompt by _bgz_precmd in 70-keybindings.zsh — green play-glyph + N running
+# in the background, yellow pause-glyph + M paused. Ctrl+Z pauses/hides the current
+# foreground job (see 70-keybindings.zsh).
+# NOTE: $_bgz_jobs is escaped (\$) so it stays literal in PROMPT and prompt_subst
+# re-expands it on every draw. Un-escaped, it would be frozen to its empty value
+# at source time and the job counter would never appear (RPROMPT below is already
+# single-quoted for the same reason).
+PROMPT="${_distro_icon} %B%F{blue}%c%f%b \${_bgz_jobs}${_arrows} "
 
 # Right side: git branch (from vcs_info) + clock. 24h HH:MM by default;
 # for the 12h "01:35 pm" style instead use: %D{%I:%M %p}

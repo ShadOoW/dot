@@ -5,7 +5,9 @@ exec_always {
 exec {
     mako &
     swayidle &
-    autotiling-rs 3 4 5 6 7 8 9 10 &
+    # Workspaces 3/4 are reserved for scripted project layouts
+    # (dot tools workspace) — autotiling would fight the tabbed containers.
+    autotiling-rs 5 6 7 8 9 10 &
     wl-paste --watch cliphist -db-path /data/stash/clipboard/cliphist -max-items 1000000 store &
 
     # Start MRU focus tracker for Alt-Tab behavior
@@ -18,4 +20,7 @@ exec {
 
     # Start browser
     vivaldi-stable &
+    # Restores the pre-reboot terminal/claude snapshot taken by
+    # `dot session restart`; silent no-op when none is pending.
+    dot session restore --if-pending &
 }

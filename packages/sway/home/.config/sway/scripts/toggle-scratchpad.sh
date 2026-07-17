@@ -25,6 +25,9 @@ set_window_properties() {
     "explorer")
       swaymsg "[con_mark=\"$MARK_NAME\"] resize set width 100ppt height 50ppt, move position center"
       ;;
+    "btw")
+      swaymsg "[con_mark=\"$MARK_NAME\"] resize set width 60ppt height 45ppt, move position center"
+      ;;
   esac
 }
 

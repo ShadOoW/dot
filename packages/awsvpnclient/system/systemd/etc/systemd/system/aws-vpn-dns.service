@@ -1,0 +1,14 @@
+[Unit]
+Description=Route split-horizon domains to the AWS VPN tunnel DNS while it is connected
+BindsTo=sys-subsystem-net-devices-tun0.device
+After=sys-subsystem-net-devices-tun0.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/sleep 2
+ExecStart=/usr/bin/resolvectl domain tun0 ~mongodb.net ~eu-west-3.compute.amazonaws.com
+ExecStart=/usr/bin/resolvectl flush-caches
+
+[Install]
+WantedBy=sys-subsystem-net-devices-tun0.device

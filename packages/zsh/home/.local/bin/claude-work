@@ -1,20 +1,2 @@
 #!/usr/bin/env zsh
-dir="$HOME/.claude-work"
-real_claude=$(command -v claude)
-
-mkdir -p "$dir"
-for item in settings.json CLAUDE.md RTK.md commands hooks plugins; do
-  src="$HOME/.claude/$item"
-  dst="$dir/$item"
-  [[ -e "$src" && ! -e "$dst" ]] && ln -sf "$src" "$dst"
-done
-
-tmpdir=$(mktemp -d)
-printf '#!/usr/bin/env zsh\nexport CLAUDE_CONFIG_DIR="%s"\nexec "%s" "$@"\n' \
-  "$dir" "$real_claude" > "$tmpdir/claude"
-chmod +x "$tmpdir/claude"
-
-PATH="$tmpdir:$PATH" headroom wrap claude "$@"
-ret=$?
-rm -rf "$tmpdir"
-exit $ret
+exec claude-account work "$@"

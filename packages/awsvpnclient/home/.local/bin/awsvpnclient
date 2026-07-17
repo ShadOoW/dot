@@ -1,50 +1,11 @@
 #!/bin/sh
-# AWS VPN Client launcher with a SAML browser workaround.
+# AWS VPN Client launcher.
 #
-# The GTK client's built-in SAML browser launch is broken on Linux — it asks the
-# XDG desktop portal / .NET to open the IdP login URL and silently no-ops (it
-# spawns no process at all; see packages/awsvpnclient/README.md). Without the
-# login page you're stuck at "Waiting for identity...".
-#
-# This wrapper polls the client log for the SAML auth URL and opens it with
-# xdg-open (which works), then runs the client. After you log in, the IdP posts
-# the assertion back to the client's local callback and the tunnel comes up.
-#
-# Works on Arch (AUR package) and Void (dot xbps build) — both install the app to
-# /opt/awsvpnclient. Requires xdg-open and a configured default browser.
+# Historical note: through 5.2.x the client's built-in SAML browser launch was
+# broken on Linux — it made an XDG-portal / .NET call that spawned no process at
+# all — so this wrapper polled the client log for the SAML URL and opened it
+# with xdg-open. As of 5.3.1 the client opens the browser itself, which turned
+# the wrapper's copy into a duplicate login tab; the workaround was removed
+# (see git history if a future version regresses).
 
-APP="/opt/awsvpnclient/AWS VPN Client"
-LOGDIR="$HOME/.config/AWSVPNClient/logs"
-mkdir -p "$LOGDIR"
-
-# Newest SAML auth URL in a log file (empty if none).
-saml_url_of() {
-  line=$(grep 'SAML URL returned: https://' "$1" 2>/dev/null | tail -1)
-  line=${line#*SAML URL returned: }
-  printf '%s' "${line%% *}"
-}
-
-# Background: open each newly-issued SAML URL. The client rotates its log per
-# launch, so always follow the newest one.
-(
-  # Prime with any pre-existing URL so only new logins trigger a browser.
-  newest=$(ls -t "$LOGDIR"/aws_vpn_client_*.log 2>/dev/null | head -1)
-  last=$(saml_url_of "$newest")
-  while :; do
-    newest=$(ls -t "$LOGDIR"/aws_vpn_client_*.log 2>/dev/null | head -1)
-    if [ -n "$newest" ]; then
-      url=$(saml_url_of "$newest")
-      if [ -n "$url" ] && [ "$url" != "$last" ]; then
-        last=$url
-        xdg-open "$url" >/dev/null 2>&1 &
-      fi
-    fi
-    sleep 1
-  done
-) &
-watcher=$!
-trap 'kill "$watcher" 2>/dev/null' EXIT INT TERM
-
-# Run in the foreground (not exec) so the trap fires and stops the watcher
-# when the client exits.
-"$APP" "$@"
+exec "/opt/awsvpnclient/AWS VPN Client" "$@"

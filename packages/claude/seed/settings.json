@@ -50,6 +50,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/shad/.claude/hooks/rtk-rewrite.sh"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
@@ -74,6 +85,8 @@
       }
     }
   },
+  "effortLevel": "xhigh",
+  "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark-ansi",
   "skipAutoPermissionPrompt": true,

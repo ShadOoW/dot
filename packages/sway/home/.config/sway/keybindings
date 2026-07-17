@@ -7,14 +7,17 @@ bindsym {
     $mod+Shift+Return exec $term
     $mod+q kill
     $mod+d exec $menu
+    $mod+o exec $projects
     $mod+x exec $window
     $mod+c exec $clipboard
     $mod+Mod1+c exec $clipboard_delete
     $mod+i exec $images
+    $mod+y exec ~/.config/sway/scripts/kitty-yank-cwd.sh
 
     $mod+a exec $sp_explorer
     $mod+m exec $sp_music
     $mod+z exec $sp_terminal
+    $mod+t exec $sp_btw
     # $mod+Shift+x exec $sp_chatgpt
     $mod+w exec pkill waybar || waybar
     # Pin window in foreground of every workspace

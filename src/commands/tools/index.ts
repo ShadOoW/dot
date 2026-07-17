@@ -9,6 +9,7 @@ import { recordCommand } from "./record.ts";
 import { passphraseCommand } from "./passphrase.ts";
 import { claudeResumeCommand } from "./claude-resume.ts";
 import { claudeSendCommand } from "./claude-send.ts";
+import { workspaceCommand } from "./workspace.ts";
 
 const chrootCommand = defineCommand({
   meta: { description: "Display the Void Linux chroot recovery instructions" },
@@ -42,6 +43,7 @@ export const toolsCommand = defineCommand({
     passphrase: passphraseCommand,
     "claude-resume": claudeResumeCommand,
     "claude-send": claudeSendCommand,
+    workspace: workspaceCommand,
   },
   async run({ rawArgs }) {
     // citty runs this parent handler after a subcommand too — only print
@@ -57,6 +59,7 @@ Subcommands:
   passphrase                  Generate a secure diceware passphrase
   claude-resume               Inject a prompt into a claude kitty window after a delay
   claude-send                 Send stdin/--text to this repo's claude kitty window
+  workspace                   Launch or focus a sway+kitty project workspace
 
 Examples:
   dot tools compress ~/screenshots/
@@ -67,6 +70,8 @@ Examples:
   dot tools claude-resume --in 4h --text "continue"
   dot tools claude-resume --auto
   wl-paste | dot tools claude-send
+  dot tools workspace bruce
+  dot tools workspace --pick
 `);
   },
 });

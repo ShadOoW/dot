@@ -10,6 +10,7 @@ import { statusCommand } from "./status.ts";
 import { graphCommand } from "./graph.ts";
 import { completionsCommand } from "./completions.ts";
 import { wgCommand } from "./wg.ts";
+import { sessionCommand } from "./session.ts";
 
 // Single source of truth for top-level commands: dot.ts registers these with
 // citty and completions.ts derives the zsh completion list from the same map,
@@ -31,4 +32,5 @@ export const REGISTRY = {
   graph: graphCommand,
   completions: completionsCommand,
   wg: wgCommand,
+  session: sessionCommand,
 };

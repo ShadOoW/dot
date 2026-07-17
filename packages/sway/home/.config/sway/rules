@@ -25,6 +25,10 @@ for_window {
   [app_id="terminal-mark"] floating enable, mark terminal, move scratchpad, border pixel 4, border color #7dcfff
   [app_id="music-mark"] floating enable, mark music, move scratchpad, border pixel 4, border color #7dcfff
   [app_id="yazi-explorer"] floating enable, mark explorer, move scratchpad, border pixel 4, border color #7dcfff
+
+  # btw stash terminal ($mod+s) — floating, centered, purple-bordered. Marked +
+  # stashed like the other scratchpads; toggle-scratchpad.sh handles show/hide + sizing.
+  [app_id="btw-scratch"] floating enable, mark btw, move scratchpad, border pixel 4, border color #bb9af7
 }
 
 # Workspace assignments

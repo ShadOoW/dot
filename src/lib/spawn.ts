@@ -7,7 +7,7 @@ interface SpawnOpts {
   env?: Record<string, string>;
 }
 
-function shellEscape(args: string[]): string {
+export function shellEscape(args: string[]): string {
   return args.map(arg => {
     if (/^[\w.,@:/=+-]+$/.test(arg)) return arg;
     return "'" + arg.replace(/'/g, "'\\''") + "'";

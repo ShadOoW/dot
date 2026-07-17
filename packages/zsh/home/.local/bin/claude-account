@@ -1,0 +1,49 @@
+#!/usr/bin/env zsh
+# Run Claude Code against an isolated config dir so multiple accounts
+# (personal, work) can coexist on one machine. Each account gets its own
+# CLAUDE_CONFIG_DIR — hence its own credentials + oauth identity — while the
+# account-agnostic config (settings, prompts, commands, hooks, plugins) is
+# symlinked in from ~/.claude so it stays shared.
+#
+# Both accounts are EXPLICIT on purpose: a bare `claude` / `headroom wrap
+# claude` writes to the ambiguous default config (~/.claude + ~/.claude.json),
+# which any stray login can silently flip to the wrong account. Pinning each
+# account to its own dir removes that footgun.
+#
+# headroom's RTK/MCP setup hardcodes ~/.claude and ignores CLAUDE_CONFIG_DIR;
+# injecting CLAUDE_CONFIG_DIR into headroom's own env makes claude start with a
+# "foreign" config dir headroom didn't prepare, triggering fullscreen mode.
+# Fix: hand headroom a shim named "claude" (first on PATH) that injects
+# CLAUDE_CONFIG_DIR only into the claude binary, leaving headroom on ~/.claude.
+#
+# Usage: claude-account <name> [claude args...]   (see claude-personal/claude-work)
+account="$1"
+shift
+if [[ -z "$account" ]]; then
+  echo "claude-account: missing account name" >&2
+  exit 1
+fi
+
+dir="$HOME/.claude-$account"
+real_claude=$(command -v claude) || {
+  echo "claude not found in PATH" >&2
+  exit 1
+}
+
+# Share account-agnostic config from ~/.claude (never credentials/identity).
+mkdir -p "$dir"
+for item in settings.json CLAUDE.md RTK.md commands hooks plugins; do
+  src="$HOME/.claude/$item"
+  dst="$dir/$item"
+  [[ -e "$src" && ! -e "$dst" ]] && ln -sf "$src" "$dst"
+done
+
+tmpdir=$(mktemp -d)
+printf '#!/usr/bin/env zsh\nexport CLAUDE_CONFIG_DIR="%s"\nexec "%s" "$@"\n' \
+  "$dir" "$real_claude" >"$tmpdir/claude"
+chmod +x "$tmpdir/claude"
+
+PATH="$tmpdir:$PATH" headroom wrap claude "$@"
+ret=$?
+rm -rf "$tmpdir"
+exit $ret
