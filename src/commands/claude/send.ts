@@ -1,9 +1,10 @@
 import { defineCommand } from "citty";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
-import { isCancel, select, text } from "@clack/prompts";
+import { isCancel, select } from "@clack/prompts";
 import { colors, logError, logInfo, logSuccess, logWarn } from "../../lib/console.ts";
-import { findClaudeWindows, getScreenText, type ClaudeWindow } from "../../lib/kitty.ts";
+import { findClaudeWindows, getScreenText, sendEnter, sendText, type ClaudeWindow } from "../../lib/kitty.ts";
+import { run } from "../../lib/spawn.ts";
 import {
   JOBS_DIR,
   deleteJob,
@@ -12,9 +13,28 @@ import {
   runnerAlive,
   saveJob,
   type ResumeJob,
-} from "./claude-resume-runner.ts";
+} from "./send-runner.ts";
 
-const RUNNER_PATH = join(import.meta.dir, "claude-resume-runner.ts");
+/**
+ * Send text into the Claude Code session running in a kitty window.
+ *
+ * With no timing flag it fires immediately at this repo's window — the dispatch
+ * half of the nvim review loop (review.nvim exports annotations to the
+ * clipboard, <leader>rs pipes them here, the agent gets them as its next
+ * prompt):
+ *
+ *   echo "fix the error handling in api.ts" | dot claude send
+ *   dot claude send --text "..." --no-enter
+ *
+ * With --in/--at/--auto it schedules the same injection for later via a
+ * detached runner — built to wake a rate-limited session back up:
+ *
+ *   dot claude send --in 4h --text "continue"
+ *   dot claude send --auto          # read the reset time off the banner
+ *   dot claude send --list | --cancel <id>
+ */
+
+const RUNNER_PATH = join(import.meta.dir, "send-runner.ts");
 const PRUNE_AFTER_MS = 48 * 60 * 60 * 1000;
 
 // ─── time parsing ─────────────────────────────────────────────────────────────
@@ -63,12 +83,45 @@ function formatRemaining(ms: number): string {
 
 // ─── window resolution ────────────────────────────────────────────────────────
 
+async function gitRoot(): Promise<string> {
+  const r = await run(["git", "rev-parse", "--show-toplevel"]);
+  return r.exitCode === 0 ? r.stdout.trim() : process.cwd();
+}
+
 function windowLabel(w: ClaudeWindow): string {
   const pid = w.socket.replace(/^unix:\/tmp\/kitty-/, "");
   return `${w.title || "(untitled)"} — ${w.cwd} (kitty ${pid})${w.isSelf ? " (this window)" : ""}`;
 }
 
-async function resolveWindow(match?: string): Promise<ClaudeWindow | null> {
+/**
+ * Send-now target: the claude window for the current repo. Never targets the
+ * window this command was spawned from — an agent piping to `send` must not
+ * prompt itself into a loop.
+ */
+async function resolveRepoWindow(match?: string): Promise<ClaudeWindow | null> {
+  const root = await gitRoot();
+  const others = (await findClaudeWindows(match)).filter((w) => !w.isSelf);
+  let candidates = others.filter((w) => w.cwd === root);
+  if (candidates.length === 0) {
+    candidates = others.filter((w) => w.cwd.startsWith(`${root}/`) || root.startsWith(`${w.cwd}/`));
+  }
+  if (candidates.length === 0) {
+    logError(`No Claude Code window found for ${root}`);
+    return null;
+  }
+  if (candidates.length > 1) {
+    logWarn(`Multiple Claude windows match ${root} — narrow it down with --match:`);
+    for (const w of candidates) logWarn(`  ${w.cwd}  (${w.title})`);
+    return null;
+  }
+  return candidates[0]!;
+}
+
+/**
+ * Schedule target: any claude window (the rate-limited one is often the window
+ * you're scheduling from, so isSelf is kept and merely warned about).
+ */
+async function resolveScheduledWindow(match?: string): Promise<ClaudeWindow | null> {
   const windows = await findClaudeWindows(match);
   if (windows.length === 0) {
     logError(match ? `No kitty window with a claude session matches "${match}"` : "No kitty window with a running claude session found");
@@ -84,7 +137,7 @@ async function resolveWindow(match?: string): Promise<ClaudeWindow | null> {
     return null;
   }
   const picked = await select({
-    message: "Multiple claude sessions — which one should be resumed?",
+    message: "Multiple claude sessions — which one?",
     options: windows.map((w, i) => ({ value: i, label: windowLabel(w) })),
   });
   if (isCancel(picked)) return null;
@@ -150,7 +203,7 @@ async function listJobs(): Promise<void> {
     keep.push(job);
   }
   if (keep.length === 0) {
-    logInfo("No scheduled resumes.");
+    logInfo("No scheduled sends.");
     return;
   }
   console.log("");
@@ -202,17 +255,21 @@ async function cancelJob(id: string | undefined): Promise<boolean> {
 
 // ─── command ─────────────────────────────────────────────────────────────────
 
-export const claudeResumeCommand = defineCommand({
-  meta: { description: "Resume a rate-limited claude session later by injecting a prompt into its kitty window" },
+export const sendCommand = defineCommand({
+  meta: {
+    name: "send",
+    description: "Send text to a claude kitty window now, or schedule it with --in/--at/--auto",
+  },
   args: {
-    in: { type: "string", description: "Delay before injecting (e.g. 4h, 90m, 4h30m)" },
-    at: { type: "string", description: "Wall-clock time to inject (e.g. 03:15, 3:15am)" },
-    auto: { type: "boolean", description: "Read the reset time from the rate-limit banner on screen" },
-    text: { type: "string", default: "continue", description: "Prompt text to inject" },
+    text: { type: "string", description: 'Text to send (default: stdin when sending now, "continue" when scheduling)' },
     match: { type: "string", description: "Filter target window by title/cwd substring" },
-    list: { type: "boolean", description: "List scheduled resumes" },
-    cancel: { type: "boolean", description: "Cancel a scheduled resume (id as positional, or pick)" },
-    "dry-run": { type: "boolean", description: "Resolve window and fire time, print the plan, change nothing" },
+    "no-enter": { type: "boolean", description: "Paste without submitting (send-now only)" },
+    in: { type: "string", description: "Schedule: delay before sending (e.g. 4h, 90m, 4h30m)" },
+    at: { type: "string", description: "Schedule: wall-clock time to send (e.g. 03:15, 3:15am)" },
+    auto: { type: "boolean", description: "Schedule: read the reset time from the rate-limit banner on screen" },
+    list: { type: "boolean", description: "List scheduled sends" },
+    cancel: { type: "boolean", description: "Cancel a scheduled send (id as positional, or pick)" },
+    "dry-run": { type: "boolean", description: "Resolve target and fire time, print the plan, change nothing" },
   },
   async run({ args }) {
     if (args.list) {
@@ -229,7 +286,36 @@ export const claudeResumeCommand = defineCommand({
       process.exit(1);
     }
 
-    const target = await resolveWindow(args.match);
+    // ── send now ──────────────────────────────────────────────────────────────
+    if (modeCount === 0) {
+      const text = (args.text ?? (await Bun.stdin.text())).trimEnd();
+      if (!text) {
+        logError("Nothing to send (empty stdin and no --text)");
+        process.exit(1);
+      }
+      const target = await resolveRepoWindow(args.match);
+      if (!target) process.exit(1);
+
+      const sent = await sendText(target.socket, target.windowId, text);
+      if (!sent) {
+        logError("kitten send-text failed");
+        process.exit(1);
+      }
+      if (!args["no-enter"]) {
+        // Let the TUI ingest the paste before the key event so Enter isn't
+        // coalesced into it (same trick as the scheduled runner).
+        await Bun.sleep(400);
+        if (!(await sendEnter(target.socket, target.windowId))) {
+          logError("kitten send-key failed — text pasted but not submitted");
+          process.exit(1);
+        }
+      }
+      logSuccess(`Sent ${text.length} chars to ${target.title || target.cwd}`);
+      return;
+    }
+
+    // ── schedule ────────────────────────────────────────────────────────────────
+    const target = await resolveScheduledWindow(args.match);
     if (!target) process.exit(1);
 
     let fireAt: number | null = null;
@@ -246,27 +332,12 @@ export const claudeResumeCommand = defineCommand({
         logError(`Invalid --at "${args.at}" (e.g. 03:15, 3:15am)`);
         process.exit(1);
       }
-    } else if (args.auto) {
+    } else {
       fireAt = await parseResetFromScreen(target);
       if (!fireAt) process.exit(1);
-    } else {
-      if (!process.stdin.isTTY) {
-        logError("No --in/--at/--auto given and not a TTY");
-        process.exit(1);
-      }
-      const answer = await text({
-        message: "When? (duration like 4h30m, or time like 3:15am)",
-        placeholder: "4h",
-      });
-      if (isCancel(answer) || !answer) process.exit(1);
-      const ms = parseDuration(answer);
-      fireAt = ms && ms >= 10_000 ? Date.now() + ms : parseAt(answer);
-      if (!fireAt) {
-        logError(`Could not parse "${answer}"`);
-        process.exit(1);
-      }
     }
 
+    const text = args.text ?? "continue";
     const job: ResumeJob = {
       id: Date.now().toString(36),
       createdAt: Date.now(),
@@ -275,14 +346,14 @@ export const claudeResumeCommand = defineCommand({
       windowId: target.windowId,
       windowTitle: target.title,
       cwd: target.cwd,
-      text: args.text,
+      text,
       runnerPid: null,
       status: "pending",
     };
 
     const when = `${new Date(fireAt).toLocaleString()} (in ${formatRemaining(fireAt - Date.now())})`;
     if (args["dry-run"]) {
-      logInfo(`Would inject "${job.text}" at ${when} via:`);
+      logInfo(`Would send "${job.text}" at ${when} via:`);
       console.log(colors.dim(`    kitten @ --to ${job.socket} send-text --match id:${job.windowId} -- ${job.text}`));
       console.log(colors.dim(`    kitten @ --to ${job.socket} send-key --match id:${job.windowId} enter`));
       return;
@@ -299,9 +370,9 @@ export const claudeResumeCommand = defineCommand({
     // beat so an immediate --list shows a live runner.
     await Bun.sleep(150);
     if (target.isSelf) {
-      logWarn("Target is this window — the injected text will land in this session.");
+      logWarn("Target is this window — the scheduled text will land in this session.");
     }
     logSuccess(`Scheduled ${job.id}: "${job.text}" → ${target.title || target.cwd} at ${when}`);
-    logInfo(`Manage with: dot tools claude-resume --list | --cancel ${job.id}`);
+    logInfo(`Manage with: dot claude send --list | --cancel ${job.id}`);
   },
 });

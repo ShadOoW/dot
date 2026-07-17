@@ -21,6 +21,6 @@ exec {
     # Start browser
     vivaldi-stable &
     # Restores the pre-reboot terminal/claude snapshot taken by
-    # `dot session restart`; silent no-op when none is pending.
-    dot session restore --if-pending &
+    # `dot claude session reboot`; silent no-op when none is pending.
+    dot claude session restore --if-pending &
 }

@@ -1,8 +1,8 @@
 import { defineCommand } from "citty";
 import { confirm, isCancel } from "@clack/prompts";
-import { colors, logError, logInfo, logSuccess, logWarn } from "../lib/console.ts";
-import { buildSessionFile, writeSessionFile } from "../lib/kitty-session.ts";
-import { notify } from "../lib/kitty.ts";
+import { colors, logError, logInfo, logSuccess, logWarn } from "../../lib/console.ts";
+import { buildSessionFile, writeSessionFile } from "../../lib/kitty-session.ts";
+import { notify } from "../../lib/kitty.ts";
 import {
   buildRestorePlan,
   captureManifest,
@@ -13,8 +13,8 @@ import {
   saveManifest,
   type Manifest,
   type RestorePlan,
-} from "../lib/session.ts";
-import { swayCommand, WindowSubscription } from "../lib/sway.ts";
+} from "../../lib/session.ts";
+import { swayCommand, WindowSubscription } from "../../lib/sway.ts";
 
 function spawnDetached(argv: string[]): void {
   Bun.spawn(argv, { stdout: "ignore", stderr: "ignore", stdin: "ignore" }).unref();
@@ -104,7 +104,7 @@ const saveCommand = defineCommand({
   },
 });
 
-const restartCommand = defineCommand({
+const rebootCommand = defineCommand({
   meta: { description: "Snapshot sessions, then reboot — restore runs on next sway login" },
   args: {
     now: { type: "boolean", description: "Skip confirmation" },
@@ -144,7 +144,7 @@ const restoreCommand = defineCommand({
     const claimed = await claimManifest();
     if (!claimed) {
       if (args["if-pending"]) return;
-      logError(`No pending manifest at ${MANIFEST_PATH} — run \`dot session save\` first`);
+      logError(`No pending manifest at ${MANIFEST_PATH} — run \`dot claude session save\` first`);
       process.exit(1);
     }
     await runRestore(claimed.manifest, claimed.claimedPath);
@@ -168,7 +168,7 @@ export const sessionCommand = defineCommand({
   meta: { description: "Save open terminal/claude sessions and restore them after a reboot" },
   subCommands: {
     save: saveCommand,
-    restart: restartCommand,
+    reboot: rebootCommand,
     restore: restoreCommand,
     status: statusCommand,
   },

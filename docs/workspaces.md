@@ -3,7 +3,7 @@
 How per-project sway workspaces get built, and how every open terminal — including
 running Claude Code sessions — survives a reboot. Implemented as
 [`dot tools workspace`](../src/commands/tools/workspace.ts) and
-[`dot session`](../src/commands/session.ts), configured through
+[`dot claude session`](../src/commands/claude/session.ts), configured through
 [`packages/sway`](../packages/sway/).
 
 ## The annoyance that started this
@@ -70,13 +70,13 @@ profiles there.
 ## Session snapshot: reboot without losing anything
 
 ```
-dot session restart        # snapshot everything, confirm, reboot
-dot session save           # snapshot only (manual)
-dot session status         # what's pending
-dot session restore --dry-run
+dot claude session reboot         # snapshot everything, confirm, reboot
+dot claude session save           # snapshot only (manual)
+dot claude session status         # what's pending
+dot claude session restore --dry-run
 ```
 
-`restart` walks every kitty instance (`kitten @ ls` per `/tmp/kitty-*` socket),
+`reboot` walks every kitty instance (`kitten @ ls` per `/tmp/kitty-*` socket),
 records each window's **cwd + foreground command + sway workspace**, and joins claude
 windows against the live session registry. The join is by claude's own **PID** (the
 key Claude Code writes its registry under), falling back to `KITTY_LISTEN_ON` +
@@ -85,7 +85,7 @@ starttime. Each claude window is tagged with the **account** its process runs un
 (read from `CLAUDE_CONFIG_DIR`), so it resumes in the right config dir. The manifest
 lands in `~/.local/state/dot/session/manifest.json`, then the machine reboots.
 
-On the next sway login, `dot session restore --if-pending` (in the sway `exec` block)
+On the next sway login, `dot claude session restore --if-pending` (in the sway `exec` block)
 claims the manifest **atomically by rename** — restore fires exactly once, even if it
 crashes halfway — and rebuilds each kitty os-window on its saved workspace:
 
@@ -98,7 +98,7 @@ Deliberate cuts and edge rules:
 
 - **GUI apps are not restored** (Insomnia, browser, …). Vivaldi restores itself from
   the autostart line; project GUIs come back with `dot tools workspace <name>`. The
-  restart summary lists what will be skipped.
+  reboot summary lists what will be skipped.
 - The pre-warmed scratchpad kitties (`terminal-mark`, `music-mark`, `yazi-explorer`)
   are excluded — sway's exec block recreates them anyway.
 - A claude window whose session id can't be resolved falls back to `<launcher> -c`
@@ -106,15 +106,15 @@ Deliberate cuts and edge rules:
   the only id-less claude in that cwd — two `-c` in one directory would race for the
   same session. Extra registry sessions with no window get their own `session-claude`
   window.
-- Snapshots are explicit by design: only `restart`/`save` write a manifest, so a
+- Snapshots are explicit by design: only `reboot`/`save` write a manifest, so a
   normal login never restores anything you closed on purpose. **Exactly one snapshot
-  is kept** — restore consumes it, and the next `save`/`restart` overwrites it. No
+  is kept** — restore consumes it, and the next `save`/`reboot` overwrites it. No
   history.
 
 ## Replacing tmux
 
 The combination is the tmux workflow without tmux: kitty tabs/splits are the
 multiplexer, sway tabs group heterogeneous apps per project, `dot tools workspace`
-is the session definition, and `dot session` is tmux-resurrect. What tmux still does
+is the session definition, and `dot claude session` is tmux-resurrect. What tmux still does
 that this doesn't: surviving _unplanned_ deaths (power loss) — the snapshot is
 explicit, not continuous — and detach/reattach over SSH.

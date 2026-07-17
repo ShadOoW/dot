@@ -4,10 +4,10 @@ import { join } from "path";
 import { CACHE_DIR } from "../../lib/config.ts";
 import { findClaudeWindows, notify, sendEnter, sendText } from "../../lib/kitty.ts";
 
-// Detached runner for `dot tools claude-resume`. Executed directly
-// (`setsid bun claude-resume-runner.ts <job.json>`), never via citty; the
-// scheduling command imports only the job helpers below (import.meta.main
-// keeps the runner body from executing on import).
+// Detached runner for a scheduled `dot claude send --in/--at/--auto`. Executed
+// directly (`setsid bun send-runner.ts <job.json>`), never via citty; the
+// scheduling command imports only the job helpers below (import.meta.main keeps
+// the runner body from executing on import).
 
 export type JobStatus = "pending" | "fired" | "failed" | "cancelled";
 
@@ -113,7 +113,7 @@ async function runnerMain(): Promise<void> {
     job.status = "failed";
     job.error = "no claude window found at fire time";
     await saveJob(job);
-    notify("critical", "Claude resume failed", `Job ${job.id}: no claude session found (window closed?)`);
+    notify("critical", "Claude send failed", `Job ${job.id}: no claude session found (window closed?)`);
     process.exit(1);
   }
 
@@ -129,7 +129,7 @@ async function runnerMain(): Promise<void> {
   await saveJob(job);
   notify(
     ok ? "normal" : "critical",
-    ok ? "Claude resumed" : "Claude resume failed",
+    ok ? "Claude send fired" : "Claude send failed",
     ok ? `Sent "${job.text}" to ${target.title || target.cwd}` : `Job ${job.id}: injection failed`,
   );
   process.exit(ok ? 0 : 1);

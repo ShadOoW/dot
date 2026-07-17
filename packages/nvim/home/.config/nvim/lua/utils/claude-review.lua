@@ -11,8 +11,7 @@
 --                                    so gutter hunks *are* Claude's changes
 --                                    and <leader>gr rejects one against it
 --   send()/send_visual()           — pipe text into the repo's running
---                                    Claude kitty window via `dot tools
---                                    claude-send`
+--                                    Claude kitty window via `dot claude send`
 
 local notify = require('utils.notify')
 
@@ -71,7 +70,7 @@ local function dispatch(text)
     return
   end
   vim.system(
-    { 'dot', 'tools', 'claude-send' },
+    { 'dot', 'claude', 'send' },
     { stdin = text, text = true },
     vim.schedule_wrap(function(res)
       if res.code == 0 then
