@@ -72,8 +72,10 @@ profiles there.
 ```
 dot claude session reboot         # snapshot everything, confirm, reboot
 dot claude session save           # snapshot only (manual)
-dot claude session status         # what's pending
+dot claude session status         # what's saved + whether it's still armed
+dot claude session restore        # re-restore the saved snapshot on demand
 dot claude session restore --dry-run
+dot claude session clear          # discard the saved snapshot
 ```
 
 `reboot` walks every kitty instance (`kitten @ ls` per `/tmp/kitty-*` socket),
@@ -86,8 +88,10 @@ starttime. Each claude window is tagged with the **account** its process runs un
 lands in `~/.local/state/dot/session/manifest.json`, then the machine reboots.
 
 On the next sway login, `dot claude session restore --if-pending` (in the sway `exec` block)
-claims the manifest **atomically by rename** — restore fires exactly once, even if it
-crashes halfway — and rebuilds each kitty os-window on its saved workspace:
+claims a one-shot **auto-restore token atomically by rename** — restore fires exactly once
+per save, even if it crashes halfway — and rebuilds each kitty os-window on its saved
+workspace. The token is separate from the manifest, so restore never consumes the snapshot
+itself (see below):
 
 - claude windows → `claude-work` / `claude-personal --resume <sessionId>` (right
   account, exact session, exact cwd)
@@ -108,13 +112,22 @@ Deliberate cuts and edge rules:
   window.
 - Snapshots are explicit by design: only `reboot`/`save` write a manifest, so a
   normal login never restores anything you closed on purpose. **Exactly one snapshot
-  is kept** — restore consumes it, and the next `save`/`reboot` overwrites it. No
-  history.
+  is kept**, and the next `save`/`reboot` overwrites it. No history.
+- The snapshot is **durable**: restore reads it and leaves it in place. Only a new
+  `save`/`reboot` replaces it (or `clear` discards it) — a re-restore, a partial
+  failure, or an unplanned power-loss reboot never loses it, so recovery is always one
+  `dot claude session restore` away. What _is_ one-shot is the separate **auto-restore
+  token**: `save`/`reboot` arm it, the login `restore --if-pending` consumes it, so
+  the layout auto-rebuilds exactly once per save instead of duplicating every boot. A
+  manual `dot claude session restore` disarms that token (so it won't also fire on the
+  next login) but keeps the snapshot. `status` shows whether it's still armed.
 
 ## Replacing tmux
 
 The combination is the tmux workflow without tmux: kitty tabs/splits are the
 multiplexer, sway tabs group heterogeneous apps per project, `dot tools workspace`
 is the session definition, and `dot claude session` is tmux-resurrect. What tmux still does
-that this doesn't: surviving _unplanned_ deaths (power loss) — the snapshot is
-explicit, not continuous — and detach/reattach over SSH.
+that this doesn't: _auto_-restoring after an _unplanned_ death (power loss) — the snapshot
+is explicit, not continuous, so it only auto-fires after a planned `save`/`reboot`. The
+snapshot is durable, though, so after an unplanned reboot the last saved layout is still one
+`dot claude session restore` away. The other gap is detach/reattach over SSH.

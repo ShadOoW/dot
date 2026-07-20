@@ -4,10 +4,13 @@ import { colors, logError, logInfo, logSuccess, logWarn } from "../../lib/consol
 import { buildSessionFile, writeSessionFile } from "../../lib/kitty-session.ts";
 import { notify } from "../../lib/kitty.ts";
 import {
+  autoRestoreArmed,
   buildRestorePlan,
   captureManifest,
-  claimManifest,
-  discardManifest,
+  claimAutoRestore,
+  clearSnapshot,
+  disarmAutoRestore,
+  discardAutoRestore,
   MANIFEST_PATH,
   pendingManifest,
   saveManifest,
@@ -54,7 +57,7 @@ function printPlan(plan: RestorePlan): void {
   for (const note of plan.notes) logWarn(note);
 }
 
-async function runRestore(manifest: Manifest, claimedPath: string): Promise<void> {
+async function runRestore(manifest: Manifest): Promise<void> {
   const plan = buildRestorePlan(manifest);
   for (const note of plan.notes) logWarn(note);
 
@@ -82,7 +85,6 @@ async function runRestore(manifest: Manifest, claimedPath: string): Promise<void
   }
 
   if (manifest.focusedWorkspace != null) await swayCommand(`workspace number ${manifest.focusedWorkspace}`);
-  await discardManifest(claimedPath);
 
   const summary = `${plan.windows.length - failures}/${plan.windows.length} windows, ${plan.claudeCount} claude session(s)`;
   if (failures > 0) {
@@ -126,41 +128,71 @@ const rebootCommand = defineCommand({
 });
 
 const restoreCommand = defineCommand({
-  meta: { description: "Restore the pending snapshot (runs from sway exec on login)" },
+  meta: { description: "Restore the saved snapshot (non-destructive; runs from sway exec on login)" },
   args: {
-    "if-pending": { type: "boolean", description: "Exit silently when there is nothing to restore" },
+    "if-pending": {
+      type: "boolean",
+      description: "Login one-shot: restore only if armed, consuming the trigger; silent otherwise",
+    },
     "dry-run": { type: "boolean", description: "Print the restore plan without launching anything" },
   },
   async run({ args }) {
     if (args["dry-run"]) {
       const manifest = pendingManifest();
       if (!manifest) {
-        logInfo("No pending manifest");
+        logInfo("No saved snapshot");
         return;
       }
       printPlan(buildRestorePlan(manifest));
       return;
     }
-    const claimed = await claimManifest();
-    if (!claimed) {
-      if (args["if-pending"]) return;
-      logError(`No pending manifest at ${MANIFEST_PATH} — run \`dot claude session save\` first`);
+
+    // Login path: fire exactly once per save via the auto-restore token, then
+    // drop the token — the durable manifest is left in place for future recovery.
+    if (args["if-pending"]) {
+      const claimed = await claimAutoRestore();
+      if (!claimed) return; // not armed (never saved, or already restored this cycle)
+      await runRestore(claimed.manifest);
+      await discardAutoRestore(claimed.claimedToken);
+      return;
+    }
+
+    // Manual path: restore the durable snapshot on demand. It stays on disk so it
+    // can be restored again; disarm the login trigger so it won't also duplicate
+    // everything on the next boot.
+    const manifest = pendingManifest();
+    if (!manifest) {
+      logError(`No saved snapshot at ${MANIFEST_PATH} — run \`dot claude session save\` first`);
       process.exit(1);
     }
-    await runRestore(claimed.manifest, claimed.claimedPath);
+    await runRestore(manifest);
+    await disarmAutoRestore();
   },
 });
 
 const statusCommand = defineCommand({
-  meta: { description: "Show the pending snapshot, if any" },
+  meta: { description: "Show the saved snapshot, if any" },
   async run() {
     const manifest = pendingManifest();
     if (manifest) {
-      logInfo(`Pending snapshot from ${new Date(manifest.savedAt).toLocaleString()}:`);
+      const armed = autoRestoreArmed()
+        ? colors.green("armed — auto-restores on next login")
+        : colors.dim("already auto-restored — restore manually to recover");
+      logInfo(`Saved snapshot from ${new Date(manifest.savedAt).toLocaleString()} (${armed}):`);
       summarize(manifest);
     } else {
-      logInfo("No pending snapshot");
+      logInfo("No saved snapshot");
     }
+  },
+});
+
+const clearCommand = defineCommand({
+  meta: { description: "Discard the saved snapshot and its auto-restore trigger" },
+  async run() {
+    const had = pendingManifest() != null;
+    await clearSnapshot();
+    if (had) logSuccess("Snapshot cleared");
+    else logInfo("No saved snapshot");
   },
 });
 
@@ -171,5 +203,6 @@ export const sessionCommand = defineCommand({
     reboot: rebootCommand,
     restore: restoreCommand,
     status: statusCommand,
+    clear: clearCommand,
   },
 });

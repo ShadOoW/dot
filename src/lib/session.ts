@@ -13,13 +13,20 @@ import type { SessionTab, SessionWindow } from "./kitty-session.ts";
 // cwd + foreground command is captured, and claude windows are tagged with
 // their session id AND the account they belong to (work / personal / bare)
 // so they resume in the right config dir. Only one snapshot is kept at a time
-// — restore consumes it, no history.
+// — a new save overwrites it — but the snapshot is DURABLE: restore reads it
+// and leaves it in place, so it survives a re-restore, a partial failure, and
+// an unplanned reboot. Recovery is always one `dot claude session restore` away
+// until the next save replaces it.
 
 export const SESSION_DIR = join(STATE_DIR, "session");
 export const MANIFEST_PATH = join(SESSION_DIR, "manifest.json");
-// Fixed name (not timestamped): only one snapshot ever exists, so a claim in
-// flight is unambiguous and a crashed restore leaves exactly one stale file.
-const CLAIM_PATH = join(SESSION_DIR, "manifest.claiming.json");
+// The manifest holds the layout; a separate zero-byte sentinel is the one-shot
+// "auto-restore on next login" token. Keeping them separate is what lets the
+// manifest stay durable while login-restore still fires exactly once per save:
+// login claims the token (atomic rename, so a crash/race can't double-fire),
+// not the manifest. Fixed names — only one snapshot ever exists.
+const AUTORESTORE_PATH = join(SESSION_DIR, "autorestore");
+const AUTORESTORE_CLAIM_PATH = join(SESSION_DIR, "autorestore.claiming");
 
 // Pre-warmed scratchpad kitties from the sway exec block — recreated on every
 // login, so restoring them would duplicate them.
@@ -260,8 +267,12 @@ export function buildRestorePlan(m: Manifest): RestorePlan {
 
 export async function saveManifest(m: Manifest): Promise<string> {
   await mkdir(SESSION_DIR, { recursive: true });
-  await rm(CLAIM_PATH, { force: true }); // drop any stale in-flight claim — only one snapshot is kept
   await Bun.write(MANIFEST_PATH, JSON.stringify(m, null, 2) + "\n");
+  // Arm a fresh one-shot auto-restore for the next login. The manifest itself is
+  // durable — only this token is consumed by login-restore — so a new save is
+  // the only thing that replaces the snapshot.
+  await Bun.write(AUTORESTORE_PATH, "");
+  await rm(AUTORESTORE_CLAIM_PATH, { force: true }); // drop any stale in-flight claim
   return MANIFEST_PATH;
 }
 
@@ -274,19 +285,41 @@ export function pendingManifest(): Manifest | null {
   }
 }
 
-/** Atomically take ownership of the pending manifest so restore fires exactly once. */
-export async function claimManifest(): Promise<{ manifest: Manifest; claimedPath: string } | null> {
+/** True while a saved snapshot is still armed to auto-restore on the next login. */
+export function autoRestoreArmed(): boolean {
+  return existsSync(AUTORESTORE_PATH) || existsSync(AUTORESTORE_CLAIM_PATH);
+}
+
+/**
+ * Atomically consume the one-shot auto-restore token so a login restore fires
+ * exactly once per save, even across a crash or a racing invocation. The durable
+ * manifest is left untouched — only the token is claimed. Returns null when
+ * nothing is armed (never saved, or already auto-restored this cycle).
+ */
+export async function claimAutoRestore(): Promise<{ manifest: Manifest; claimedToken: string } | null> {
   const manifest = pendingManifest();
   if (!manifest) return null;
   try {
-    await rename(MANIFEST_PATH, CLAIM_PATH);
+    await rename(AUTORESTORE_PATH, AUTORESTORE_CLAIM_PATH);
   } catch {
-    return null; // another restore raced us
+    return null; // not armed, or another restore raced us
   }
-  return { manifest, claimedPath: CLAIM_PATH };
+  return { manifest, claimedToken: AUTORESTORE_CLAIM_PATH };
 }
 
-/** Drop the consumed snapshot — we keep no history. */
-export async function discardManifest(claimedPath: string): Promise<void> {
-  await rm(claimedPath, { force: true });
+/** Drop the claimed auto-restore token after a login restore. Manifest stays. */
+export async function discardAutoRestore(claimedToken: string): Promise<void> {
+  await rm(claimedToken, { force: true });
+}
+
+/** Disarm the one-shot login trigger without touching the durable manifest. */
+export async function disarmAutoRestore(): Promise<void> {
+  await rm(AUTORESTORE_PATH, { force: true });
+  await rm(AUTORESTORE_CLAIM_PATH, { force: true });
+}
+
+/** Drop the snapshot and its trigger entirely (explicit `clear`). */
+export async function clearSnapshot(): Promise<void> {
+  await rm(MANIFEST_PATH, { force: true });
+  await disarmAutoRestore();
 }
