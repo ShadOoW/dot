@@ -6,7 +6,6 @@ return {
   cmd = 'CodeDiff',
   opts = {},
   keys = {
-    { '<leader>rv', '<cmd>CodeDiff<cr>', desc = 'Review working tree (codediff)' },
     { '<leader>rl', '<cmd>CodeDiff HEAD~1 HEAD<cr>', desc = 'Review last commit' },
   },
 }

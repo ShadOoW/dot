@@ -43,7 +43,11 @@ printf '#!/usr/bin/env zsh\nexport CLAUDE_CONFIG_DIR="%s"\nexec "%s" "$@"\n' \
   "$dir" "$real_claude" >"$tmpdir/claude"
 chmod +x "$tmpdir/claude"
 
-PATH="$tmpdir:$PATH" headroom wrap claude "$@"
+# --no-serena: headroom re-injects the Serena MCP into this account's config on
+# EVERY `wrap claude` launch (headroom/cli/wrap.py:_setup_serena_mcp). That is why
+# Serena kept reappearing no matter how often we stripped it from the JSON — the
+# next launch put it right back. This flag disables that injection permanently.
+PATH="$tmpdir:$PATH" headroom wrap claude --no-serena "$@"
 ret=$?
 rm -rf "$tmpdir"
 exit $ret

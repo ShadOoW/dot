@@ -61,10 +61,6 @@ return {
       map('n', '<leader>gB', gs.toggle_current_line_blame, 'Toggle inline blame')
       map('n', '<leader>gW', gs.toggle_word_diff, 'Toggle word diff')
       map('n', '<leader>gX', gs.toggle_deleted, 'Toggle deleted lines')
-
-      -- Review of Claude turns lives in utils/claude-review.lua (<leader>r).
-      -- <leader>ri points the gitsigns base at the turn ref so <leader>gr
-      -- rejects a hunk against what the agent wrote, not the index.
     end,
   },
   config = function(_, opts) require('gitsigns').setup(opts) end,

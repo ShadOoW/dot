@@ -72,6 +72,7 @@ return {
         'yamlfix', -- YAML formatter
         -- Additional Modern Tools
         'tree-sitter-cli', -- Tree-sitter CLI
+        'kulala-fmt', -- .http/.rest formatter (conform: http filetype)
         'grammarly-languageserver', -- Grammarly integration
         'ltex-ls', -- LaTeX/Markdown grammar checker
         'odinfmt', -- Odin formatter

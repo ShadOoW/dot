@@ -57,6 +57,7 @@ return {
       'cmake', -- Data & Query Languages
       'sql',
       'graphql', -- Specialized
+      'http', -- REST client (.http files, kulala.nvim)
       'diff',
       'comment',
     },

@@ -91,6 +91,10 @@ return {
       toml = { 'taplo' },
       xml = { 'xmlformat', 'prettierd' },
 
+      -- REST client (.http / .rest files, kulala.nvim) — needs the `kulala-fmt`
+      -- CLI on PATH (see mason-tool-installer / :MasonInstall kulala-fmt).
+      http = { 'kulala-fmt' },
+
       -- Documentation (prettierd only)
       -- markdown = { 'prettierd' },
       mdx = { 'prettierd' },
@@ -292,11 +296,38 @@ return {
       vim.notify(output, vim.log.levels.INFO, { title = 'ESLint Output' })
     end, { desc = 'Run eslint and show output' })
 
-    -- Format with specific formatter
+    -- Format with a specific formatter.
+    -- Runs synchronously so the result is never silently dropped (async format
+    -- discards its output if anything touches the buffer mid-run), skips the
+    -- picker when only one formatter applies, and reports the outcome.
     vim.keymap.set({ 'n', 'v' }, '<leader>fF', function()
-      local formatters = conform.list_formatters()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local formatters = conform.list_formatters(bufnr)
       if #formatters == 0 then
         require('utils.notify').warn('Conform', 'No formatters available for this buffer')
+        return
+      end
+
+      local function run(choice)
+        conform.format({
+          formatters = { choice },
+          bufnr = bufnr,
+          async = false, -- sync: never silently discarded by a mid-run buffer change
+          lsp_format = 'never',
+          timeout_ms = 10000,
+        }, function(err, did_edit)
+          if err then
+            require('utils.notify').error('Conform', choice .. ': ' .. tostring(err))
+          elseif did_edit then
+            require('utils.notify').success('Conform', 'Formatted with ' .. choice)
+          else
+            require('utils.notify').info('Conform', choice .. ': already formatted (no changes)')
+          end
+        end)
+      end
+
+      if #formatters == 1 then
+        run(formatters[1].name)
         return
       end
 
@@ -304,13 +335,7 @@ return {
       vim.ui.select(formatter_names, {
         prompt = 'Select a formatter to use for this buffer:',
       }, function(choice)
-        if choice then
-          conform.format({
-            formatters = { choice },
-            async = true,
-            timeout_ms = 2000,
-          })
-        end
+        if choice then run(choice) end
       end)
     end, {
       desc = 'Format (pick formatter)',
