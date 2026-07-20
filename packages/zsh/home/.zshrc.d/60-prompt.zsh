@@ -1,5 +1,8 @@
 autoload -Uz vcs_info
-precmd() { vcs_info; }
+precmd() {
+  vcs_info
+  _clock_arm
+}
 zstyle ':vcs_info:git:*' formats ' %F{yellow} %b%f'
 zstyle ':vcs_info:git:*' actionformats ' %F{yellow} %b|%F{red}%a%f'
 setopt prompt_subst
@@ -35,3 +38,22 @@ PROMPT="${_distro_icon} %B%F{blue}%c%f%b \${_bgz_jobs}${_arrows} "
 # invisible. Use a theme-independent 256-colour mid-grey (244) for a readable
 # but understated clock.
 RPROMPT='%B${vcs_info_msg_0_}%b %F{244}%D{%H:%M}%f'
+
+# Live clock ─────────────────────────────────────────────────────────────────
+# %D{%H:%M} above is only re-rendered when the prompt is drawn, so while the
+# shell sits idle between commands the clock freezes at the time of your last
+# enter-press. Redraw the prompt on a timer so it stays truthful.
+#
+# TMOUT fires SIGALRM after N idle seconds at the prompt; a defined TRAPALRM
+# handles it (and, by existing, suppresses TMOUT's default "log out" action).
+# `zle reset-prompt` re-expands PROMPT/RPROMPT — refreshing the clock — while
+# preserving whatever is already typed on the line. We re-arm to the next
+# minute boundary rather than a flat 60s, so the digits flip exactly when the
+# minute rolls over and we wake at most once a minute.
+zmodload zsh/datetime # provides $EPOCHSECONDS
+_clock_arm() { TMOUT=$((60 - EPOCHSECONDS % 60)); }
+_clock_arm # arm before the first prompt
+TRAPALRM() {
+  zle reset-prompt
+  _clock_arm
+}
