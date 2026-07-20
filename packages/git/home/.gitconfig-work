@@ -1,0 +1,4 @@
+# Work identity — loaded by includeIf for repos under /data/code/work/
+# (name is inherited from ~/.gitconfig; only the email differs)
+[user]
+	email = younes.el-alami@bruce.work

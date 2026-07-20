@@ -2,6 +2,7 @@
 	defaultBranch = main
 [user]
 	name = Younes El Alami
+	email = shadoow.ma@gmail.com
 [github]
 	user = ShadOoW
 [alias]
@@ -18,11 +19,19 @@
 	untracked = yellow bold
 [core]
 	editor = nano
+	excludesfile = ~/.config/git/ignore
 [push]
 	autoSetupRemote = true
 [safe]
 	directory = /mnt/share/brain
 [url "ssh://git@github.com/"]
 	insteadOf = https://github.com/
+# Machine-local overrides (untracked; keep for per-machine git settings)
 [include]
 	path = ~/.gitconfig.local
+
+# --- Per-identity email override (keep LAST so it wins) ---
+# Work repos live under /data/code/work/ (e.g. the lee-bruce-work org).
+# The author name is shared; only the email switches to the bruce.work address.
+[includeIf "gitdir:/data/code/work/"]
+	path = ~/.gitconfig-work

@@ -1,0 +1,20 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Global git ignore — applies to EVERY git repository on this machine.
+# This is git's XDG default (~/.config/git/ignore) and is also pointed at
+# explicitly by core.excludesfile in ~/.gitconfig.
+# Managed in dotfiles: packages/git/home/.config/git/ignore
+#
+# Keep this for machine-wide noise only. Project-specific ignores belong in a
+# repo's own .gitignore; personal per-repo ignores belong in .git/info/exclude.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Claude Code per-machine local settings
+**/.claude/settings.local.json
+
+# Serena MCP scratch dirs (see ~/nuke-serena.sh to remove Serena entirely)
+.serena/
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
