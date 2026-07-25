@@ -21,6 +21,11 @@ image/x-portable-pixmap=feh.desktop
 image/x-tga=feh.desktop
 image/x-xbitmap=feh.desktop
 image/x-xpixmap=feh.desktop
+text/html=vivaldi-stable.desktop
+x-scheme-handler/http=vivaldi-stable.desktop
+x-scheme-handler/https=vivaldi-stable.desktop
+x-scheme-handler/about=vivaldi-stable.desktop
+x-scheme-handler/unknown=vivaldi-stable.desktop
 
 [Added Associations]
 image/jpeg=feh.desktop;
