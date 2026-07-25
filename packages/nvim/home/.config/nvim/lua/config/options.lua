@@ -3,9 +3,6 @@ local notify = require('utils.notify')
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
--- Prevent rainbow-delimiters from loading (dependency of mini.nvim, not used)
-vim.g.loaded_rainbow_delimiters = true
-
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
 
@@ -36,8 +33,8 @@ vim.cmd([[
   endif
 ]])
 
--- Don't show the mode, since it's already in the status line
-vim.opt.showmode = false
+-- Show current mode (kept: this is the effective value; see also lualine)
+vim.opt.showmode = true
 
 -- Sync clipboard between OS and Neovim.
 --  Schedule the setting after `UiEnter` because it can increase startup-time.
@@ -64,9 +61,6 @@ vim.opt.foldcolumn = '0'
 vim.opt.cursorcolumn = false
 -- Left/Right padding: Keep columns visible at edges
 vim.opt.sidescrolloff = 8
-
--- Decrease update time
-vim.opt.updatetime = 250
 
 -- Decrease mapped sequence wait time
 vim.opt.timeoutlen = 300
@@ -103,11 +97,6 @@ vim.opt.cursorlineopt = 'line'
 -- Disable all scrolling animations
 vim.opt.lazyredraw = false
 vim.opt.jumpoptions = 'stack'
-
--- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
--- instead raise a dialog asking if you wish to save the current file(s)
--- See `:help 'confirm'`
-vim.opt.confirm = true
 
 -- Don't wrap lines
 vim.opt.wrap = false
@@ -171,26 +160,8 @@ vim.opt.confirm = false -- Don't confirm when abandoning buffers
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
--- Clean startup - remove intro and make buffers behave properly
-vim.api.nvim_create_autocmd('VimEnter', {
-  group = vim.api.nvim_create_augroup('CleanStartup', {
-    clear = true,
-  }),
-  callback = function()
-    -- Only clean up if no arguments and buffer is empty
-    if vim.fn.argc() == 0 then
-      local buf = vim.api.nvim_get_current_buf()
-      local bufname = vim.api.nvim_buf_get_name(buf)
-      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-
-      -- If buffer is empty and unnamed, that's normal for 'nvim' - leave it be
-      -- Session restoration will handle 'nvim .' case
-    end
-  end,
-})
-
--- Session options
-vim.opt.sessionoptions = 'blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal'
+-- Session options ('terminal' excluded: session pre-save deletes terminal buffers)
+vim.opt.sessionoptions = 'blank,buffers,curdir,folds,help,tabpages,winsize,winpos'
 
 -- File type associations
 vim.filetype.add({
@@ -208,27 +179,7 @@ vim.filetype.add({
   },
 })
 
--- Customize cursor appearance (solid for readability)
-vim.api.nvim_set_hl(0, 'Cursor', { blend = 0 })
-vim.api.nvim_set_hl(0, 'lCursor', { blend = 0 })
-vim.api.nvim_set_hl(0, 'CursorLine', { blend = 0 })
-vim.api.nvim_set_hl(0, 'CursorColumn', { blend = 0 })
-
-vim.opt.guicursor = {
-  'n-v:ver25-Cursor/lCursor', -- vertical bar in normal and visual mode (non-blinking)
-  'i-ci:ver25-blinkwait700-blinkoff400-blinkon250-Cursor/lCursor', -- vertical bar in insert and insert-command (blinking)
-  'r-cr:hor20', -- horizontal bar in replace modes
-  'o:hor50', -- horizontal bar in operator-pending
-  'sm:block-blinkwait175-blinkoff150-blinkon175', -- showmatch cursor
-}
-
--- Additional mode indicators
-vim.api.nvim_set_hl(0, 'ModeMsg', {
-  fg = '#89b4fa',
-  bold = true,
-}) -- Customize mode message color
-vim.opt.showmode = true -- Show current mode in status line
-vim.opt.statusline = '%{mode()}' -- Show mode in status line
+-- Cursor appearance and cursor highlights live in config/cursor.lua
 
 -- Use latest version of file with enhanced tmux integration
 vim.opt.autoread = true
@@ -295,8 +246,8 @@ if vim.env.TMUX then
   vim.api.nvim_command('set eventignore-=FocusLost')
 end
 
--- Clipboard configuration
-vim.opt.clipboard = 'unnamedplus'
+-- Clipboard registers are synced via the scheduled `clipboard = 'unnamedplus'`
+-- assignment near the top of this file (deferred to keep startup fast).
 
 -- Fix clipboard issues on Linux
 if vim.fn.has('linux') == 1 then

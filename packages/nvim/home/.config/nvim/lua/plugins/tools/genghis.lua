@@ -1,5 +1,5 @@
 -- File operations from within the buffer (Genghis)
--- Keymaps: fn=new fe=new-in-folder fs=from-selection fd=dup fr=rename fm=move fx=chmod fD=trash fp=path fy=rel-path fY=abs-path
+-- Keymaps: fs=from-selection fx=chmod fy=rel-path fY=abs-path
 return {
   'chrisgrieser/nvim-genghis',
   event = 'VeryLazy',

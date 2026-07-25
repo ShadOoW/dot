@@ -18,11 +18,23 @@ async function loadCache(): Promise<Cache> {
   }
 }
 
-async function saveCache(cache: Cache): Promise<void> {
-  await mkdir(dirname(CACHE_FILE), { recursive: true });
-  const tmp = `${CACHE_FILE}.tmp`;
-  await writeFile(tmp, JSON.stringify(cache, null, 2));
-  await rename(tmp, CACHE_FILE);
+// Writes are serialized in-process and each merges into a freshly loaded
+// cache, so concurrent getLatestRelease calls for different repos don't
+// clobber each other's entries. The tmp name is unique per write to avoid
+// cross-process tmp collisions.
+let _writeLock: Promise<void> = Promise.resolve();
+
+function saveCacheEntry(repo: string, entry: CacheEntry): Promise<void> {
+  const task = _writeLock.then(async () => {
+    await mkdir(dirname(CACHE_FILE), { recursive: true });
+    const cache = await loadCache();
+    cache[repo] = entry;
+    const tmp = `${CACHE_FILE}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+    await writeFile(tmp, JSON.stringify(cache, null, 2));
+    await rename(tmp, CACHE_FILE);
+  });
+  _writeLock = task.catch(() => {});
+  return task;
 }
 
 const _inFlight = new Map<string, Promise<ReleaseInfo | null>>();
@@ -51,16 +63,14 @@ async function _getLatestRelease(repo: string): Promise<ReleaseInfo | null> {
     const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers });
 
     if (res.status === 304 && entry) {
-      cache[repo] = { ...entry, fetchedAt: now };
-      await saveCache(cache);
+      await saveCacheEntry(repo, { ...entry, fetchedAt: now });
       return entry.data;
     }
 
     if (!res.ok) return null;
 
     const data = (await res.json()) as ReleaseInfo;
-    cache[repo] = { etag: res.headers.get("etag") ?? "", data, fetchedAt: now };
-    await saveCache(cache);
+    await saveCacheEntry(repo, { etag: res.headers.get("etag") ?? "", data, fetchedAt: now });
     return data;
   } catch {
     return entry?.data ?? null;

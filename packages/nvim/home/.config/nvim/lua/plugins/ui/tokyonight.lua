@@ -7,7 +7,9 @@ return {
     require('tokyonight').setup({
       style = 'night', -- Explicitly set to night variant
       light_style = 'day', -- Fallback for light mode
-      transparent = true, -- Enable transparency for kitty transparency
+      -- transparent was defeated by on_highlights forcing hl.Normal bg below;
+      -- keep the effective (opaque) look explicit.
+      transparent = false,
       terminal_colors = true, -- Configure terminal colors
       styles = {
         comments = {
@@ -125,39 +127,6 @@ return {
         hl.IncSearch = {
           bg = c.orange,
           fg = c.bg,
-        }
-
-        hl.TelescopeNormal = {
-          bg = c.bg,
-          fg = c.fg,
-        }
-        hl.TelescopeBorder = {
-          bg = c.bg_dark,
-          fg = c.border_highlight,
-        }
-        hl.TelescopePromptNormal = {
-          bg = c.bg,
-          fg = c.fg,
-        }
-        hl.TelescopePromptBorder = {
-          bg = c.bg_dark,
-          fg = c.border_highlight,
-        }
-        hl.TelescopeResultsNormal = {
-          bg = c.bg,
-          fg = c.fg,
-        }
-        hl.TelescopeResultsBorder = {
-          bg = c.bg_dark,
-          fg = c.border_highlight,
-        }
-        hl.TelescopePreviewNormal = {
-          bg = c.bg,
-          fg = c.fg,
-        }
-        hl.TelescopePreviewBorder = {
-          bg = c.bg_dark,
-          fg = c.border_highlight,
         }
 
         hl.Pmenu = {

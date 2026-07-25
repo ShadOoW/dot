@@ -1,10 +1,11 @@
 -- Enhanced notification backend using nvim-notify
--- Provides beautiful, customizable notifications with Tokyo Night styling
+-- Provides beautiful, customizable notifications with shared palette styling
 return {
   'rcarriga/nvim-notify',
   event = 'VeryLazy',
   config = function()
     local notify = require('notify')
+    local palette = require('utils.palette')
 
     -- Configure notify: passive (panel-first model; popups only for critical errors)
     notify.setup({
@@ -15,7 +16,7 @@ return {
       minimum_width = 50,
 
       -- Layout and positioning
-      background_colour = '#1e1e2e',
+      background_colour = palette.base,
       fps = 60,
       level = 2,
 
@@ -47,7 +48,7 @@ return {
         })
 
         -- Set window-specific highlight groups
-        vim.api.nvim_win_set_option(win, 'winhl', 'Normal:NotifyBackground,FloatBorder:NotifyBorder')
+        vim.wo[win].winhl = 'Normal:NotifyBackground,FloatBorder:NotifyBorder'
       end,
 
       -- Custom highlight groups
@@ -60,132 +61,132 @@ return {
       },
     })
 
-    -- Set up Tokyo Night inspired highlight groups
+    -- Set up highlight groups from the shared palette
     local function setup_highlights()
       -- Base notification colors
       vim.api.nvim_set_hl(0, 'NotifyBackground', {
-        fg = '#cdd6f4',
-        bg = '#1e1e2e',
+        fg = palette.text,
+        bg = palette.base,
       })
-      local bg_dark = '#16161e'
+      local bg_dark = palette.tn_bg_dark
       vim.api.nvim_set_hl(0, 'NotifyBorder', {
-        fg = '#89b4fa',
+        fg = palette.blue,
         bg = bg_dark,
       })
 
       -- Level-specific colors
       vim.api.nvim_set_hl(0, 'NotifyERROR', {
-        fg = '#f38ba8',
-        bg = '#1e1e2e',
+        fg = palette.red,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyWARN', {
-        fg = '#f9e2af',
-        bg = '#1e1e2e',
+        fg = palette.yellow,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyINFO', {
-        fg = '#89b4fa',
-        bg = '#1e1e2e',
+        fg = palette.blue,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyDEBUG', {
-        fg = '#6c7086',
-        bg = '#1e1e2e',
+        fg = palette.overlay,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyTRACE', {
-        fg = '#6c7086',
-        bg = '#1e1e2e',
+        fg = palette.overlay,
+        bg = palette.base,
       })
 
       -- Border colors for different levels (solid backgrounds)
       vim.api.nvim_set_hl(0, 'NotifyERRORBorder', {
-        fg = '#f38ba8',
+        fg = palette.red,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NotifyWARNBorder', {
-        fg = '#f9e2af',
+        fg = palette.yellow,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NotifyINFOBorder', {
-        fg = '#89b4fa',
+        fg = palette.blue,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NotifyDEBUGBorder', {
-        fg = '#6c7086',
+        fg = palette.overlay,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NotifyTRACEBorder', {
-        fg = '#6c7086',
+        fg = palette.overlay,
         bg = bg_dark,
       })
 
       -- Title colors
       vim.api.nvim_set_hl(0, 'NotifyERRORTitle', {
-        fg = '#f38ba8',
-        bg = '#1e1e2e',
+        fg = palette.red,
+        bg = palette.base,
         bold = true,
       })
       vim.api.nvim_set_hl(0, 'NotifyWARNTitle', {
-        fg = '#f9e2af',
-        bg = '#1e1e2e',
+        fg = palette.yellow,
+        bg = palette.base,
         bold = true,
       })
       vim.api.nvim_set_hl(0, 'NotifyINFOTitle', {
-        fg = '#89b4fa',
-        bg = '#1e1e2e',
+        fg = palette.blue,
+        bg = palette.base,
         bold = true,
       })
       vim.api.nvim_set_hl(0, 'NotifyDEBUGTitle', {
-        fg = '#6c7086',
-        bg = '#1e1e2e',
+        fg = palette.overlay,
+        bg = palette.base,
         bold = true,
       })
       vim.api.nvim_set_hl(0, 'NotifyTRACETitle', {
-        fg = '#6c7086',
-        bg = '#1e1e2e',
+        fg = palette.overlay,
+        bg = palette.base,
         bold = true,
       })
 
       -- Icon colors
       vim.api.nvim_set_hl(0, 'NotifyERRORIcon', {
-        fg = '#f38ba8',
-        bg = '#1e1e2e',
+        fg = palette.red,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyWARNIcon', {
-        fg = '#f9e2af',
-        bg = '#1e1e2e',
+        fg = palette.yellow,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyINFOIcon', {
-        fg = '#89b4fa',
-        bg = '#1e1e2e',
+        fg = palette.blue,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyDEBUGIcon', {
-        fg = '#6c7086',
-        bg = '#1e1e2e',
+        fg = palette.overlay,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyTRACEIcon', {
-        fg = '#6c7086',
-        bg = '#1e1e2e',
+        fg = palette.overlay,
+        bg = palette.base,
       })
 
       -- Body text colors
       vim.api.nvim_set_hl(0, 'NotifyERRORBody', {
-        fg = '#cdd6f4',
-        bg = '#1e1e2e',
+        fg = palette.text,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyWARNBody', {
-        fg = '#cdd6f4',
-        bg = '#1e1e2e',
+        fg = palette.text,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyINFOBody', {
-        fg = '#cdd6f4',
-        bg = '#1e1e2e',
+        fg = palette.text,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyDEBUGBody', {
-        fg = '#bac2de',
-        bg = '#1e1e2e',
+        fg = palette.subtext,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NotifyTRACEBody', {
-        fg = '#bac2de',
-        bg = '#1e1e2e',
+        fg = palette.subtext,
+        bg = palette.base,
       })
     end
 
@@ -199,6 +200,7 @@ return {
     -- This prevents duplicate notification panels
 
     -- Create utility functions for notification management
+    -- (nvim-notify has no per-id dismiss, so no dismiss-by-criteria machinery here)
     _G.notification_utils = {
       -- Get notification history with filtering
       get_history = function(filters)
@@ -248,46 +250,7 @@ return {
 
         return counts
       end,
-
-      -- Dismiss notifications by criteria
-      dismiss_by_criteria = function(criteria)
-        criteria = criteria or {}
-        local history = notify.history()
-
-        for _, notif in ipairs(history) do
-          local should_dismiss = true
-
-          if criteria.level and notif.level ~= criteria.level then should_dismiss = false end
-
-          if criteria.title and notif.title ~= criteria.title then should_dismiss = false end
-
-          if criteria.older_than then
-            local age = os.time() - (notif.time or 0)
-            if age < criteria.older_than then should_dismiss = false end
-          end
-
-          if should_dismiss then
-            notify.dismiss({
-              silent = true,
-              pending = true,
-            })
-            break
-          end
-        end
-      end,
-
-      -- Clear old notifications automatically
-      auto_clear_old = function(max_age)
-        max_age = max_age or 600 -- Default 10 minutes
-        _G.notification_utils.dismiss_by_criteria({
-          older_than = max_age,
-        })
-      end,
     }
-
-    -- Setup auto-clear timer for old notifications
-    local auto_clear_timer = vim.loop.new_timer()
-    auto_clear_timer:start(60000, 60000, vim.schedule_wrap(function() _G.notification_utils.auto_clear_old() end))
 
     -- Create autocmd to emit custom event for lualine integration
     vim.api.nvim_create_autocmd('User', {

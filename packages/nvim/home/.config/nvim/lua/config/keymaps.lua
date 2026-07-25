@@ -163,8 +163,8 @@ end
 keymap.n('<F2>', toggle_buffer_in_qflist, 'Toggle buffer in quickfix list')
 keymap.i('<F2>', toggle_buffer_in_qflist, 'Toggle buffer in quickfix list')
 
--- Delete from cursor to end of line (Ctrl+K; normal and insert)
-keymap.n('<C-k>', 'd$', 'Delete to end of line')
+-- Delete from cursor to end of line (insert mode only; normal-mode <C-k> is
+-- tmux-navigator "navigate up", consistent with <C-h/j/l>; use D in normal mode)
 keymap.i('<C-k>', '<C-o>d$', 'Delete to end of line')
 
 -- Indentation in visual mode
@@ -185,8 +185,8 @@ keymap.v('K', ':m \'<-2<CR>gv=gv', 'Move selection up')
 -- Tmux Integration
 -- ═══════════════════════════════════════════════════════════════════════════════
 
--- ea=list_panes, ep=project_workflow
-keymap.n('<leader>ea', '<cmd>TmuxPanes<cr>', 'List nvim panes in tmux session')
+-- et=list_panes, ep=project_workflow (<leader>ea is the Codeium toggle)
+keymap.n('<leader>et', '<cmd>TmuxPanes<cr>', 'List nvim panes in tmux session')
 
 -- Session and Project Management
 keymap.n('<leader>ep', function()
@@ -232,19 +232,19 @@ end, 'Delete all session files')
 
 -- Quick diagnostic navigation (IntelliJ-style)
 keymap.n('[d', function()
-  vim.diagnostic.goto_prev()
+  vim.diagnostic.jump({ count = -1, float = true })
   vim.schedule(function() vim.cmd('normal! zz') end)
 end, 'Previous diagnostic')
 keymap.n(']d', function()
-  vim.diagnostic.goto_next()
+  vim.diagnostic.jump({ count = 1, float = true })
   vim.schedule(function() vim.cmd('normal! zz') end)
 end, 'Next diagnostic')
 keymap.n('[e', function()
-  vim.diagnostic.goto_prev({ severity = vim.diagnostic.severity.ERROR })
+  vim.diagnostic.jump({ count = -1, float = true, severity = vim.diagnostic.severity.ERROR })
   vim.schedule(function() vim.cmd('normal! zz') end)
 end, 'Previous error')
 keymap.n(']e', function()
-  vim.diagnostic.goto_next({ severity = vim.diagnostic.severity.ERROR })
+  vim.diagnostic.jump({ count = 1, float = true, severity = vim.diagnostic.severity.ERROR })
   vim.schedule(function() vim.cmd('normal! zz') end)
 end, 'Next error')
 keymap.n('<leader>cd', function() vim.diagnostic.open_float() end, 'Show diagnostic float')

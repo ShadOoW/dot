@@ -1,7 +1,7 @@
 {
   "description": "Kitty terminal emulator",
   "packages": {
-    "arch": { "brew": ["kitty"] },
+    "arch": { "pacman": ["kitty"] },
     "void": { "xbps": ["kitty"] },
     "macos": { "brew": ["kitty"] }
   },

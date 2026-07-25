@@ -6,6 +6,7 @@ return {
   event = 'VeryLazy',
   config = function()
     local lualine = require('lualine')
+    local palette = require('utils.palette')
 
     local function get_project_name()
       local cwd = vim.fn.getcwd()
@@ -40,35 +41,10 @@ return {
       return ' ' .. project_name
     end
 
-    local function get_tag_status()
-      local tag_file = vim.fn.expand('%:p:h') .. '/tags'
-      if vim.fn.filereadable(tag_file) == 1 then
-        local mtime = vim.fn.getftime(tag_file)
-        local current_time = os.time()
-        local age = current_time - mtime
-
-        -- If tags are older than 1 hour, show updating status
-        if age > 3600 then
-          return ' Updating...'
-        else
-          return ' Tags Ready'
-        end
-      end
-      return ''
-    end
-
-    local function java_version()
-      if vim.bo.filetype == 'java' then return ' Java' end
-      return ''
-    end
-
     -- Custom components
     local function buffer_count()
-      local buffers = vim.fn.len(vim.fn.getbufinfo({
-        buflisted = 1,
-        bufmodified = 0,
-        fileloaded = 1, -- Only count file buffers
-      }))
+      -- Count all listed buffers, regardless of modified state
+      local buffers = #vim.fn.getbufinfo({ buflisted = 1 })
       return string.format(' %d', buffers)
     end
 
@@ -82,91 +58,91 @@ return {
     local custom_theme = {
       normal = {
         a = {
-          fg = '#1e1e2e',
-          bg = '#89b4fa',
+          fg = palette.base,
+          bg = palette.blue,
           gui = 'bold',
         },
         b = {
-          fg = '#cdd6f4',
-          bg = '#45475a',
+          fg = palette.text,
+          bg = palette.surface1,
         },
         c = {
-          fg = '#bac2de',
-          bg = '#313244',
+          fg = palette.subtext,
+          bg = palette.surface0,
         },
       },
       insert = {
         a = {
-          fg = '#1e1e2e',
-          bg = '#a6e3a1',
+          fg = palette.base,
+          bg = palette.green,
           gui = 'bold',
         },
         b = {
-          fg = '#cdd6f4',
-          bg = '#45475a',
+          fg = palette.text,
+          bg = palette.surface1,
         },
         c = {
-          fg = '#bac2de',
-          bg = '#313244',
+          fg = palette.subtext,
+          bg = palette.surface0,
         },
       },
       visual = {
         a = {
-          fg = '#1e1e2e',
-          bg = '#f9e2af',
+          fg = palette.base,
+          bg = palette.yellow,
           gui = 'bold',
         },
         b = {
-          fg = '#cdd6f4',
-          bg = '#45475a',
+          fg = palette.text,
+          bg = palette.surface1,
         },
         c = {
-          fg = '#bac2de',
-          bg = '#313244',
+          fg = palette.subtext,
+          bg = palette.surface0,
         },
       },
       replace = {
         a = {
-          fg = '#1e1e2e',
-          bg = '#f38ba8',
+          fg = palette.base,
+          bg = palette.red,
           gui = 'bold',
         },
         b = {
-          fg = '#cdd6f4',
-          bg = '#45475a',
+          fg = palette.text,
+          bg = palette.surface1,
         },
         c = {
-          fg = '#bac2de',
-          bg = '#313244',
+          fg = palette.subtext,
+          bg = palette.surface0,
         },
       },
       command = {
         a = {
-          fg = '#1e1e2e',
-          bg = '#cba6f7',
+          fg = palette.base,
+          bg = palette.mauve,
           gui = 'bold',
         },
         b = {
-          fg = '#cdd6f4',
-          bg = '#45475a',
+          fg = palette.text,
+          bg = palette.surface1,
         },
         c = {
-          fg = '#bac2de',
-          bg = '#313244',
+          fg = palette.subtext,
+          bg = palette.surface0,
         },
       },
       inactive = {
         a = {
-          fg = '#6c7086',
-          bg = '#45475a',
+          fg = palette.overlay,
+          bg = palette.surface1,
         },
         b = {
-          fg = '#6c7086',
-          bg = '#45475a',
+          fg = palette.overlay,
+          bg = palette.surface1,
         },
         c = {
-          fg = '#6c7086',
-          bg = '#313244',
+          fg = palette.overlay,
+          bg = palette.surface0,
         },
       },
     }
@@ -225,7 +201,7 @@ return {
           {
             get_project_name,
             color = {
-              fg = '#89b4fa',
+              fg = palette.blue,
               gui = 'bold',
             },
           },
@@ -378,7 +354,7 @@ return {
               spinner = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' },
               done = '',
             },
-            color = { fg = '#89b4fa' },
+            color = { fg = palette.blue },
           },
           {
             'diagnostics',
@@ -416,33 +392,7 @@ return {
       extensions = { 'nvim-tree', 'quickfix', 'fugitive' },
     })
 
-    -- Auto-refresh when LSP attaches/detaches
-    local lsp_group = vim.api.nvim_create_augroup('StatuslineLSP', {
-      clear = true,
-    })
-    vim.api.nvim_create_autocmd('LspAttach', {
-      group = lsp_group,
-      callback = function() vim.cmd('redrawstatus') end,
-    })
-    vim.api.nvim_create_autocmd('LspDetach', {
-      group = lsp_group,
-      callback = function() vim.cmd('redrawstatus') end,
-    })
-
-    -- Auto-refresh when buffer changes to ensure statusline is always visible
-    local buffer_group = vim.api.nvim_create_augroup('StatuslineBuffer', {
-      clear = true,
-    })
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'WinNew' }, {
-      group = buffer_group,
-      callback = function() vim.cmd('redrawstatus') end,
-    })
-
-    -- Ensure statusline is redrawn on colorscheme change
-    vim.api.nvim_create_autocmd('ColorScheme', {
-      callback = function()
-        vim.defer_fn(function() vim.cmd('redrawstatus') end, 100)
-      end,
-    })
+    -- No manual redrawstatus autocmds needed: options.refresh (250ms) keeps
+    -- the statusline current on LSP attach/detach, buffer/window changes, etc.
   end,
 }

@@ -8,8 +8,6 @@ local modules_to_reload = {
   'config.commands',
   'config.keymaps',
   'utils.keymap',
-  'utils.file',
-  'utils.string',
   'lsp.handlers',
   'plugins',
 }
@@ -39,8 +37,6 @@ function M.reload_config()
 
   -- Reload utility modules
   require('utils.keymap')
-  require('utils.file')
-  require('utils.string')
 
   -- Print success message
   require('utils.notify').success('Neovim', 'Configuration reloaded successfully!')

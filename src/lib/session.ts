@@ -226,11 +226,11 @@ export function buildRestorePlan(m: Manifest): RestorePlan {
       const launcher = w.claude?.command ?? "claude-work";
       if (w.claude?.sessionId) {
         claudeCount++;
-        return { cwd: w.cwd, cmd: `${launcher} --resume ${w.claude.sessionId}` };
+        return { cwd: w.cwd, cmd: shellEscape([launcher, "--resume", w.claude.sessionId]) };
       }
       if (idlessPerCwd.get(w.cwd) === 1) {
         claudeCount++;
-        return { cwd: w.cwd, cmd: `${launcher} -c` };
+        return { cwd: w.cwd, cmd: shellEscape([launcher, "-c"]) };
       }
       notes.push(`claude in ${w.cwd}: no session id and ${idlessPerCwd.get(w.cwd)} candidates — plain shell`);
       return { cwd: w.cwd };
@@ -257,7 +257,7 @@ export function buildRestorePlan(m: Manifest): RestorePlan {
       workspace: m.focusedWorkspace,
       tabs: m.claudeUnmatched.map((s) => ({
         title: s.name ?? "claude",
-        windows: [{ cwd: s.cwd, cmd: `${s.command} --resume ${s.sessionId}` }],
+        windows: [{ cwd: s.cwd, cmd: shellEscape([s.command, "--resume", s.sessionId]) }],
       })),
     });
   }

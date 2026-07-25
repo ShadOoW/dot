@@ -1,5 +1,4 @@
 -- render-markdown.nvim - Beautiful markdown rendering
--- Works alongside obsidian.nvim (which has ui disabled)
 return {
   'MeanderingProgrammer/render-markdown.nvim',
   dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' },
@@ -8,19 +7,6 @@ return {
     local render_markdown = require('render-markdown')
 
     render_markdown.setup({
-      -- Characters that will replace the `#` at the beginning of headings
-      headings = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
-      -- Character to use for the bullet point in lists
-      bullet = '●',
-      -- Character that will replace the `>` at the beginning of block quotes
-      quote = '┃',
-      -- See :h 'conceallevel' for more information about meaning of values
-      conceal = {
-        -- conceallevel used for buffers with this plugin
-        default = 0,
-        -- Used when not being rendered, gets user default
-        rendered = 3,
-      },
       -- Determines how icons fill the available space:
       --  inline:  underlying text is concealed resulting in a left aligned icon
       --  overlay: result is left padded with spaces to hide any additional text

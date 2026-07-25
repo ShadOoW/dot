@@ -142,10 +142,10 @@ return {
       '<leader>zh',
       function()
         -- Trigger hot reload
-        vim.lsp.buf.execute_command({
+        client:exec_cmd({
           command = 'dart.hotReload',
           arguments = {},
-        })
+        }, { bufnr = bufnr })
       end,
       vim.tbl_extend('force', opts, {
         desc = 'Flutter: Hot reload',
@@ -157,10 +157,10 @@ return {
       '<leader>zH',
       function()
         -- Trigger hot restart
-        vim.lsp.buf.execute_command({
+        client:exec_cmd({
           command = 'dart.hotRestart',
           arguments = {},
-        })
+        }, { bufnr = bufnr })
       end,
       vim.tbl_extend('force', opts, {
         desc = 'Flutter: Hot restart',
@@ -217,10 +217,10 @@ return {
       '<leader>zo',
       function()
         -- Open Flutter outline
-        vim.lsp.buf.execute_command({
+        client:exec_cmd({
           command = 'dart.showFlutterOutline',
           arguments = {},
-        })
+        }, { bufnr = bufnr })
       end,
       vim.tbl_extend('force', opts, {
         desc = 'Flutter: Show outline',
@@ -265,20 +265,8 @@ return {
       })
     end
 
-    -- Set up auto-formatting on save for Dart files
-    if client.server_capabilities.documentFormattingProvider then
-      vim.api.nvim_create_autocmd('BufWritePre', {
-        group = vim.api.nvim_create_augroup('DartFormat', {
-          clear = true,
-        }),
-        buffer = bufnr,
-        callback = function()
-          vim.lsp.buf.format({
-            bufnr = bufnr,
-          })
-        end,
-      })
-    end
+    -- Format on save is handled by conform.nvim (lsp_format fallback with an
+    -- empty formatter list for dart → LSP formatting; single formatter path).
   end,
 
   -- Custom handlers for Flutter-specific features

@@ -112,14 +112,13 @@ return {
 
     -- Additional tmux integration features
     if vim.env.TMUX then
-      -- Enhanced focus detection for tmux
-      vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter' }, {
+      -- Refresh tmux status on focus regain only (BufEnter fired this far too often)
+      vim.api.nvim_create_autocmd('FocusGained', {
         group = vim.api.nvim_create_augroup('tmux-focus', {
           clear = true,
         }),
         callback = function()
-          -- Refresh tmux status when entering vim
-          vim.fn.system('tmux refresh-client -S 2>/dev/null || true')
+          pcall(function() vim.system({ 'tmux', 'refresh-client', '-S' }) end)
         end,
       })
     end

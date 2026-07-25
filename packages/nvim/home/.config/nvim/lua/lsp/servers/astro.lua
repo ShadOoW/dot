@@ -20,10 +20,17 @@ end
 return {
   filetypes = { 'astro' },
   init_options = {
-    typescript = {
-      tsdk = get_typescript_server_path(),
-    },
+    typescript = {},
   },
+  -- Resolve the tsdk lazily (at server start), not at require time — the
+  -- filesystem probing in get_typescript_server_path is not free.
+  before_init = function(_, config)
+    config.init_options = config.init_options or {}
+    config.init_options.typescript = config.init_options.typescript or {}
+    if not config.init_options.typescript.tsdk then
+      config.init_options.typescript.tsdk = get_typescript_server_path()
+    end
+  end,
   settings = {
     astro = {
       format = {

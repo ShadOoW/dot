@@ -76,38 +76,20 @@ function M.on_attach(client, bufnr)
       bufnr = bufnr,
     })
 
+    -- <leader>c prefix (Code); <leader>t is reserved for tab management
     buf_map(
       'n',
-      '<leader>th',
+      '<leader>ch',
       function()
         vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({
           bufnr = bufnr,
         }))
       end,
-      '[T]oggle Inlay [H]ints'
+      'Toggle Inlay [H]ints'
     )
   end
 
-  -- Document highlight with better error handling
-  if client.server_capabilities.documentHighlightProvider == true then
-    local highlight_group = vim.api.nvim_create_augroup('lsp-document-highlight-' .. bufnr, {
-      clear = true,
-    })
-
-    vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
-      buffer = bufnr,
-      group = highlight_group,
-      callback = function() pcall(vim.lsp.buf.document_highlight) end,
-      desc = 'Document highlight on cursor hold',
-    })
-
-    vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
-      buffer = bufnr,
-      group = highlight_group,
-      callback = function() pcall(vim.lsp.buf.clear_references) end,
-      desc = 'Clear document highlight on cursor move',
-    })
-  end
+  -- Document highlight is handled by vim-illuminate (plugins/ui/cursorline.lua)
 end
 
 -- Populate workspace diagnostics for all relevant clients attached to bufnr.
@@ -145,8 +127,8 @@ function M.setup_diagnostics()
     } or {},
     -- Virtual lines render the full message on a dedicated line below the
     -- offending code, which is far more readable than right-side virtual text
-    -- that gets clipped. only_current_line keeps noise low on large files.
-    virtual_lines = { only_current_line = true },
+    -- that gets clipped. current_line keeps noise low on large files.
+    virtual_lines = { current_line = true },
     virtual_text = false,
   })
 end

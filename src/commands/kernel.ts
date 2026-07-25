@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
 import { createInterface } from "readline";
-import { commandExists, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
+import { commandExists, logError, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
 
 const KEEP_COUNT = 2;
 
@@ -67,8 +67,16 @@ export const kernelCommand = defineCommand({
       process.stdout.write("y\n");
     }
 
-    Bun.spawnSync(["sudo", "vkpurge", "rm", ...toRemove], { stdout: "inherit", stderr: "inherit" });
-    Bun.spawnSync(["sudo", "grub-mkconfig", "-o", "/boot/grub/grub.cfg"], { stdout: "inherit", stderr: "inherit" });
+    const purge = Bun.spawnSync(["sudo", "vkpurge", "rm", ...toRemove], { stdout: "inherit", stderr: "inherit" });
+    if (purge.exitCode !== 0) {
+      logError(`vkpurge rm failed (exit ${purge.exitCode}) — skipping grub-mkconfig`);
+      process.exit(1);
+    }
+    const grub = Bun.spawnSync(["sudo", "grub-mkconfig", "-o", "/boot/grub/grub.cfg"], { stdout: "inherit", stderr: "inherit" });
+    if (grub.exitCode !== 0) {
+      logError(`grub-mkconfig failed (exit ${grub.exitCode})`);
+      process.exit(1);
+    }
     logSuccess("done");
   },
 });

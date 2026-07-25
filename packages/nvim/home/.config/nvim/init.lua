@@ -56,22 +56,13 @@ require('lazy').setup({
   change_detection = {
     notify = false,
   },
-  ui = {
-    icons = vim.g.have_nerd_font and {} or {},
-  },
 })
 
 -- Load utility modules
 require('utils.keymap')
-require('utils.file')
-require('utils.string')
 require('utils.reload')
 require('utils.session')
-require('utils.browser')
 require('utils.tmux').setup()
 
--- Fix: Use single column for both absolute and relative numbers
-vim.api.nvim_create_autocmd({ 'UIEnter', 'BufReadPost', 'WinEnter' }, {
-  once = false,
-  callback = function() vim.wo.cursorlineopt = 'line' end,
-})
+-- cursorlineopt/numberwidth/foldcolumn fixups live in config/options.lua
+-- (FixNumberColumns augroup)

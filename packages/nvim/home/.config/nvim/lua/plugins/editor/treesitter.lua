@@ -1,10 +1,14 @@
 -- Treesitter configuration
+-- Pinned to the 'master' branch: this config uses the module-based API
+-- (highlight/indent/textobjects/incremental_selection/matchup) which the
+-- rewritten 'main' branch no longer supports.
 return {
   'nvim-treesitter/nvim-treesitter',
+  branch = 'master',
   build = ':TSUpdate',
   event = 'BufReadPost',
   dependencies = {
-    'nvim-treesitter/nvim-treesitter-textobjects',
+    { 'nvim-treesitter/nvim-treesitter-textobjects', branch = 'master' },
     'nvim-treesitter/nvim-treesitter-context',
     'windwp/nvim-ts-autotag',
   },
@@ -149,11 +153,12 @@ return {
       },
       swap = {
         enable = true,
+        -- <leader><Down>/<Up> are taken by tab navigation (config/keymaps.lua)
         swap_next = {
-          ['<leader><Down>'] = '@parameter.inner',
+          ['<leader>cs'] = '@parameter.inner',
         },
         swap_previous = {
-          ['<leader><Up>'] = '@parameter.inner',
+          ['<leader>cS'] = '@parameter.inner',
         },
       },
       lsp_interop = {
@@ -184,8 +189,7 @@ return {
   },
 
   config = function(_, opts)
-    opts.install_dir = require('utils.paths').cache_path('site')
-    require('nvim-treesitter').setup(opts)
+    require('nvim-treesitter.configs').setup(opts)
 
     -- Configure treesitter context
     require('treesitter-context').setup({
@@ -228,24 +232,6 @@ return {
       vim.api.nvim_exec_autocmds('FileType', { buffer = buf, modeline = false })
     end)
 
-    -- Configure autotag with new API
-    require('nvim-ts-autotag').setup({
-      opts = {
-        -- Defaults
-        enable_close = true, -- Auto close tags
-        enable_rename = true, -- Auto rename pairs of tags
-        enable_close_on_slash = true, -- Auto close on trailing </
-      },
-      -- Also override individual filetype configs, these take priority.
-      -- Empty by default, useful if one of the "opts" global settings
-      -- doesn't work well in a specific filetype
-      per_filetype = {
-        ['html'] = {
-          enable_close = true,
-          enable_rename = true,
-          enable_close_on_slash = true,
-        },
-      },
-    })
+    -- nvim-ts-autotag is configured in plugins/editor/autotag.lua
   end,
 }

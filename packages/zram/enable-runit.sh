@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-ln -s /etc/sv/zramen /var/service/zramen
+ln -sf /etc/sv/zramen /var/service/zramen

@@ -1,7 +1,7 @@
 {
   "description": "Git version control configuration",
   "packages": {
-    "arch": { "brew": ["git"] },
+    "arch": { "pacman": ["git"] },
     "void": { "xbps": ["git"] },
     "macos": { "brew": ["git"] }
   },

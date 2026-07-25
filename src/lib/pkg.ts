@@ -4,11 +4,13 @@ import { hostname } from "os";
 import { join } from "path";
 import { PACKAGES_DIR, HOME_DIR } from "./config.ts";
 import { logWarn } from "./console.ts";
+import { PACKAGE_MANAGERS, validateMeta } from "./schema.ts";
 
 export type FileEntry = { source: string; target: string };
 
-export type PackageManager = "brew" | "xbps" | "cargo" | "pacman";
-export type PackageList = Record<PackageManager, string[]>;
+export type PackageManager = (typeof PACKAGE_MANAGERS)[number];
+// Partial: metas declare only the managers they actually use.
+export type PackageList = Partial<Record<PackageManager, string[]>>;
 export type PackagesMeta = Record<string, PackageList>;
 
 export interface PackageMeta {
@@ -65,6 +67,11 @@ export async function getPackageMeta(name: string, seen: Set<string> = new Set()
       logWarn(`${name}/meta.json: invalid JSON — ${(e as Error).message}`);
       return null;
     }
+    const errors = validateMeta(raw, name).filter((i) => i.level === "error");
+    if (errors.length > 0) {
+      for (const i of errors) logWarn(`${name}/meta.json: ${i.path ? `${i.path}: ` : ""}${i.message}`);
+      return null;
+    }
   }
 
   const meta: PackageMeta = {
@@ -94,13 +101,17 @@ export async function getPackageMeta(name: string, seen: Set<string> = new Set()
 
 const unique = (xs: string[]): string[] => [...new Set(xs)];
 
+function isPackageManager(s: string): s is PackageManager {
+  return (PACKAGE_MANAGERS as readonly string[]).includes(s);
+}
+
 function mergePackages(base: PackagesMeta, over: PackagesMeta): PackagesMeta {
   const out: PackagesMeta = structuredClone(base);
   for (const [distro, list] of Object.entries(over)) {
-    const target = (out[distro] ??= {} as PackageList);
+    const target = (out[distro] ??= {});
     for (const [pm, names] of Object.entries(list)) {
-      const key = pm as PackageManager;
-      target[key] = unique([...(target[key] ?? []), ...names]);
+      if (!isPackageManager(pm) || !names) continue;
+      target[pm] = unique([...(target[pm] ?? []), ...names]);
     }
   }
   return out;
@@ -144,6 +155,16 @@ export function appliesToHost(meta: Pick<PackageMeta, "hosts">, host: string = d
   if (!meta.hosts || meta.hosts.length === 0) return true;
   const h = host.toLowerCase();
   return meta.hosts.some((x) => x.toLowerCase() === h);
+}
+
+/**
+ * A package "applies" to the current OS when meta.os is empty (universal)
+ * or includes the current distro or its broad category ("linux"/"macos").
+ */
+export function appliesToCurrentOS(meta: Pick<PackageMeta, "os">, distro: string = detectDistro()): boolean {
+  if (!meta.os || meta.os.length === 0) return true;
+  const osCategory = distro === "macos" ? "macos" : "linux";
+  return meta.os.includes(osCategory) || meta.os.includes(distro);
 }
 
 export async function collectFiles(pkgDir: string, section: "home" | "system", init?: string): Promise<FileEntry[]> {

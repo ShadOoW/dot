@@ -4,6 +4,7 @@ return {
   dependencies = { 'hrsh7th/cmp-nvim-lsp', 'hrsh7th/cmp-buffer', 'hrsh7th/cmp-path', 'hrsh7th/cmp-cmdline' },
   config = function()
     local cmp = require('cmp')
+    local palette = require('utils.palette')
 
     cmp.setup({
       preselect = cmp.PreselectMode.Item,
@@ -119,32 +120,32 @@ return {
 
     -- Improve ghost text visibility
     vim.api.nvim_set_hl(0, 'CmpGhostText', {
-      fg = '#7aa2f7',
+      fg = palette.tn_blue,
       italic = true,
       nocombine = true,
     })
 
     -- Compact modern popup styling
     vim.api.nvim_set_hl(0, 'CmpPmenu', {
-      bg = '#1e1e2e',
-      fg = '#cdd6f4',
+      bg = palette.base,
+      fg = palette.text,
     })
     vim.api.nvim_set_hl(0, 'CmpPmenuBorder', {
-      fg = '#414868',
-      bg = '#1e1e2e',
+      fg = palette.tn_border,
+      bg = palette.base,
     })
     vim.api.nvim_set_hl(0, 'CmpPmenuSel', {
-      bg = '#2a2e3f',
-      fg = '#cdd6f4',
+      bg = palette.sel_bg,
+      fg = palette.text,
       bold = true,
     })
     vim.api.nvim_set_hl(0, 'CmpDoc', {
-      bg = '#1e1e2e',
-      fg = '#cdd6f4',
+      bg = palette.base,
+      fg = palette.text,
     })
     vim.api.nvim_set_hl(0, 'CmpDocBorder', {
-      fg = '#414868',
-      bg = '#1e1e2e',
+      fg = palette.tn_border,
+      bg = palette.base,
     })
 
     -- Use buffer source for `/` and `?`

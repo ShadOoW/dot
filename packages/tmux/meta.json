@@ -1,7 +1,7 @@
 {
   "description": "tmux terminal multiplexer",
   "packages": {
-    "arch": { "brew": ["tmux"] },
+    "arch": { "pacman": ["tmux"] },
     "void": { "xbps": ["tmux"] },
     "macos": { "brew": ["tmux"] }
   },

@@ -8,8 +8,8 @@ return {
     local codeium = require('codeium')
     local notify = require('utils.notify')
 
-    -- Track enabled state (default: enabled)
-    vim.g.codeium_enabled = vim.g.codeium_enabled ~= nil and vim.g.codeium_enabled or true
+    -- Track enabled state (default: enabled); explicit nil check so `false` is respected
+    if vim.g.codeium_enabled == nil then vim.g.codeium_enabled = true end
 
     codeium.setup({
       enable_cmp_source = false,

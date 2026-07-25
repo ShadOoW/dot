@@ -102,19 +102,7 @@ return {
       })
     end
 
-    -- Set up auto-formatting on save if enabled
-    if client.server_capabilities.documentFormattingProvider then
-      vim.api.nvim_create_autocmd('BufWritePre', {
-        group = vim.api.nvim_create_augroup('OdinFormat', {
-          clear = true,
-        }),
-        buffer = bufnr,
-        callback = function()
-          vim.lsp.buf.format({
-            bufnr = bufnr,
-          })
-        end,
-      })
-    end
+    -- Format on save is handled by conform.nvim (odin uses lsp_format = 'prefer';
+    -- single formatter path, no duplicate BufWritePre autocmd here).
   end,
 }

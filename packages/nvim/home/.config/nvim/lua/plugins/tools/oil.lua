@@ -1,8 +1,10 @@
 -- Oil.nvim - Edit your filesystem like a buffer
+-- Lazy-loaded on keys/cmd (an eager VimEnter event defeated the lazy-load);
+-- session.lua require()s it on demand for directory startup.
 return {
   'stevearc/oil.nvim',
   dependencies = { 'nvim-tree/nvim-web-devicons' },
-  event = 'VimEnter',
+  cmd = 'Oil',
   keys = {
     {
       '|',

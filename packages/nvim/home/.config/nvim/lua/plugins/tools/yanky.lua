@@ -34,26 +34,28 @@ return {
       desc = 'Yank text',
     })
 
-    -- Set buffer-local keymaps for p and P, excluding git buffers
-    vim.api.nvim_create_autocmd('BufEnter', {
-      pattern = '*',
-      callback = function()
-        if vim.bo.filetype ~= 'git' then
-          vim.keymap.set({ 'n', 'x' }, 'p', '<Plug>(YankyPutAfter)', {
-            desc = 'Put after cursor',
-            buffer = true,
-          })
-          vim.keymap.set({ 'n', 'x' }, 'P', '<Plug>(YankyPutBefore)', {
-            desc = 'Put before cursor',
-            buffer = true,
-          })
-        end
-      end,
+    -- Global p/P maps (defined once); git buffers get the native put back below
+    vim.keymap.set({ 'n', 'x' }, 'p', '<Plug>(YankyPutAfter)', {
+      desc = 'Put after cursor',
     })
-    vim.keymap.set('n', '<c-n>', '<Plug>(YankyCycleForward)', {
+    vim.keymap.set({ 'n', 'x' }, 'P', '<Plug>(YankyPutBefore)', {
+      desc = 'Put before cursor',
+    })
+    vim.api.nvim_create_autocmd('FileType', {
+      pattern = 'git',
+      group = vim.api.nvim_create_augroup('YankyGitException', { clear = true }),
+      callback = function(args)
+        vim.keymap.set({ 'n', 'x' }, 'p', 'p', { buffer = args.buf, desc = 'Put after cursor (native)' })
+        vim.keymap.set({ 'n', 'x' }, 'P', 'P', { buffer = args.buf, desc = 'Put before cursor (native)' })
+      end,
+      desc = 'Use native put in git buffers',
+    })
+
+    -- <C-p> belongs to the fzf-lua file finder; cycle on Alt instead
+    vim.keymap.set('n', '<M-n>', '<Plug>(YankyCycleForward)', {
       desc = 'Cycle forward through yank history',
     })
-    vim.keymap.set('n', '<c-p>', '<Plug>(YankyCycleBackward)', {
+    vim.keymap.set('n', '<M-p>', '<Plug>(YankyCycleBackward)', {
       desc = 'Cycle backward through yank history',
     })
   end,

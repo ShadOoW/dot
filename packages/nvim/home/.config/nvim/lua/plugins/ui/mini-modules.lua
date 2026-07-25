@@ -39,9 +39,6 @@ return {
       },
     })
 
-    -- Minimap for code overview
-    require('mini.map').setup({})
-
     -- Highlight patterns like colors, todos, URLs, etc.
     require('mini.hipatterns').setup({
       highlighters = {

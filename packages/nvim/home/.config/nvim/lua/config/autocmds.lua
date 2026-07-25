@@ -64,13 +64,13 @@ vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
 
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
---  See `:help vim.highlight.on_yank()`
+--  See `:help vim.hl.on_yank()`
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
   group = vim.api.nvim_create_augroup('highlight-yank', {
     clear = true,
   }),
-  callback = function() vim.highlight.on_yank() end,
+  callback = function() vim.hl.on_yank() end,
 })
 
 -- Return to last edit position when opening files
@@ -133,20 +133,6 @@ vim.api.nvim_create_autocmd('TermEnter', {
     -- Check for file changes when entering terminal mode
     vim.schedule(function() vim.cmd('checktime') end)
   end,
-})
-
--- Disable document highlight for file types that often cause issues
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'markdown', 'text', 'txt', 'help', 'log', 'json', 'yaml', 'toml', 'conf' },
-  callback = function(args)
-    -- Clear any existing document highlight autocommands for this buffer
-    -- Use pcall to safely clear autocmds that might not exist
-    pcall(vim.api.nvim_clear_autocmds, {
-      group = 'lsp-document-highlight-' .. args.buf,
-      buffer = args.buf,
-    })
-  end,
-  desc = 'Disable document highlight for specific file types',
 })
 
 -- Enhanced auto-indent and split tags on <CR> in web framework files (excluding pure HTML)
@@ -323,17 +309,31 @@ vim.api.nvim_create_autocmd('FileType', {
   desc = 'Configure HTML files for superhtml and HTML5 compliance',
 })
 
--- Enhanced session post-load handling: Clean up unwanted windows and conditionally open Lazy/Mason
+-- Enhanced session post-load handling: Clean up unwanted buffers/windows and conditionally open Lazy/Mason
+-- (single owner of post-restore cleanup; persistence.nvim v3 fires this event itself)
 vim.api.nvim_create_autocmd('User', {
   pattern = 'PersistenceLoadPost',
   callback = function()
-    -- Delete initial folder buffer from nvim . (persists after session restore)
+    -- Delete restored panel buffers (trouble/lazy/mason/...), [No Name] buffers,
+    -- and the initial folder buffer from `nvim .` (persists after session restore)
     for _, buf in ipairs(vim.api.nvim_list_bufs()) do
       if vim.api.nvim_buf_is_valid(buf) then
         local bufname = vim.api.nvim_buf_get_name(buf)
         local buftype = vim.bo[buf].buftype
         local filetype = vim.bo[buf].filetype
-        if bufname ~= '' and vim.fn.isdirectory(bufname) == 1 and filetype == '' and buftype == '' then
+        local is_initial_folder_buf = bufname ~= ''
+          and vim.fn.isdirectory(bufname) == 1
+          and filetype == ''
+          and buftype == ''
+        local is_no_name_buf = bufname == '' and buftype == '' and filetype == ''
+        if
+          filetype == 'trouble'
+          or filetype == 'exclusive-panel'
+          or filetype == 'lazy'
+          or filetype == 'mason'
+          or is_no_name_buf
+          or is_initial_folder_buf
+        then
           pcall(vim.api.nvim_buf_delete, buf, { force = true })
         end
       end

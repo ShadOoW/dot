@@ -1,7 +1,13 @@
 -- LSP servers configuration
 return {
   'neovim/nvim-lspconfig',
-  dependencies = { 'hrsh7th/cmp-nvim-lsp', 'williamboman/mason.nvim', 'williamboman/mason-lspconfig.nvim' },
+  dependencies = {
+    'hrsh7th/cmp-nvim-lsp',
+    'williamboman/mason.nvim',
+    'williamboman/mason-lspconfig.nvim',
+    -- JSON/YAML schema catalog consumed by lsp/servers/jsonls.lua and yamlls.lua
+    { 'b0o/schemastore.nvim', lazy = true },
+  },
   event = { 'BufReadPre', 'BufNewFile' },
   config = function()
     -- Guard against double-loading due to lazy.nvim import/require overlap

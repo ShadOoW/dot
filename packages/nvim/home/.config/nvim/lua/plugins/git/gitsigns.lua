@@ -31,20 +31,21 @@ return {
       -- ── Navigation ──────────────────────────────────────────────────────────
       vim.keymap.set('n', '<leader>gj', function()
         if vim.wo.diff then return ']c' end
-        vim.schedule(function() gs.next_hunk() end)
+        vim.schedule(function() gs.nav_hunk('next') end)
         return '<Ignore>'
       end, { buffer = bufnr, expr = true, desc = 'Next hunk' })
 
       vim.keymap.set('n', '<leader>gk', function()
         if vim.wo.diff then return '[c' end
-        vim.schedule(function() gs.prev_hunk() end)
+        vim.schedule(function() gs.nav_hunk('prev') end)
         return '<Ignore>'
       end, { buffer = bufnr, expr = true, desc = 'Previous hunk' })
 
       -- ── Stage / Reset ────────────────────────────────────────────────────────
+      -- stage_hunk toggles: running it on a staged hunk unstages it
       map({ 'n', 'v' }, '<leader>gs', gs.stage_hunk, 'Stage hunk')
       map('n', '<leader>gS', gs.stage_buffer, 'Stage buffer')
-      map('n', '<leader>gu', gs.undo_stage_hunk, 'Unstage hunk')
+      map('n', '<leader>gu', gs.stage_hunk, 'Unstage hunk (toggle)')
       map({ 'n', 'v' }, '<leader>gr', gs.reset_hunk, 'Reset hunk')
       map('n', '<leader>gR', gs.reset_buffer, 'Reset buffer')
 
@@ -60,7 +61,7 @@ return {
       -- ── Toggles ──────────────────────────────────────────────────────────────
       map('n', '<leader>gB', gs.toggle_current_line_blame, 'Toggle inline blame')
       map('n', '<leader>gW', gs.toggle_word_diff, 'Toggle word diff')
-      map('n', '<leader>gX', gs.toggle_deleted, 'Toggle deleted lines')
+      -- (toggle_deleted was removed from gitsigns; <leader>gi previews deleted lines inline)
     end,
   },
   config = function(_, opts) require('gitsigns').setup(opts) end,

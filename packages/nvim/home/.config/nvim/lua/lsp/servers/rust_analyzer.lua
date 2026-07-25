@@ -67,30 +67,30 @@ return {
     -- ── LSP / rust-analyzer workspace commands ───────────────────────────────
     map(
       '<leader>re',
-      function() vim.lsp.buf.execute_command({ command = 'rust-analyzer.expandMacro' }) end,
+      function() client:exec_cmd({ command = 'rust-analyzer.expandMacro' }, { bufnr = bufnr }) end,
       'Expand macro'
     )
 
     map(
       '<leader>rp',
-      function() vim.lsp.buf.execute_command({ command = 'rust-analyzer.parentModule' }) end,
+      function() client:exec_cmd({ command = 'rust-analyzer.parentModule' }, { bufnr = bufnr }) end,
       'Go to parent module'
     )
 
     map(
       '<leader>ro',
-      function() vim.lsp.buf.execute_command({ command = 'rust-analyzer.openDocs' }) end,
+      function() client:exec_cmd({ command = 'rust-analyzer.openDocs' }, { bufnr = bufnr }) end,
       'Open docs in browser'
     )
 
     map(
       '<leader>rj',
-      function() vim.lsp.buf.execute_command({ command = 'rust-analyzer.joinLines' }) end,
+      function() client:exec_cmd({ command = 'rust-analyzer.joinLines' }, { bufnr = bufnr }) end,
       'Join lines (smart)'
     )
 
     map('<leader>rw', function()
-      vim.lsp.buf.execute_command({ command = 'rust-analyzer.reloadWorkspace' })
+      client:exec_cmd({ command = 'rust-analyzer.reloadWorkspace' }, { bufnr = bufnr })
       require('utils.notify').info('Rust', 'Workspace reloaded')
     end, 'Reload workspace')
 

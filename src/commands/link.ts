@@ -4,8 +4,10 @@ import { mkdir, symlink, unlink } from "fs/promises";
 import { dirname, join } from "path";
 import { PACKAGES_DIR } from "../lib/config.ts";
 import {
+  appliesToCurrentOS,
   appliesToHost,
   collectFiles,
+  detectDistro,
   detectHost,
   detectInit,
   getPackageMeta,
@@ -19,6 +21,7 @@ export interface LinkOptions {
   dryRun?: boolean;
   force?: boolean;
   ignoreHost?: boolean;
+  ignoreOs?: boolean;
 }
 
 export interface UnlinkOptions {
@@ -79,7 +82,7 @@ function printLinkSummary(
 }
 
 export async function linkPackage(pkg: string, options: LinkOptions = {}): Promise<boolean> {
-  const { init: initOverride, dryRun = false, force = false, ignoreHost = false } = options;
+  const { init: initOverride, dryRun = false, force = false, ignoreHost = false, ignoreOs = false } = options;
   const pkgDir = join(PACKAGES_DIR, pkg);
   if (!existsSync(pkgDir)) {
     logError(`Package "${pkg}" not found in packages/`);
@@ -92,6 +95,14 @@ export async function linkPackage(pkg: string, options: LinkOptions = {}): Promi
       logWarn(`${pkg}: meta.hosts=[${meta.hosts.join(", ")}] excludes current host (${detectHost()}) — linking anyway (--ignore-host)`);
     } else {
       logWarn(`${pkg}: restricted to hosts [${meta.hosts.join(", ")}], current host is "${detectHost()}" — skipping. Use --ignore-host to override.`);
+      return true;
+    }
+  }
+  if (meta && meta.os.length > 0 && !appliesToCurrentOS(meta)) {
+    if (ignoreOs) {
+      logWarn(`${pkg}: meta.os=[${meta.os.join(", ")}] excludes current OS (${detectDistro()}) — linking anyway (--ignore-os)`);
+    } else {
+      logWarn(`${pkg}: restricted to OS [${meta.os.join(", ")}], current OS is "${detectDistro()}" — skipping. Use --ignore-os to override.`);
       return true;
     }
   }

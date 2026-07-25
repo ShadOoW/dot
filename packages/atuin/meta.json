@@ -1,7 +1,7 @@
 {
   "description": "Atuin shell history sync and search",
   "packages": {
-    "arch": { "brew": ["atuin"] },
+    "arch": { "pacman": ["atuin"] },
     "void": { "xbps": ["atuin"] },
     "macos": { "brew": ["atuin"] }
   },

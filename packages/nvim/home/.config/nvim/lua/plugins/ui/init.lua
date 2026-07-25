@@ -17,7 +17,6 @@ return {
   require('plugins.ui.modes'),
   require('plugins.ui.indent-blankline'),
   require('plugins.ui.matchparen'),
-  require('plugins.ui.cinnamon'),
   require('plugins.ui.render-markdown'),
   require('plugins.ui.bottom-panels').setup(),
 }

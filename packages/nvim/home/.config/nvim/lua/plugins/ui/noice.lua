@@ -327,6 +327,7 @@ return {
     },
   },
   config = function(_, opts)
+    local palette = require('utils.palette')
     require('noice').setup(opts)
 
     -- Scroll noice split panel to bottom when content changes (debounced, zb-based)
@@ -349,7 +350,7 @@ return {
                   vim.cmd('noautocmd silent! normal! zb')
                 end)
                 vim.api.nvim_buf_clear_namespace(buf, last_line_ns, 0, -1)
-                vim.api.nvim_buf_add_highlight(buf, last_line_ns, 'NoiceLastLine', line_count - 1, 0, -1)
+                vim.hl.range(buf, last_line_ns, 'NoiceLastLine', { line_count - 1, 0 }, { line_count - 1, -1 })
               end
               break
             end
@@ -396,59 +397,59 @@ return {
     end
 
     -- Setup custom highlight groups with Tokyo Night colors (solid backgrounds)
-    local bg_dark = '#16161e'
+    local bg_dark = palette.tn_bg_dark
     local function setup_highlights()
       vim.api.nvim_set_hl(0, 'NoiceFormatProgressDone', {
-        fg = '#a6e3a1',
+        fg = palette.green,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoiceFormatProgressTodo', {
-        fg = '#f9e2af',
+        fg = palette.yellow,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoiceLspProgressClient', {
-        fg = '#89b4fa',
+        fg = palette.blue,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoiceLspProgressTitle', {
-        fg = '#cdd6f4',
+        fg = palette.text,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoiceLspProgressSpinner', {
-        fg = '#f9e2af',
+        fg = palette.yellow,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoiceMini', {
-        fg = '#89b4fa',
-        bg = '#1e1e2e',
+        fg = palette.blue,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NoiceCmdlinePopup', {
-        fg = '#cdd6f4',
-        bg = '#313244',
+        fg = palette.text,
+        bg = palette.surface0,
       })
       vim.api.nvim_set_hl(0, 'NoiceCmdlinePopupBorder', {
-        fg = '#89b4fa',
+        fg = palette.blue,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoicePopup', {
-        fg = '#cdd6f4',
-        bg = '#313244',
+        fg = palette.text,
+        bg = palette.surface0,
       })
       vim.api.nvim_set_hl(0, 'NoicePopupBorder', {
-        fg = '#89b4fa',
+        fg = palette.blue,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoiceSplit', {
-        fg = '#cdd6f4',
-        bg = '#1e1e2e',
+        fg = palette.text,
+        bg = palette.base,
       })
       vim.api.nvim_set_hl(0, 'NoiceSplitBorder', {
-        fg = '#89b4fa',
+        fg = palette.blue,
         bg = bg_dark,
       })
       vim.api.nvim_set_hl(0, 'NoiceLastLine', {
         fg = 'NONE',
-        bg = '#313244',
+        bg = palette.surface0,
       })
     end
 
@@ -497,9 +498,9 @@ return {
           local win = vim.api.nvim_get_current_win()
           local config = vim.api.nvim_win_get_config(win)
           if config and (config.relative == '' or config.relative == nil) then
-            pcall(vim.api.nvim_win_set_option, win, 'winbar', '')
+            pcall(function() vim.wo[win].winbar = '' end)
             vim.defer_fn(function()
-              if vim.api.nvim_win_is_valid(win) then pcall(vim.api.nvim_win_set_option, win, 'winbar', '') end
+              if vim.api.nvim_win_is_valid(win) then pcall(function() vim.wo[win].winbar = '' end) end
             end, 50)
           end
         end

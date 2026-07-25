@@ -29,13 +29,22 @@ export function launchArgv(win: SessionWindow): string[] {
   return win.cmd ? ["zsh", "-l", "-c", `${win.cmd}; exec zsh -l`] : ["zsh", "-l"];
 }
 
+/**
+ * new_tab/cd take the rest of the line verbatim (no shlex), so quoting would
+ * become literal — strip newlines instead so a title/cwd can't inject extra
+ * session directives.
+ */
+function sessionLineSafe(s: string): string {
+  return s.replace(/[\r\n]+/g, " ");
+}
+
 /** kitty parses launch lines with shlex — POSIX single-quoting is safe. */
 export function buildSessionFile(tabs: SessionTab[]): string {
   const lines: string[] = [];
   for (const tab of tabs) {
-    lines.push(`new_tab ${tab.title}`);
+    lines.push(`new_tab ${sessionLineSafe(tab.title)}`);
     for (const win of tab.windows) {
-      lines.push(`cd ${win.cwd}`);
+      lines.push(`cd ${sessionLineSafe(win.cwd)}`);
       lines.push(`launch ${shellEscape(launchArgv(win))}`);
     }
   }

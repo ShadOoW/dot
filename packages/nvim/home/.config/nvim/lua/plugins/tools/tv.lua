@@ -19,7 +19,8 @@ return {
       global_keybindings = { channels = '<leader>sC' },
       channels = {
         files = {
-          keybinding = '<C-p>',
+          -- <C-p> is the fzf-lua file finder; tv files gets its own key
+          keybinding = '<leader>sT',
           handlers = {
             ['<CR>'] = h.open_as_files,
             ['<C-s>'] = h.open_in_split,
@@ -67,7 +68,8 @@ return {
           },
         },
         ['zsh-history'] = {
-          keybinding = '<leader>sH',
+          -- <leader>sH is fzf-lua help tags
+          keybinding = '<leader>sz',
           layout = 'portrait',
           handlers = {
             ['<CR>'] = h.insert_at_cursor,
@@ -98,7 +100,8 @@ return {
           },
         },
         ['npm-scripts'] = {
-          keybinding = '<leader>sn',
+          -- <leader>sn is the fzf-lua Noice messages picker
+          keybinding = '<leader>sN',
           layout = 'portrait',
           handlers = {
             ['<CR>'] = h.execute_shell_command('npm run {}'),

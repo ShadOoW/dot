@@ -334,7 +334,8 @@ return {
       { '<leader>sH', function() fzf.help_tags(picker_opts('Help Tags', '󰋗')) end, 'Help tags' },
       { '<leader>sr', function() fzf.resume() end, 'Resume last search' },
       {
-        '<leader>sS',
+        -- <leader>sS is git status (modified only); document symbols moved to sm
+        '<leader>sm',
         function() fzf.lsp_document_symbols(picker_opts('Document Symbols', '󰒕')) end,
         'Document symbols',
       },
@@ -480,11 +481,6 @@ return {
             notify.warn('Yank History', 'Yank history not available')
           end
         end,
-        'Yank history',
-      },
-      {
-        '<leader>sY',
-        function() fzf.files(picker_opts('Yank History', '󰆐')) end,
         'Yank history',
       },
       {

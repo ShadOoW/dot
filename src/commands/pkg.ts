@@ -3,7 +3,7 @@ import { confirm } from "@clack/prompts";
 import { existsSync } from "fs";
 import { join } from "path";
 import { PACKAGES_DIR } from "../lib/config.ts";
-import { appliesToHost, collectFiles, detectDistro, detectHost, getPackageMeta, listPackages } from "../lib/pkg.ts";
+import { appliesToCurrentOS, appliesToHost, collectFiles, detectDistro, detectHost, getPackageMeta, listPackages } from "../lib/pkg.ts";
 import { checkFileStatus, type FileStatus } from "../lib/status.ts";
 import { colors, logError, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
 import { linkPackage, unlinkPackage } from "./link.ts";
@@ -111,12 +111,13 @@ interface DispatchArgs {
   yes: boolean;
   force: boolean;
   ignoreHost: boolean;
+  ignoreOs: boolean;
 }
 
 // Each handler returns true on success, false on failure (drives exit code).
 const HANDLERS: Record<Action, (pkg: string, a: DispatchArgs) => Promise<boolean>> = {
   info:      (pkg) => showPackageInfo(pkg),
-  link:      (pkg, a) => linkPackage(pkg, { init: a.init, dryRun: a.dryRun, force: a.force, ignoreHost: a.ignoreHost }),
+  link:      (pkg, a) => linkPackage(pkg, { init: a.init, dryRun: a.dryRun, force: a.force, ignoreHost: a.ignoreHost, ignoreOs: a.ignoreOs }),
   unlink:    (pkg, a) => unlinkPackage(pkg, { init: a.init, dryRun: a.dryRun, skipConfirm: a.yes }),
   status:    (pkg) => showPackageStatus(pkg),
   configure: (pkg) => runConfigure(pkg),
@@ -133,13 +134,6 @@ async function dispatch(pkg: string, action: string, args: DispatchArgs): Promis
 }
 
 // ─── bulk helpers ────────────────────────────────────────────────────────────
-
-function appliesToCurrentOS(meta: { os?: string[] }): boolean {
-  if (!meta.os || meta.os.length === 0) return true;
-  const distro = detectDistro();
-  const osCategory = distro === "macos" ? "macos" : "linux";
-  return meta.os.includes(osCategory) || meta.os.includes(distro);
-}
 
 async function collectAllPackages(ignoreHost: boolean): Promise<{
   included: string[];
@@ -176,6 +170,7 @@ export const pkgCommand = defineCommand({
     yes: { type: "boolean", short: "y", description: "Skip confirmation (unlink only)" },
     force: { type: "boolean", description: "Allow link to overwrite real (non-symlink) files" },
     "ignore-host": { type: "boolean", description: "Link even if meta.hosts excludes this host" },
+    "ignore-os": { type: "boolean", description: "Link even if meta.os excludes this OS" },
     tag: { type: "string", description: "Apply action to all packages with this tag" },
     all: { type: "boolean", description: "Apply action to every package matching current host/OS" },
   },
@@ -186,6 +181,7 @@ export const pkgCommand = defineCommand({
       yes: args.yes ?? false,
       force: args.force ?? false,
       ignoreHost: args["ignore-host"] ?? false,
+      ignoreOs: args["ignore-os"] ?? false,
     };
 
     if (args.all) {
@@ -286,6 +282,7 @@ Flags:
   --dry-run              Preview link/unlink changes
   --force                Allow link to overwrite real files (use with care)
   --ignore-host          Link even if meta.hosts excludes this host
+  --ignore-os            Link even if meta.os excludes this OS
   -y, --yes              Skip unlink confirmation
   --tag <tag>            Apply action to all packages with this tag
   --all                  Apply action to all packages for current host/OS

@@ -20,41 +20,15 @@ return {
         lsp_format = 'prefer',
       } end
 
-      -- For JS/TS, use direct npx eslint after save (async, non-blocking)
+      -- JS/TS fixes are applied by the eslint LSP on BufWritePre
+      -- (see lua/lsp/servers/eslint.lua) — skip conform's own formatting.
       if
         vim.tbl_contains(
           { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue', 'svelte' },
           filetype
         )
       then
-        local filename = vim.api.nvim_buf_get_name(bufnr)
-        if filename and filename ~= '' then
-          local dir = vim.fn.fnamemodify(filename, ':p:h')
-          local bufnr = bufnr
-          -- Run eslint asynchronously and show output
-          local job = vim.fn.jobstart(
-            string.format(
-              'cd %s && npx eslint --fix %s 2>&1; echo exit:$?',
-              vim.fn.shellescape(dir),
-              vim.fn.shellescape(filename)
-            ),
-            {
-              on_stdout = function(_, data)
-                vim.schedule(
-                  function() vim.notify(table.concat(data, '\n'), vim.log.levels.INFO, { title = 'ESLint' }) end
-                )
-              end,
-              on_exit = function()
-                vim.schedule(function()
-                  vim.cmd('silent! edit!')
-                  vim.diagnostic.reset(nil, bufnr)
-                  pcall(require('lint').try_lint)
-                end)
-              end,
-            }
-          )
-        end
-        return -- Skip conform's own formatting
+        return
       end
 
       -- Default: use formatters
@@ -263,26 +237,20 @@ return {
     conform.setup(opts)
 
     -- Enhanced keymaps
-    vim.keymap.set({ 'n', 'v' }, '<leader>ff', function()
-      local filename = vim.fn.expand('%:p')
-      local dir = vim.fn.expand('%:p:h')
-      local bufnr = vim.api.nvim_get_current_buf()
-      vim.fn.jobstart(
-        string.format('cd %s && npx eslint --fix %s 2>&1', vim.fn.shellescape(dir), vim.fn.shellescape(filename)),
-        {
-          on_exit = function()
-            vim.schedule(function()
-              vim.cmd('silent! edit!')
-              vim.diagnostic.reset(nil, bufnr)
-              pcall(require('lint').try_lint)
-              vim.cmd('echo "Formatted with eslint"')
-            end)
-          end,
-        }
-      )
-    end, {
-      desc = 'Format with eslint',
-    })
+    vim.keymap.set(
+      { 'n', 'v' },
+      '<leader>ff',
+      function()
+        conform.format({
+          async = false,
+          lsp_format = 'fallback',
+          timeout_ms = 10000,
+        })
+      end,
+      {
+        desc = 'Format buffer',
+      }
+    )
 
     -- Debug: run eslint directly and show output
     vim.keymap.set('n', '<leader>fe', function()
@@ -355,21 +323,6 @@ return {
       desc = 'Toggle format on save',
     })
 
-    -- Command to show available formatters
-    vim.api.nvim_create_user_command('ConformInfo', function()
-      local formatters = conform.list_formatters()
-      if #formatters == 0 then
-        print('No formatters available for this buffer')
-        return
-      end
-
-      print('Available formatters for ' .. vim.bo.filetype .. ':')
-      for _, formatter in ipairs(formatters) do
-        local status = formatter.available and '✓' or '✗'
-        print(string.format('  %s %s', status, formatter.name))
-      end
-    end, {
-      desc = 'Show available formatters',
-    })
+    -- Note: :ConformInfo is provided by conform.nvim itself
   end,
 }

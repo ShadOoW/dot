@@ -55,28 +55,4 @@ function M.long_error(title, msg, opts)
   return vim.notify(brief, vim.log.levels.ERROR, opts)
 end
 
--- Quick access to notification panel
-function M.show_panel()
-  if _G.NotificationPanel then
-    _G.NotificationPanel.open()
-  else
-    vim.notify('Notification panel not available', vim.log.levels.WARN)
-  end
-end
-
-function M.get_stats()
-  if _G.NotificationPanel then
-    return {
-      total = _G.NotificationPanel.get_count(),
-      errors = _G.NotificationPanel.get_error_count(),
-      warnings = _G.NotificationPanel.get_warning_count(),
-    }
-  end
-  return {
-    total = 0,
-    errors = 0,
-    warnings = 0,
-  }
-end
-
 return M

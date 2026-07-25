@@ -1,0 +1,76 @@
+#!/bin/sh
+# har — pull the URL, request payload and response out of HAR text and copy the
+#        trimmed result back to the clipboard.
+#
+# In your browser's Network tab, right-click a request → Copy → "Copy as HAR"
+# (or "Copy all as HAR" for the whole log), then just run:
+#
+#     har            # read the clipboard, write the trimmed result back to it
+#     har file.har   # read a file instead
+#     cmd | har      # or pipe HAR in on stdin
+#
+# Reading from the clipboard rather than an argument is deliberate: it keeps
+# multi-kilobyte HAR blobs out of your shell history.
+set -eu
+
+if [ "$#" -ge 1 ] && [ "$1" != "-" ]; then
+  input=$(cat -- "$1")
+elif [ ! -t 0 ]; then
+  input=$(cat)
+else
+  input=$(clipboard-paste)
+fi
+
+if [ -z "${input:-}" ]; then
+  echo "har: no input — copy a request as HAR, pass a file, or pipe it in" >&2
+  exit 1
+fi
+
+out=$(printf '%s' "$input" | jq -r '
+  def maybe_json(s):
+    if (s | length) == 0 then "(none)" else (s | fromjson? // s) end;
+
+  # Accept a full HAR ({log:{entries}}), a bare {entries}, an array of entries,
+  # or a single entry object.
+  def norm:
+    if type == "array" then .
+    elif (.log.entries? | type) == "array" then .log.entries
+    elif (.entries? | type) == "array" then .entries
+    else [.] end;
+
+  def reqbody: maybe_json(.request.postData.text // "");
+
+  def resbody:
+    (.response.content // {}) as $c
+    | (($c.text // "")
+        | if ($c.encoding // "") == "base64" then (@base64d? // .) else . end
+      ) as $d
+    | maybe_json($d);
+
+  norm as $e
+  | ($e | length) as $n
+  | range(0; $n) as $i
+  | $e[$i] as $x
+  | (if $n > 1 then "════════ request \($i + 1) of \($n) ════════", "" else empty end),
+    "# URL",
+    "\($x.request.method // "GET") \($x.request.url // "?")",
+    "",
+    "# PAYLOAD",
+    ($x | reqbody),
+    "",
+    "# RESPONSE",
+    ($x | resbody),
+    (if $i < $n - 1 then "", "" else empty end)
+' 2>/dev/null) || {
+  echo "har: could not parse HAR JSON (is the clipboard actually HAR?)" >&2
+  exit 1
+}
+
+if [ -z "${out:-}" ]; then
+  echo "har: no request entries found in the HAR" >&2
+  exit 1
+fi
+
+printf '%s\n' "$out" | clipboard-copy
+printf '%s\n' "$out"
+echo "✓ har: URL + payload + response copied to clipboard" >&2

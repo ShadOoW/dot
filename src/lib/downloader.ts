@@ -68,8 +68,7 @@ export async function downloadAndExtract(
   let r: { exitCode: number; stderr: Uint8Array } | null = null;
 
   if (stripComponents > 0) {
-    const stripArgs = Array(stripComponents).fill("--strip-components=1").flat();
-    r = Bun.spawnSync(["tar", "-xf", archivePath, "-C", extractDir, ...stripArgs]);
+    r = Bun.spawnSync(["tar", "-xf", archivePath, "-C", extractDir, `--strip-components=${stripComponents}`]);
   } else if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz")) {
     r = Bun.spawnSync(["tar", "-xzf", archivePath, "-C", extractDir]);
   } else if (lower.endsWith(".tar.xz")) {

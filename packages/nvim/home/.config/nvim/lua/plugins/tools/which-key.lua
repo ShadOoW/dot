@@ -59,7 +59,7 @@ return {
         },
         {
           '<leader>t',
-          group = 'Tags & Symbols',
+          group = 'Tabs',
         },
         {
           '<leader>x',

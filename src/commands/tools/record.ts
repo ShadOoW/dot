@@ -27,7 +27,9 @@ async function getSwayWindows(): Promise<Array<{ id: string; app_id: string; tit
     const tree = JSON.parse(result.stdout);
     const windows: Array<{ id: string; app_id: string; title: string; rect: { x: number; y: number; width: number; height: number } }> = [];
     function walk(node: Record<string, unknown>) {
-      if (node.type === "window" && node.app_id) {
+      // sway leaf windows are type "con"/"floating_con" (see src/lib/sway.ts);
+      // split containers share the type but have no app_id.
+      if ((node.type === "con" || node.type === "floating_con") && node.app_id) {
         windows.push({
           id: String(node.id),
           app_id: String(node.app_id),
