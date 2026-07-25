@@ -200,17 +200,65 @@ const LINKS: Link[] = [
   { link: join(HOME_DIR, ".local/share/Steam"),       target: join(MANAGED, "managed-steam/Steam") },
 ];
 
-type LinkResult = "linked" | "already" | "conflict";
+export type ManagedLinkStatus = "ok" | "broken" | "missing" | "conflict";
 
-async function ensureLink({ link, target }: Link): Promise<LinkResult> {
-  if (existsSync(link)) {
-    if (lstatSync(link).isSymbolicLink()) return "already";
+/** lstat-based check — existsSync alone can't tell "missing" from "dangling symlink". */
+export function checkManagedLink({ link }: Link): ManagedLinkStatus {
+  let stat;
+  try {
+    stat = lstatSync(link);
+  } catch {
+    return "missing";
+  }
+  if (!stat.isSymbolicLink()) return "conflict";
+  return existsSync(link) ? "ok" : "broken";
+}
+
+export function checkManagedLinks(): Array<Link & { status: ManagedLinkStatus }> {
+  return LINKS.map((entry) => ({ ...entry, status: checkManagedLink(entry) }));
+}
+
+type LinkResult = "linked" | "healed" | "already" | "conflict";
+
+async function ensureLink(entry: Link): Promise<LinkResult> {
+  const { link, target } = entry;
+  const status = checkManagedLink(entry);
+  if (status === "conflict") {
     logWarn(`${link} — exists as a real path, remove it manually before linking`);
     return "conflict";
   }
+  if (status === "ok") return "already";
+  if (status === "broken") {
+    // target dir vanished (cache clean, migration, subvolume recreate) — recreate it so the link resolves again
+    await mkdir(target, { recursive: true });
+    return "healed";
+  }
+  await mkdir(target, { recursive: true });
   await mkdir(dirname(link), { recursive: true });
   await symlink(target, link);
   return "linked";
+}
+
+export interface LinkSummary { created: number; healed: number; already: number; conflicts: number }
+
+export async function linkManagedCaches(log = true): Promise<LinkSummary> {
+  const summary: LinkSummary = { created: 0, healed: 0, already: 0, conflicts: 0 };
+  for (const entry of LINKS) {
+    const result = await ensureLink(entry);
+    if (result === "linked") {
+      if (log) logSuccess(`${entry.link} → ${entry.target}`);
+      summary.created++;
+    } else if (result === "healed") {
+      if (log) logSuccess(`${entry.link} (target recreated)`);
+      summary.healed++;
+    } else if (result === "already") {
+      if (log) logSuccess(entry.link);
+      summary.already++;
+    } else {
+      summary.conflicts++;
+    }
+  }
+  return summary;
 }
 
 // ─── subcommands ─────────────────────────────────────────────────────────────
@@ -242,23 +290,12 @@ const linkCommand = defineCommand({
   meta: { description: "Create symlinks from default tool locations to managed-cache dirs" },
   async run() {
     logDesc("Linking managed cache directories…");
-    let created = 0;
-    let already = 0;
-    for (const entry of LINKS) {
-      const result = await ensureLink(entry);
-      if (result === "linked") {
-        logSuccess(`${entry.link} → ${entry.target}`);
-        created++;
-      } else if (result === "already") {
-        logSuccess(entry.link);
-        already++;
-      }
-    }
+    const { created, healed, already, conflicts } = await linkManagedCaches();
     console.log();
-    if (created === 0 && already > 0) {
+    if (created === 0 && healed === 0 && conflicts === 0 && already > 0) {
       logInfo(`All ${already} link(s) already in place`);
-    } else if (created > 0) {
-      logInfo(`${created} link(s) created, ${already} already in place`);
+    } else {
+      logInfo(`${created} created, ${healed} healed, ${already} already in place${conflicts ? `, ${conflicts} conflict(s)` : ""}`);
     }
   },
 });

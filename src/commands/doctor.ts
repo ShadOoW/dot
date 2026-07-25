@@ -7,6 +7,7 @@ import { validateAllPackages } from "../lib/schema.ts";
 import { linkPackage } from "./link.ts";
 import { runInitScriptInternal } from "./info.ts";
 import { findGhosts, findSystemGhosts, flattenGhosts, shortenPath, type GhostItem } from "../lib/ghosts.ts";
+import { checkManagedLinks, linkManagedCaches } from "./cache.ts";
 import { rm } from "fs/promises";
 
 function summarize(s: PackageStatus): string {
@@ -69,6 +70,8 @@ export const doctorCommand = defineCommand({
     const healthy = statuses.filter((s) => s.files.length > 0 && s.counts.ok === s.files.length);
 
     const [ghosts, systemGhosts] = await Promise.all([findGhosts(), findSystemGhosts()]);
+    const cacheLinks = checkManagedLinks();
+    const brokenCacheLinks = cacheLinks.filter((l) => l.status !== "ok");
 
     if (!args.quiet) {
       console.log(`\n${colors.bold("Health report")} — ${withFiles.length} packages with files\n`);
@@ -140,6 +143,15 @@ export const doctorCommand = defineCommand({
       for (const g of systemGhosts) printGhost(g, 0, "system");
     }
 
+    if (!args.quiet && brokenCacheLinks.length > 0) {
+      console.log(`\n${colors.bold("Cache links")}  ${colors.dim("~/.cache/managed-*")}`);
+      for (const l of brokenCacheLinks) {
+        const icon = l.status === "conflict" ? colors.yellow("~") : colors.red("✗");
+        console.log(`  ${icon} ${shortenPath(l.link)}  ${colors.dim(`[${l.status}]`)}`);
+        console.log(`    ${colors.dim(`→ ${shortenPath(l.target)}`)}`);
+      }
+    }
+
     if (!args.quiet && services.length > 0) {
       console.log(`\n${colors.bold("Services")}  ${colors.dim(init)}`);
       const nameWidth = Math.max(28, ...services.map(s => `${s.pkg}:${s.name}`.length)) + 2;
@@ -185,6 +197,9 @@ export const doctorCommand = defineCommand({
     if (allGhostsFlat.length > 0) {
       const sysPart = systemGhosts.length > 0 ? `, ${systemGhosts.length} system` : "";
       logInfo(`Ghosts: ${colors.red(`${allHomeGhostsFlat.length} home${sysPart}`)} — run with --fix to prune`);
+    }
+    if (brokenCacheLinks.length > 0) {
+      logInfo(`Cache links: ${colors.red(`${brokenCacheLinks.length} broken/missing`)} — run with --fix to repair`);
     }
     if (services.length > 0) {
       const running = services.filter((s) => s.state === "running").length;
@@ -250,14 +265,21 @@ export const doctorCommand = defineCommand({
         logInfo(`Pruned ${pruned} ghost(s).`);
       }
 
-      if (toFix.length === 0 && failedServices.length === 0 && allGhostsFlat.length === 0) {
+      // 4. Fix cache links
+      if (brokenCacheLinks.length > 0) {
+        logSection(`Repairing ${brokenCacheLinks.length} managed-cache link(s)…`);
+        const summary = await linkManagedCaches(false);
+        logInfo(`Cache links: ${summary.created} created, ${summary.healed} healed${summary.conflicts ? `, ${summary.conflicts} conflict(s) left unresolved` : ""}`);
+      }
+
+      if (toFix.length === 0 && failedServices.length === 0 && allGhostsFlat.length === 0 && brokenCacheLinks.length === 0) {
         logSuccess("Nothing to fix.");
       }
       return;
     }
 
-    if (withIssues.length > 0) {
-      logError("Doctor found issues. Re-run with -v for full breakdown, then `dot pkg <name> link` to repair, or use --fix to repair automatically.");
+    if (withIssues.length > 0 || brokenCacheLinks.length > 0) {
+      logError("Doctor found issues. Re-run with -v for full breakdown, then `dot pkg <name> link` / `dot cache link` to repair, or use --fix to repair automatically.");
       process.exit(1);
     }
     const realFailed = failedServices.filter(s => s.state === "failed");
