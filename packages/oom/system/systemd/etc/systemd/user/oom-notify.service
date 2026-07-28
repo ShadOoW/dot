@@ -1,0 +1,19 @@
+[Unit]
+Description=Critical desktop notification whenever anything is OOM-killed
+# A broken ExecStart must become a *failed* unit you notice, not a silent 5s restart loop.
+# photoview-caddy and litellm each burned ~590 restarts per boot exactly that way, because
+# the default start limit (5 in 10s) never trips at RestartSec=5.
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/oom-notify
+Restart=on-failure
+RestartSec=10
+
+[Install]
+# default.target, not graphical-session.target: sway is started by ly, not by a systemd
+# user session, so graphical-session.target never activates here. Matches how the other
+# working user units in this repo (agentmemory, kanata, tmux-server) are wired.
+WantedBy=default.target

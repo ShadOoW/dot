@@ -1,0 +1,9 @@
+{
+  "description": "Memory safety: earlyoom + a reserved floor for system services + critical OOM notifications",
+  "packages": {
+    "arch": { "pacman": ["earlyoom", "libnotify"] }
+  },
+  "tags": ["system"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}

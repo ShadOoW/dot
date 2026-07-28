@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# Raise a critical, non-expiring desktop notification whenever anything is OOM-killed —
+# by the kernel, by earlyoom, or by systemd-oomd.
+#
+# Runs as a *user* service on purpose: notify-send needs the session D-Bus, and getting a
+# root daemon to reach it is fragile — which is why earlyoom's own -n/--notify is not used.
+# shad can read the kernel journal thanks to the ACL on /var/log/journal (group wheel);
+# verify with `journalctl -k -n1` if notifications ever stop appearing.
+#
+# ── Coalescing, and why it is NOT a throttle ────────────────────────────────────────
+# The first version dropped any event within 15s of the previous one. That silently
+# swallowed real kills: firing four test events 7.6s, 2.3s and 4.2s apart produced exactly
+# one notification. An OOM kill is the last thing that should ever be silently discarded.
+#
+# So every event now notifies. Bursts are handled by *replacement* instead of suppression:
+# the x-canonical-private-synchronous hint makes mako update the existing popup in place
+# rather than stacking dozens, and the body carries a running count for the burst. One
+# popup, every event reflected, nothing lost.
+set -uo pipefail
+
+BURST_WINDOW=60 # seconds; after this quiet period the burst counter resets
+count=0
+burst_start=0
+
+# ── Finding the right D-Bus session bus ─────────────────────────────────────────────
+# This machine runs TWO session buses: sway is started under `dbus-run-session`, so sway,
+# mako and any terminal you open share a bus at /tmp/dbus-XXXX, while the systemd *user
+# manager* — and therefore this service — gets the standard /run/user/1000/bus.
+#
+# The notification daemon only owns org.freedesktop.Notifications on sway's bus, so
+# notify-send from here fails with:
+#   NameHasNoOwner: Could not activate remote peer 'org.freedesktop.Notifications'
+# and D-Bus "helpfully" activates a SECOND mako to serve the user bus — two daemons, two
+# layer-shell surfaces, divergent state.
+#
+# So: discover the bus from the running notification daemon itself (same uid, so /proc is
+# readable) and use that. Self-healing across restarts, and no hardcoded random path.
+# The real fix is to stop launching a private bus for the sway session; until then, this.
+discover_bus() {
+  local pid
+  for name in mako swaync dunst fnott; do
+    pid=$(pgrep -x "$name" | head -1) || true
+    [ -n "${pid:-}" ] || continue
+    local addr
+    addr=$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')
+    [ -n "$addr" ] && {
+      printf '%s' "$addr"
+      return 0
+    }
+  done
+  return 1
+}
+
+send() {
+  # -u critical maps to mako's [urgency=critical] block (packages/mako): red background,
+  # default-timeout=0 and ignore-timeout=1, so it stays until dismissed by hand.
+  # x-canonical-private-synchronous makes a burst replace one popup instead of stacking.
+  # Not --wait: that would block this loop until the popup was clicked away.
+  notify-send -u critical -t 0 -a OOM -i dialog-error \
+    -h "string:x-canonical-private-synchronous:oom-kill" \
+    -- "$1" "$2"
+}
+
+notify() {
+  # Discovery is the PRIMARY path, not a fallback. Sending on this service's own bus
+  # "succeeds" by making D-Bus activate a second notification daemon to serve it — the
+  # popup shows, but you then have two daemons and `makoctl` from a terminal is talking to
+  # the other one, so you cannot even dismiss it. Target the daemon that already exists.
+  #
+  # Done per-event rather than once at startup because this unit reaches default.target
+  # before sway has started mako, and because the address changes each login.
+  local addr
+  if addr=$(discover_bus); then
+    DBUS_SESSION_BUS_ADDRESS=$addr send "$1" "$2" 2>/dev/null && return 0
+  fi
+  # No daemon running at all: fall back to whatever bus we have and let D-Bus activate one.
+  send "$1" "$2" 2>/dev/null && return 0
+  # Never swallow this silently — swallowing it is what hid the two-bus problem for an hour.
+  echo "oom-notify: could not deliver notification (no reachable notification daemon): $1" >&2
+  return 1
+}
+
+emit() {
+  local title=$1 detail=$2 now=$SECONDS
+  if ((now - burst_start > BURST_WINDOW)); then
+    count=0
+    burst_start=$now
+  fi
+  count=$((count + 1))
+  local body=$detail
+  if ((count > 1)); then
+    body="$detail"$'\n\n'"$count kills in the last $((now - burst_start))s — run: dot sgc report"
+  fi
+  notify "$title" "$body"
+}
+
+# --lines=0 so we react only to new events and never replay history at startup.
+# Process substitution, not a pipe: keeps the loop (and its counters) in the main shell.
+while IFS= read -r line; do
+  case $line in
+    *"Out of memory: Killed process"*)
+      # "Killed process 724848 (vivaldi-bin) total-vm:..." -> "724848 (vivaldi-bin)"
+      victim=${line#*Killed process }
+      victim="${victim%%)*})"
+      emit "OOM — kernel killed a process" \
+        "$victim"$'\n\n'"The kernel ran out of memory. Inspect: journalctl -k -g oom"
+      ;;
+    *"sending SIGKILL to process"* | *"sending SIGTERM to process"*)
+      emit "OOM — earlyoom killed a process" "$line"
+      ;;
+    *"due to memory pressure"*)
+      emit "OOM — systemd-oomd killed a cgroup" "$line"
+      ;;
+  esac
+done < <(journalctl --follow --lines=0 --output=cat --no-pager 2>/dev/null)
