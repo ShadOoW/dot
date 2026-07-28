@@ -85,6 +85,10 @@
       }
     }
   },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "effortLevel": "xhigh",
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
