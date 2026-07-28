@@ -38,6 +38,14 @@ return {
       vim.g.matchup_motion_enabled = 1
       vim.g.matchup_text_obj_enabled = 1
 
+      -- Treesitter-aware matching.  This used to be switched on through
+      -- nvim-treesitter's `matchup` module, which the 'main' rewrite removed;
+      -- matchup reads these globals directly and ships its own queries under
+      -- after/queries/.  `_disabled` must be a list -- matchup indexes it
+      -- unconditionally.
+      vim.g.matchup_treesitter_enabled = 1
+      vim.g.matchup_treesitter_disabled = {}
+
       -- Cleanup matches when buffer is deleted to prevent errors
       vim.api.nvim_create_autocmd('BufDelete', {
         callback = function()

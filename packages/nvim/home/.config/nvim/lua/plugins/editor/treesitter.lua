@@ -1,195 +1,162 @@
 -- Treesitter configuration
--- Pinned to the 'master' branch: this config uses the module-based API
--- (highlight/indent/textobjects/incremental_selection/matchup) which the
--- rewritten 'main' branch no longer supports.
+-- Tracks the rewritten 'main' branch, which has no module system: highlighting,
+-- indentation, incremental selection and the matchup integration are each wired
+-- up explicitly.  Textobjects live in plugins/editor/treesitter-textobjects.lua,
+-- matchup's globals in plugins/ui/matchparen.lua.
+local ensure_installed = { -- Web Development Core
+  'html',
+  'css',
+  'scss',
+  'javascript',
+  'typescript',
+  'tsx',
+  'jsdoc', -- Modern Web Frameworks
+  'astro',
+  'svelte',
+  'vue', -- Styling & Templates
+  'json',
+  'json5',
+  -- no 'jsonc' parser on 'main'; the plugin registers jsonc -> json instead
+  'yaml',
+  'toml',
+  'xml', -- Documentation & Markup
+  'markdown',
+  'markdown_inline', -- Programming Languages
+  'lua',
+  'luadoc',
+  'luap',
+  'java',
+  'c',
+  'cpp',
+  'rust',
+  'go',
+  'python',
+  'php',
+  'ruby',
+  'dart', -- Flutter/Dart support
+  'odin', -- Shell & Config
+  'bash',
+  'fish',
+  'dockerfile',
+  'vim',
+  'vimdoc',
+  'regex',
+  'gitignore',
+  'gitcommit',
+  'git_config',
+  'git_rebase',
+  -- Build Tools & Package Managers
+  'make',
+  'cmake', -- Data & Query Languages
+  'sql',
+  'graphql', -- Specialized
+  'http', -- REST client (.http files, kulala.nvim)
+  'diff',
+  'comment',
+}
+
+-- Treesitter indentation is still flagged experimental upstream; for these two
+-- the built-in indentexpr behaves better.
+local indent_disabled = { python = true, yaml = true }
+
+-- Filetypes that also want the vim regex syntax layered on top; the rewrite has
+-- no `additional_vim_regex_highlighting`, so set 'syntax' directly.
+local regex_highlight = { markdown = true }
+
+local MAX_FILESIZE = 100 * 1024
+
+---@param buf integer
+---@return boolean
+local function oversized(buf)
+  local ok, stats = pcall(vim.uv.fs_stat, vim.api.nvim_buf_get_name(buf))
+  return (ok and stats and stats.size > MAX_FILESIZE) or false
+end
+
 return {
   'nvim-treesitter/nvim-treesitter',
-  branch = 'master',
+  branch = 'main',
+  -- The rewrite prepends its install_dir to 'runtimepath' during setup() and
+  -- explicitly does not support lazy-loading.
+  lazy = false,
   build = ':TSUpdate',
-  event = 'BufReadPost',
   dependencies = {
-    { 'nvim-treesitter/nvim-treesitter-textobjects', branch = 'master' },
     'nvim-treesitter/nvim-treesitter-context',
     'windwp/nvim-ts-autotag',
   },
-  opts = {
-    -- Enhanced language support for modern web development
-    ensure_installed = { -- Web Development Core
-      'html',
-      'css',
-      'scss',
-      'javascript',
-      'typescript',
-      'tsx',
-      'jsdoc', -- Modern Web Frameworks
-      'astro',
-      'svelte',
-      'vue', -- Styling & Templates
-      'json',
-      'json5',
-      'jsonc',
-      'yaml',
-      'toml',
-      'xml', -- Documentation & Markup
-      'markdown',
-      'markdown_inline', -- Programming Languages
-      'lua',
-      'luadoc',
-      'luap',
-      'java',
-      'c',
-      'cpp',
-      'rust',
-      'go',
-      'python',
-      'php',
-      'ruby',
-      'dart', -- Flutter/Dart support
-      'odin', -- Shell & Config
-      'bash',
-      'fish',
-      'dockerfile',
-      'vim',
-      'vimdoc',
-      'regex',
-      'gitignore',
-      'gitcommit',
-      'git_config',
-      'git_rebase',
-      -- Build Tools & Package Managers
-      'make',
-      'cmake', -- Data & Query Languages
-      'sql',
-      'graphql', -- Specialized
-      'http', -- REST client (.http files, kulala.nvim)
-      'diff',
-      'comment',
-    },
-    auto_install = true,
 
-    -- Enhanced highlighting
-    highlight = {
-      enable = true,
-      use_languagetree = true,
-      additional_vim_regex_highlighting = { 'markdown' },
-      disable = function(lang, buf)
-        local max_filesize = 100 * 1024 -- 100 KB
-        local ok, stats = pcall(vim.uv.fs_stat, vim.api.nvim_buf_get_name(buf))
-        if ok and stats and stats.size > max_filesize then return true end
-      end,
-    },
+  config = function()
+    local ts = require('nvim-treesitter')
 
-    -- Enhanced indentation
-    indent = {
-      enable = true,
-      disable = { 'python', 'yaml' }, -- These have issues with treesitter indent
-    },
+    -- Parsers are compiled artifacts, so keep them with the other regenerable
+    -- caches instead of in stdpath('data').
+    ts.setup({ install_dir = require('utils.paths').cache_path('treesitter') })
 
-    -- Enhanced text objects
-    textobjects = {
-      select = {
-        enable = true,
-        lookahead = true,
-        keymaps = {
-          ['af'] = '@function.outer',
-          ['if'] = '@function.inner',
-          ['ac'] = '@class.outer',
-          ['ic'] = '@class.inner',
-          ['aa'] = '@parameter.outer',
-          ['ia'] = '@parameter.inner',
-          ['ai'] = '@conditional.outer',
-          ['ii'] = '@conditional.inner',
-          ['al'] = '@loop.outer',
-          ['il'] = '@loop.inner',
-          ['ab'] = '@block.outer',
-          ['ib'] = '@block.inner',
-          ['as'] = '@statement.outer',
-          ['is'] = '@statement.inner',
-          ['ad'] = '@comment.outer',
-          ['id'] = '@comment.inner',
-          ['am'] = '@call.outer',
-          ['im'] = '@call.inner',
-        },
-      },
-      move = {
-        enable = true,
-        set_jumps = true,
-        goto_next_start = {
-          [']f'] = '@function.outer',
-          [']c'] = '@class.outer',
-          [']a'] = '@parameter.inner',
-          [']i'] = '@conditional.outer',
-          [']l'] = '@loop.outer',
-          [']s'] = '@statement.outer',
-          [']m'] = '@call.outer',
-        },
-        goto_next_end = {
-          [']F'] = '@function.outer',
-          [']C'] = '@class.outer',
-          [']A'] = '@parameter.inner',
-          [']I'] = '@conditional.outer',
-          [']L'] = '@loop.outer',
-          [']S'] = '@statement.outer',
-          [']M'] = '@call.outer',
-        },
-        goto_previous_start = {
-          ['[f'] = '@function.outer',
-          ['[c'] = '@class.outer',
-          ['[a'] = '@parameter.inner',
-          ['[i'] = '@conditional.outer',
-          ['[l'] = '@loop.outer',
-          ['[s'] = '@statement.outer',
-          ['[m'] = '@call.outer',
-        },
-        goto_previous_end = {
-          ['[F'] = '@function.outer',
-          ['[C'] = '@class.outer',
-          ['[A'] = '@parameter.inner',
-          ['[I'] = '@conditional.outer',
-          ['[L'] = '@loop.outer',
-          ['[S'] = '@statement.outer',
-          ['[M'] = '@call.outer',
-        },
-      },
-      swap = {
-        enable = true,
-        -- <leader><Down>/<Up> are taken by tab navigation (config/keymaps.lua)
-        swap_next = {
-          ['<leader>cs'] = '@parameter.inner',
-        },
-        swap_previous = {
-          ['<leader>cS'] = '@parameter.inner',
-        },
-      },
-      lsp_interop = {
-        enable = true,
-        border = 'single',
-        peek_definition_code = {
-          ['<leader>cp'] = '@function.outer',
-          ['<leader>cP'] = '@class.outer',
-        },
-      },
-    },
+    -- Incremental selection, reimplemented since the rewrite dropped the module.
+    -- Kept buffer-local so <CR> keeps its normal meaning in quickfix, help and
+    -- other windows without a parser.
+    ---@param buf integer
+    local function map_incremental(buf)
+      local incremental = require('utils.ts_incremental')
+      local map = function(mode, lhs, rhs, desc) vim.keymap.set(mode, lhs, rhs, { buffer = buf, desc = desc }) end
+      map('n', '<CR>', incremental.init_selection, 'Treesitter: start selection')
+      map('x', '<CR>', incremental.node_incremental, 'Treesitter: expand selection')
+      map('x', '<S-CR>', incremental.scope_incremental, 'Treesitter: expand to scope')
+      map('x', '<BS>', incremental.node_decremental, 'Treesitter: shrink selection')
+    end
 
-    -- Enhanced incremental selection with intuitive keymaps
-    incremental_selection = {
-      enable = true,
-      keymaps = {
-        init_selection = '<CR>', -- Enter to start selection
-        node_incremental = '<CR>', -- Enter to expand selection
-        scope_incremental = '<S-CR>', -- Shift+Enter for scope
-        node_decremental = '<BS>', -- Backspace to shrink selection
-      },
-    },
+    ---@param buf integer
+    ---@param lang string
+    local function enable(buf, lang)
+      if not vim.api.nvim_buf_is_valid(buf) then return end
 
-    -- Enhanced matching
-    matchup = {
-      enable = true,
-    },
-  },
+      pcall(vim.treesitter.start, buf, lang)
+      if regex_highlight[vim.bo[buf].filetype] then vim.bo[buf].syntax = 'ON' end
+      if not indent_disabled[lang] then vim.bo[buf].indentexpr = 'v:lua.require\'nvim-treesitter\'.indentexpr()' end
+      map_incremental(buf)
+    end
 
-  config = function(_, opts)
-    require('nvim-treesitter.configs').setup(opts)
+    ---@param buf integer
+    local function attach(buf)
+      local lang = vim.treesitter.language.get_lang(vim.bo[buf].filetype)
+      if not lang or oversized(buf) then return end
+
+      -- `language.add` resolves against the whole runtimepath, so this covers
+      -- both parsers this plugin installed (its install_dir is prepended, and
+      -- so wins) and any the distro ships -- `get_installed` would miss those.
+      if vim.treesitter.language.add(lang) then
+        enable(buf, lang)
+      elseif vim.list_contains(ts.get_available(), lang) then
+        -- Stand-in for master's `auto_install`: fetch on first sight, then light
+        -- the buffer up once the parser has actually landed.
+        ts.install({ lang }):await(function(err)
+          if err then return end
+          vim.schedule(function() enable(buf, lang) end)
+        end)
+      end
+    end
+
+    vim.api.nvim_create_autocmd('FileType', {
+      group = vim.api.nvim_create_augroup('user_treesitter', { clear = true }),
+      callback = function(ev) attach(ev.buf) end,
+    })
+
+    --- Attach to buffers whose FileType already fired -- during a session
+    --- restore, or before a parser finished building.
+    local function sweep_buffers()
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype ~= '' then attach(buf) end
+      end
+    end
+
+    local installed = {} ---@type table<string, boolean>
+    for _, lang in ipairs(ts.get_installed('parsers')) do
+      installed[lang] = true
+    end
+
+    local missing = vim.tbl_filter(function(lang) return not installed[lang] end, ensure_installed)
+    if #missing > 0 then ts.install(missing):await(vim.schedule_wrap(sweep_buffers)) end
+
+    vim.schedule(sweep_buffers)
 
     -- Configure treesitter context
     require('treesitter-context').setup({
@@ -219,18 +186,6 @@ return {
         end
       end,
     })
-
-    -- The buffer that triggered this load (BufReadPost) had its FileType
-    -- event fire *before* nvim-treesitter was available, so treesitter's
-    -- FileType handler was never called for it.  Re-fire FileType now so
-    -- nvim-treesitter's handler picks it up via its own parser-path machinery.
-    vim.schedule(function()
-      local buf = vim.api.nvim_get_current_buf()
-      if vim.bo[buf].filetype == '' then return end
-      local ok, stats = pcall(vim.uv.fs_stat, vim.api.nvim_buf_get_name(buf))
-      if ok and stats and stats.size > 100 * 1024 then return end
-      vim.api.nvim_exec_autocmds('FileType', { buffer = buf, modeline = false })
-    end)
 
     -- nvim-ts-autotag is configured in plugins/editor/autotag.lua
   end,

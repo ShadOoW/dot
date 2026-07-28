@@ -2,13 +2,20 @@
   "description": "Neovim with LSP, Mason, and modern plugins",
   "packages": {
     "arch": {
-      "pacman": ["neovim", "tree-sitter", "python-pynvim", "ripgrep", "fd"]
+      "pacman": [
+        "neovim",
+        "tree-sitter",
+        "tree-sitter-cli",
+        "python-pynvim",
+        "ripgrep",
+        "fd"
+      ]
     },
     "void": {
       "xbps": ["neovim", "python3-neovim", "tree-sitter", "ripgrep", "fd"]
     },
     "macos": {
-      "brew": ["neovim", "ripgrep", "fd"]
+      "brew": ["neovim", "tree-sitter", "ripgrep", "fd"]
     }
   },
   "tags": ["editor", "dev"],

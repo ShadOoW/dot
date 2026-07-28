@@ -152,16 +152,16 @@
     "commit": "f8e87b96cd6362ef8579be456afee3b38fd7e2a8"
   },
   "nvim-treesitter": {
-    "branch": "master",
-    "commit": "cf12346a3414fa1b06af75c79faebe7f76df080a"
+    "branch": "main",
+    "commit": "61df84986b4b4ec469ee745a182e433d49f8c27e"
   },
   "nvim-treesitter-context": {
     "branch": "master",
     "commit": "b311b30818951d01f7b4bf650521b868b3fece16"
   },
   "nvim-treesitter-textobjects": {
-    "branch": "master",
-    "commit": "5ca4aaa6efdcc59be46b95a3e876300cfead05ef"
+    "branch": "main",
+    "commit": "898ee307df58f854d11cd7edd06472574d48014e"
   },
   "nvim-ts-autotag": {
     "branch": "main",
