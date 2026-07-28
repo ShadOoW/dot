@@ -1,0 +1,9 @@
+{
+  "description": "journald disk limits — cap the journal instead of letting it grow to the 4G default",
+  "packages": {
+    "arch": { "pacman": [] }
+  },
+  "tags": ["system"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}
