@@ -1,0 +1,10 @@
+{
+  "description": "Disk-backed swapfile on the XFS engine partition — real capacity behind zram",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] }
+  },
+  "tags": ["system"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}
