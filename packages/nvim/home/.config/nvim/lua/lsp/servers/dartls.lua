@@ -258,12 +258,9 @@ return {
       })
     )
 
-    -- Enable inlay hints if supported
-    if client.server_capabilities.inlayHintProvider then
-      vim.lsp.inlay_hint.enable(true, {
-        bufnr = bufnr,
-      })
-    end
+    -- Inlay hints follow the global level (utils/noise.lua, <leader>ch) rather
+    -- than forcing themselves on for this filetype only.
+    if client.server_capabilities.inlayHintProvider then require('utils.noise').apply_hints(client) end
 
     -- Format on save is handled by conform.nvim (lsp_format fallback with an
     -- empty formatter list for dart → LSP formatting; single formatter path).

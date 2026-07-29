@@ -25,26 +25,18 @@ return {
         enable = true,
         rangeFormatting = { enable = true },
       },
-      inlayHints = {
-        bindingModeHints = { enable = true },
-        chainingHints = { enable = true },
-        closingBraceHints = { enable = true, minLines = 10 },
-        closureReturnTypeHints = { enable = 'with_block' },
-        lifetimeElisionHints = { enable = 'skip_trivial', useParameterNames = true },
-        maxLength = { enable = true, length = 25 },
-        parameterHints = { enable = true },
-        typeHints = {
-          enable = true,
-          hideClosureInitialization = false,
-          hideNamedConstructor = false,
-        },
-      },
+      -- Which hints are on depends on the current level; utils/noise.lua owns
+      -- the profiles and re-pushes them on <leader>ch.
+      inlayHints = require('utils.noise').ra_inlay_hints(),
       diagnostics = {
         disabled = { 'unlinked-file' },
         experimental = { enable = true },
       },
       completion = {
-        callable = { snippets = 'fill_arguments' },
+        -- Never synthesise a call: completing a function that is being *passed*
+        -- as an argument would otherwise insert `()` (or worse, placeholder
+        -- arguments) and the fix costs more keystrokes than typing the name.
+        callable = { snippets = 'none' },
         postfix = { enable = true },
       },
       imports = {

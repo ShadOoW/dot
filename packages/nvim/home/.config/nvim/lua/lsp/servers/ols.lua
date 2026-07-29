@@ -91,16 +91,13 @@ return {
   },
 
   -- Custom on_attach function for OLS-specific keybindings
-  on_attach = function(client, bufnr)
+  on_attach = function(client, _)
     -- Standard LSP keybindings are handled by the main LSP configuration
     -- Add any OLS-specific keybindings here if needed
 
-    -- Enable inlay hints if supported
-    if client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
-      vim.lsp.inlay_hint.enable(true, {
-        bufnr = bufnr,
-      })
-    end
+    -- Inlay hints follow the global level (utils/noise.lua, <leader>ch) rather
+    -- than forcing themselves on for this filetype only.
+    if client.server_capabilities.inlayHintProvider then require('utils.noise').apply_hints(client) end
 
     -- Format on save is handled by conform.nvim (odin uses lsp_format = 'prefer';
     -- single formatter path, no duplicate BufWritePre autocmd here).

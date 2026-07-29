@@ -247,7 +247,9 @@ keymap.n(']e', function()
   vim.diagnostic.jump({ count = 1, float = true, severity = vim.diagnostic.severity.ERROR })
   vim.schedule(function() vim.cmd('normal! zz') end)
 end, 'Next error')
-keymap.n('<leader>cd', function() vim.diagnostic.open_float() end, 'Show diagnostic float')
+-- Read the message when you want it, in a window you can stand in: `q` closes,
+-- <C-u>/<C-d> scroll, pressing it again from inside dismisses.
+keymap.n('<leader>cd', function() require('utils.noise').diagnostic_float() end, 'Read diagnostics on this line')
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- Tab Management

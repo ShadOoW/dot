@@ -69,24 +69,14 @@ function M.on_attach(client, bufnr)
     })
   end
 
-  -- Inlay hints toggle (if supported)
+  -- Inlay hints (if supported).  Levels and the server-side hint profiles live
+  -- in utils/noise.lua so every inline decoration is configured in one place.
   if client.server_capabilities.inlayHintProvider then
-    -- Enable inlay hints by default
-    vim.lsp.inlay_hint.enable(true, {
-      bufnr = bufnr,
-    })
+    local noise = require('utils.noise')
+    noise.apply_hints(client)
 
     -- <leader>c prefix (Code); <leader>t is reserved for tab management
-    buf_map(
-      'n',
-      '<leader>ch',
-      function()
-        vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({
-          bufnr = bufnr,
-        }))
-      end,
-      'Toggle Inlay [H]ints'
-    )
+    buf_map('n', '<leader>ch', noise.cycle_hints, 'Cycle Inlay [H]ints')
   end
 
   -- Document highlight is handled by vim-illuminate (plugins/ui/cursorline.lua)
@@ -106,31 +96,9 @@ function M.populate_workspace_diagnostics_for_buf(bufnr)
   end
 end
 
--- Configure diagnostics
-function M.setup_diagnostics()
-  vim.diagnostic.config({
-    severity_sort = true,
-    float = {
-      border = 'rounded',
-      source = 'if_many',
-    },
-    underline = {
-      severity = vim.diagnostic.severity.ERROR,
-    },
-    signs = vim.g.have_nerd_font and {
-      text = {
-        [vim.diagnostic.severity.ERROR] = '󰅚 ',
-        [vim.diagnostic.severity.WARN] = '󰀪 ',
-        [vim.diagnostic.severity.INFO] = '󰋽 ',
-        [vim.diagnostic.severity.HINT] = '󰌶 ',
-      },
-    } or {},
-    -- Virtual lines render the full message on a dedicated line below the
-    -- offending code, which is far more readable than right-side virtual text
-    -- that gets clipped. current_line keeps noise low on large files.
-    virtual_lines = { current_line = true },
-    virtual_text = false,
-  })
-end
+-- Configure diagnostics.  Owned by utils/noise.lua, which keeps the inline
+-- display (virtual lines, deduplication, insert-mode suppression) in the same
+-- place as the inlay-hint and ghost-text levels.
+function M.setup_diagnostics() require('utils.noise').setup() end
 
 return M

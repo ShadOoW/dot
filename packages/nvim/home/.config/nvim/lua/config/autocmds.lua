@@ -166,31 +166,10 @@ vim.api.nvim_create_autocmd('FileType', {
   desc = 'Configure web framework files (excluding HTML for superhtml compatibility)',
 })
 
--- Enhanced HTML/CSS/JS error checking
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'html', 'css', 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
-  callback = function()
-    -- Enable more aggressive diagnostics for web files with error handling
-    local buf = vim.api.nvim_get_current_buf()
-
-    -- Only configure diagnostics if buffer is valid
-    if vim.api.nvim_buf_is_valid(buf) then
-      local ok, _ = pcall(vim.diagnostic.config, {
-        -- VS Code-like: show inline text for warnings and errors and include source when useful
-        virtual_text = {
-          source = 'if_many',
-        },
-        signs = true,
-        underline = true,
-        update_in_insert = false,
-        severity_sort = true,
-      }, buf)
-
-      -- If diagnostic config fails, just silently continue
-      if not ok then notify.debug('Failed to configure diagnostics for buffer ' .. buf) end
-    end
-  end,
-})
+-- Web filetypes used to opt into buffer-local virtual_text diagnostics here.
+-- They now use the same display as everything else (utils/noise.lua): stacking
+-- a per-buffer override on top of the global virtual_lines drew every message
+-- twice, once beside the code and once beneath it.
 
 -- Window management for better tmux integration
 local window_group = vim.api.nvim_create_augroup('window-management', {

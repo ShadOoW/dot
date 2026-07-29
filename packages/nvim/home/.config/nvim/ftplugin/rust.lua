@@ -12,6 +12,9 @@ vim.opt_local.autoindent = true
 
 vim.opt_local.spell = true
 vim.opt_local.spelllang = { 'en_us' }
+-- Split camelCase/PascalCase before checking, so identifiers quoted in strings
+-- and doc comments stop drawing red squiggles under correctly spelled code.
+vim.opt_local.spelloptions = 'camel'
 
 vim.opt_local.textwidth = 100
 
