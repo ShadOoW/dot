@@ -66,6 +66,11 @@ return {
           group = 'Panels',
         },
         {
+          'gs',
+          group = 'Surround',
+          mode = { 'n', 'x' },
+        },
+        {
           '<leader>a',
           group = 'Notes & Journal',
         },

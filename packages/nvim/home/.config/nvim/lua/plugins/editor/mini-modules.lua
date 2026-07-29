@@ -10,16 +10,19 @@ return {
     require('mini.bracketed').setup({})
 
     -- Add/delete/replace surroundings (enhanced version)
+    -- Prefixed with `g` so bare `s` belongs to flash.nvim: a jump you make
+    -- dozens of times an hour earns the single keystroke, surrounding a word
+    -- does not.  Same letters as before, one key earlier.
     require('mini.surround').setup({
       -- Add custom surroundings here if needed
       mappings = {
-        add = 'sa', -- Add surrounding in Normal and Visual modes
-        delete = 'sd', -- Delete surrounding
-        find = 'sf', -- Find surrounding (to the right)
-        find_left = 'sF', -- Find surrounding (to the left)
-        highlight = 'sh', -- Highlight surrounding
-        replace = 'sc', -- Replace surrounding
-        update_n_lines = 'sn', -- Update `n_lines`
+        add = 'gsa', -- Add surrounding in Normal and Visual modes
+        delete = 'gsd', -- Delete surrounding
+        find = 'gsf', -- Find surrounding (to the right)
+        find_left = 'gsF', -- Find surrounding (to the left)
+        highlight = 'gsh', -- Highlight surrounding
+        replace = 'gsc', -- Replace surrounding
+        update_n_lines = 'gsn', -- Update `n_lines`
       },
     })
 

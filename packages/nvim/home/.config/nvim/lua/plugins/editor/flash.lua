@@ -41,12 +41,16 @@ return {
       jumplist = true,
       -- jump position
       pos = 'start', ---@type "start" | "end" | "range"
-      -- add pattern to search history
-      history = false,
-      -- add pattern to search register
-      register = false,
-      -- clear highlight after jump
-      nohlsearch = false,
+      -- Landing on a label ends the flash prompt, so `n`/`N` are the only way
+      -- to keep moving through the rest of the matches.  Writing the pattern to
+      -- the search register and history is what makes them work — otherwise you
+      -- have to start the search over to reach the second occurrence.
+      history = true,
+      register = true,
+      -- Clear the highlight on landing even though the register is set: leaving
+      -- every match lit is the sort of standing decoration we removed
+      -- everywhere else.  `n` turns it back on for as long as you are using it.
+      nohlsearch = true,
       -- automatically jump when there is only one match
       autojump = false,
       -- You can force inclusive/exclusive jumps by setting the
@@ -281,17 +285,20 @@ return {
     },
   },
   keys = {
+    -- `s` and `S` sit next to each other for the two things you do most: go
+    -- somewhere you can see, or select the block you are standing in.  Bare `s`
+    -- was vanilla's `cl`; mini.surround moved to the `gs` prefix to free it.
     {
-      'g/',
+      's',
       mode = { 'n', 'x', 'o' },
       function() require('flash').jump() end,
-      desc = 'Flash',
+      desc = 'Flash jump to a visible target',
     },
     {
       'S',
       mode = { 'n', 'o', 'x' },
       function() require('flash').treesitter() end,
-      desc = 'Flash Treesitter',
+      desc = 'Flash select surrounding block',
     },
     {
       'r',
