@@ -1,0 +1,136 @@
+// OMO configuration — managed by packages/oh-my-openagent
+// Per-machine overrides go in <project>/.opencode/oh-my-openagent.jsonc
+// Telemetry is disabled via env (OMO_DISABLE_POSTHOG=1 in ~/.zshenv) —
+// OmoConfigSchema is .strict() and does not accept a top-level `telemetry` key.
+{
+  "[opencode]": {
+    "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/omo.schema.json",
+    "agents": {
+      "sisyphus": {
+        "model": "anthropic/claude-opus-5",
+        "variant": "max"
+      },
+      "oracle": {
+        "model": "google/gemini-3.1-pro-preview",
+        "variant": "high",
+        "fallback_models": [
+          {
+            "model": "anthropic/claude-opus-5",
+            "variant": "max"
+          }
+        ]
+      },
+      "librarian": {
+        "model": "anthropic/claude-haiku-4-5"
+      },
+      "explore": {
+        "model": "anthropic/claude-haiku-4-5"
+      },
+      "multimodal-looker": {
+        "model": "opencode/gpt-5-nano"
+      },
+      "prometheus": {
+        "model": "anthropic/claude-fable-5",
+        "variant": "high"
+      },
+      "metis": {
+        "model": "anthropic/claude-opus-5",
+        "variant": "high"
+      },
+      "momus": {
+        "model": "anthropic/claude-opus-5",
+        "variant": "max",
+        "fallback_models": [
+          {
+            "model": "google/gemini-3.1-pro-preview",
+            "variant": "high"
+          }
+        ]
+      },
+      "atlas": {
+        "model": "anthropic/claude-sonnet-4-6"
+      },
+      "sisyphus-junior": {
+        "model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "categories": {
+      "visual-engineering": {
+        "model": "anthropic/claude-opus-5",
+        "variant": "max",
+        "fallback_models": [
+          {
+            "model": "anthropic/claude-fable-5",
+            "variant": "low"
+          },
+          {
+            "model": "google/gemini-3.1-pro-preview",
+            "variant": "high"
+          }
+        ]
+      },
+      "ultrabrain": {
+        "model": "google/gemini-3.1-pro-preview",
+        "variant": "high",
+        "fallback_models": [
+          {
+            "model": "anthropic/claude-opus-5",
+            "variant": "max"
+          }
+        ]
+      },
+      "deep": {
+        "model": "anthropic/claude-opus-5",
+        "variant": "max",
+        "fallback_models": [
+          {
+            "model": "google/gemini-3.1-pro-preview",
+            "variant": "high"
+          }
+        ]
+      },
+      "artistry": {
+        "model": "anthropic/claude-fable-5",
+        "variant": "high",
+        "fallback_models": [
+          {
+            "model": "anthropic/claude-opus-5",
+            "variant": "high"
+          }
+        ]
+      },
+      "quick": {
+        "model": "anthropic/claude-haiku-4-5",
+        "fallback_models": [
+          {
+            "model": "google/gemini-3-flash-preview"
+          }
+        ]
+      },
+      "unspecified-low": {
+        "model": "anthropic/claude-sonnet-4-6",
+        "fallback_models": [
+          {
+            "model": "google/gemini-3-flash-preview"
+          }
+        ]
+      },
+      "unspecified-high": {
+        "model": "anthropic/claude-sonnet-4-6",
+        "fallback_models": [
+          {
+            "model": "google/gemini-3-flash-preview"
+          }
+        ]
+      },
+      "writing": {
+        "model": "google/gemini-3-flash-preview",
+        "fallback_models": [
+          {
+            "model": "anthropic/claude-sonnet-4-6"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -15,6 +15,12 @@ export EDITOR=nvim
 export PASSWORD_STORE_DIR=/data/stash/pass
 export PRETTIERD_DEFAULT_CONFIG="$HOME/.config/prettierd/.prettierrc"
 
+# oh-my-openagent — disable PostHog telemetry. The runtime check is env-only:
+# ~/.omo/omo.jsonc uses OmoConfigSchema (strict) which rejects `telemetry`
+# at root. Set both flags so the check trips regardless of product prefix.
+export OMO_DISABLE_POSTHOG=1
+export OMO_SEND_ANONYMOUS_TELEMETRY=0
+
 # OS/distro — single source of truth, available in all shell contexts
 if [[ "$(uname)" == "Darwin" ]]; then
   export _DISTRO=macos

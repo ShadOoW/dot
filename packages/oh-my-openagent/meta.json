@@ -1,0 +1,11 @@
+{
+  "description": "oh-my-openagent (Ultimate edition) — 11 discipline agents, lifecycle hooks, MCPs, slash commands. Claude-primary, Gemini fallback via Antigravity.",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] },
+    "macos": { "brew": [] }
+  },
+  "tags": ["ai", "editor"],
+  "cleanSteps": [],
+  "os": ["linux", "macos"]
+}
