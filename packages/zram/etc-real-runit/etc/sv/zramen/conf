@@ -1,0 +1,31 @@
+# zramen configuration — the runit/Void half of the zram setup.
+#
+# Void's stock /etc/sv/zramen/conf ships with every line commented out, so zramen runs on
+# its built-in defaults. Those defaults are *mostly* fine but they are implicit, they drift
+# with the package, and they disagree with the systemd side. Everything here is therefore
+# pinned explicitly. Keep in sync with ../../../../etc-real-systemd/etc/systemd/zram-generator.conf
+# and with docs/zram.md.
+
+# 25% of RAM (31 GiB host -> ~7.8 GiB), matching `zram-size = ram * 0.25` on Arch.
+#
+# This is the same number zramen defaults to, and it is pinned anyway ON PURPOSE: the Arch
+# side sat at 75% and hard-locked the machine once or twice a day between 2026-07-28 and
+# 08-01 (zram reclaim livelock — zsmalloc cannot allocate the page it needs to store a
+# compressed page, so swap-out fails and kswapd stops making progress; see docs/zram.md,
+# "The 0.75 freeze"). A value this load-bearing does not get to be an upstream default that
+# a package update can quietly change.
+export ZRAM_SIZE=25
+
+# Hard ceiling in MiB, independent of the percentage. zramen only applies a cap when one is
+# set explicitly — ZRAM_MAX_SIZE unset means NO cap, not the 4096 shown in the stock conf's
+# commented example. 8192 keeps the device bounded if this box is ever given more RAM.
+export ZRAM_MAX_SIZE=8192
+
+# zstd, not zramen's lz4 default — better ratio for the same reason Arch uses it, and it
+# keeps the two boots comparable when reading `zramctl` output.
+export ZRAM_COMP_ALGORITHM=zstd
+
+# Priority 100 rather than zramen's 32767. What matters is only that zram outranks the
+# NVMe swapfile (`/mnt/engine/swapfile ... pri=10` in fstab) so compressed RAM fills first
+# and the disk takes genuine overflow. 100 matches swap-priority on the systemd side.
+export ZRAM_PRIORITY=100

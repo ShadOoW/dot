@@ -4,7 +4,8 @@
 # Why: /data is a btrfs-pool subvolume that is NOT mounted yet when zram is set up.
 #   * zram-generator is a systemd *generator* — it runs before any unit, earliest in boot
 #   * systemd-modules-load runs at sysinit, ~1s before data.mount
-# A symlink into /data resolves to nothing there, and neither consumer errors usefully —
+#   * runit's 08-sysctl.sh core service runs before any filesystem beyond / is up
+# A symlink into /data resolves to nothing there, and no consumer errors usefully —
 # they treat the config as absent and you simply boot with no swap:
 #   zram_generator::config: No configuration found.
 #   systemd-modules-load: Failed to chase '/etc/modules-load.d/zram.conf'
@@ -12,21 +13,29 @@
 # because `systemctl daemon-reload` re-runs generators *after* /data is mounted, so swap
 # would appear hours into a boot from some unrelated reload.
 #
-# These files live under etc-real/ rather than system/ ON PURPOSE: dot's linker only walks
+# These files live under etc-real*/ rather than system/ ON PURPOSE: dot's linker only walks
 # home/ and system/ (src/lib/pkg.ts collectFiles), so `dot link zram` physically cannot
 # recreate the symlink. The dot copy is the reference; /etc is authoritative. Change both.
 # See docs/zram.md and the "Early boot" section of /data/ops/CLAUDE.md.
+#
+# Three trees, because this box dual-boots Arch (systemd) and Void (runit):
+#   etc-real/          both inits  — sysctl.d reclaim watermarks
+#   etc-real-systemd/  Arch only   — zram-generator.conf, modules-load.d
+#   etc-real-runit/    Void only   — /etc/sv/zramen/conf
+# The shared tree is not optional on either side: the watermark tuning is what keeps
+# zsmalloc able to allocate under pressure, and without it BOTH boots can livelock the same
+# way Arch did between 2026-07-28 and 08-01. See docs/zram.md, "The 0.75 freeze".
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 
-# Everything below is systemd-specific: zram-generator and modules-load.d are systemd
-# mechanisms. Void does zram with `zramen` (see meta.json xbps + enable-runit.sh), so on
-# runit this script has nothing to do and must not litter /etc with inert files.
-if [ ! -d /run/systemd ]; then
-  echo "not a systemd system — Void uses zramen instead:"
-  echo "  dot pkg zram enable --init runit"
+if [ -d /run/systemd ]; then
+  INIT=systemd
+elif [ -d /etc/sv ]; then
+  INIT=runit
+else
+  echo "zram: unrecognised init (no /run/systemd, no /etc/sv) — nothing to do" >&2
   exit 0
 fi
 
@@ -50,22 +59,50 @@ install_real() { # $1 = source in dot, $2 = destination under /etc
   printf '  installed  %s\n' "$dst"
 }
 
-echo "zram: installing real files into /etc (never symlinks — see this script's header)"
-while IFS= read -r -d '' src; do
-  install_real "$src" "${src#"$DIR/etc-real"}"
-done < <(find "$DIR/etc-real" -type f -print0 | sort -z)
+install_tree() { # $1 = tree root under $DIR
+  local root=$1
+  [ -d "$root" ] || return 0
+  while IFS= read -r -d '' src; do
+    install_real "$src" "${src#"$root"}"
+  done < <(find "$root" -type f -print0 | sort -z)
+}
 
-$SUDO systemctl daemon-reload # re-runs the generator so dev-zram0.swap exists now
+echo "zram: installing real files into /etc for init=$INIT (never symlinks — see header)"
+install_tree "$DIR/etc-real"
+install_tree "$DIR/etc-real-$INIT"
 
-# Only touch the device if it is not already live — restarting the setup unit under an
-# active swap device fails on EBUSY.
-if ! swapon --show=NAME --noheadings 2>/dev/null | grep -qx '/dev/zram0'; then
-  $SUDO systemctl start systemd-zram-setup@zram0.service || true
-  $SUDO systemctl start dev-zram0.swap || true
+# Reclaim watermarks. Both inits read /etc/sysctl.d — systemd via systemd-sysctl.service,
+# Void via /etc/runit/core-services/08-sysctl.sh. Apply now so configure is not a no-op
+# until the next reboot.
+$SUDO sysctl --system >/dev/null 2>&1 ||
+  $SUDO sysctl -p /etc/sysctl.d/30-reclaim.conf >/dev/null # runit's sysctl has no --system
+
+if [ "$INIT" = systemd ]; then
+  $SUDO systemctl daemon-reload # re-runs the generator so dev-zram0.swap exists now
+
+  # Only touch the device if it is not already live — restarting the setup unit under an
+  # active swap device fails on EBUSY. A resize therefore needs a reboot, by design: we are
+  # not swapoff'ing a device with gigabytes of live anonymous pages on it.
+  if ! swapon --show=NAME --noheadings 2>/dev/null | grep -qx '/dev/zram0'; then
+    $SUDO systemctl start systemd-zram-setup@zram0.service || true
+    $SUDO systemctl start dev-zram0.swap || true
+  fi
+else
+  # zramen reads ./conf from its service dir at start and modprobes zram itself, so there is
+  # no modules-load.d equivalent to install. Restart only if already supervised; enabling is
+  # `dot pkg zram enable --init runit` (symlinks /etc/sv/zramen into /var/service).
+  if [ -e /var/service/zramen ]; then
+    $SUDO sv restart zramen || true
+  else
+    echo
+    echo "  zramen is not enabled yet:  dot pkg zram enable --init runit"
+  fi
 fi
 
 echo
 swapon --show || echo "  (no swap active)"
+printf 'min_free_kbytes   : %s\n' "$(sysctl -n vm.min_free_kbytes)"
+printf 'watermark_scale   : %s\n' "$(sysctl -n vm.watermark_scale_factor)"
 echo
-echo "Verify on a FRESH BOOT, not after a daemon-reload — a reload masks this bug:"
-echo "  swapon --show | grep zram0"
+echo "Verify on a FRESH BOOT, not after a daemon-reload — a reload masks the /data bug:"
+echo "  swapon --show | grep zram"
