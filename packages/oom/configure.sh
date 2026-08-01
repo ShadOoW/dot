@@ -60,7 +60,10 @@ done < <(find "$DIR/etc-real" -type f -print0 | sort -z)
 $SUDO systemctl daemon-reload
 
 # ------------------------------------------------------------------- 3. earlyoom
-$SUDO systemctl enable --now earlyoom.service
+$SUDO systemctl enable earlyoom.service
+# restart, not `enable --now`: `start` is a no-op on an already-running unit, so a changed
+# ExecStart in 10-args.conf would sit on disk without ever reaching the running process.
+$SUDO systemctl restart earlyoom.service
 # Prove the ExecStart override took, rather than assuming it did.
 echo
 echo "earlyoom argv now in effect:"
@@ -84,6 +87,7 @@ printf 'oom-notify        : %s\n' "$(systemctl --user is-active oom-notify.servi
 printf 'system.slice min  : %s\n' "$(systemctl show system.slice -p MemoryMin --value)"
 printf 'user@1000 oomadj  : %s (was 100 from upstream)\n' "$(systemctl show user@1000.service -p OOMScoreAdjust --value)"
 printf 'swap              : %s\n' "$(swapon --show=NAME,SIZE,PRIO --noheadings | tr '\n' ';' || echo none)"
+printf 'min_free_kbytes   : %s (set by packages/zram)\n' "$(sysctl -n vm.min_free_kbytes)"
 echo
 echo "Test the notification path without causing a real OOM:"
 echo "  systemd-cat -t kernel echo 'Out of memory: Killed process 1 (canary)'"

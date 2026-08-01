@@ -1,19 +1,65 @@
 # oom — memory safety
 
 Minimal setup so **the system itself never runs out of RAM**, and so an OOM kill is never
-silent. Three parts, deliberately no more.
+silent.
 
 ```sh
 dot link oom            # user unit + ~/.local/bin/oom-notify
-dot pkg oom configure   # earlyoom, /etc drop-ins, enable everything
+dot pkg oom configure   # earlyoom, /etc drop-ins, sysctl, enable everything
 ```
 
 | Part                               | Does                                                                          |
 | ---------------------------------- | ----------------------------------------------------------------------------- |
-| `earlyoom`                         | kills the largest offending **process** before the kernel's blunt killer runs |
+| `earlyoom -m 10,5 -s 100,100`      | kills the largest offending **process** before the kernel's blunt killer runs |
 | `system.slice` `MemoryMin=1G`      | a floor of memory the kernel will not reclaim from system services            |
 | `user@.service` `OOMScoreAdjust=0` | stops the kernel preferring your session manager over the real hog            |
 | `oom-notify.service`               | red, non-expiring notification on any OOM kill                                |
+
+## Why `-s 100,100` and not `-s 10,5` (2026-08-01)
+
+earlyoom's `--help`, verbatim:
+
+> Note: **both** memory and swap must be below minimum for earlyoom to act.
+
+That AND clause silently disabled earlyoom on this box. With ~39 GiB of swap advertised
+(23 GiB zram + 16 GiB NVMe swapfile), swap-free never gets near 10% before physical RAM is
+exhausted. At the 2026-07-30 23:01 freeze:
+
+```
+Node 0 Normal free:19540kB   min:64308kB      <- RAM gone
+Free swap = 27990116kB                        <- swap 68% free
+```
+
+Memory was catastrophically low, swap looked healthy, so earlyoom stayed asleep, the kernel
+OOM killer stayed asleep, and the machine hard-locked. Pinning the swap threshold at 100%
+makes that clause always true and reduces the trigger to the memory condition — the one
+that actually predicts trouble on a machine with swap this large.
+
+## The freeze this package did not catch (2026-07-28 → 08-01)
+
+Distinct from the OOM below. Four consecutive boots ended with **no shutdown sequence in
+the journal** — a hard lock, not a kill. Root cause was a zram reclaim livelock: to swap a
+page out zram must allocate a page, that allocation fails at the watermark, so the swap-out
+fails and `kswapd` cannot make progress. `mode:0xc0de0` on every failure is the `zsmalloc`
+signature; `zspages` climbed to 3.8 GiB.
+
+Full write-up and kernel evidence: **`docs/zram.md`, "The 0.75 freeze"**. The fix has three
+legs and none is sufficient alone; only one of them lives here:
+
+| leg                                                           | package                                               |
+| ------------------------------------------------------------- | ----------------------------------------------------- |
+| `earlyoom -s 100,100`                                         | **this one**                                          |
+| zram device 0.75 → 0.25                                       | `packages/zram`                                       |
+| `min_free_kbytes` 64→512 MiB, `watermark_scale_factor` 10→200 | `packages/zram/etc-real/etc/sysctl.d/30-reclaim.conf` |
+
+The watermark sysctl is in `zram` rather than here on purpose: it is headroom for
+`zsmalloc`, it applies to both inits, and this package is Arch/systemd-only. **Void gets the
+zram and sysctl legs but has no earlyoom** — see `packages/zram/README.md`.
+
+Named allocators in the failure dumps, worth watching: `Bun Pool 2` in
+`cpuset=lake-collect.service` (3 of 5 events; that service was at 2.3 GiB with
+`MemoryMax=infinity`), plus `zsh` and `kswapd0`. `lake-collect` is defined in `/data/ops`,
+not here — capping it is an ops-repo change, not a dotfiles one.
 
 ## What actually went wrong (2026-07-28 17:33)
 
