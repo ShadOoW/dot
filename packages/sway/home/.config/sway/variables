@@ -16,6 +16,9 @@ set {
     $sp_btw "~/.config/sway/scripts/toggle-scratchpad.sh btw app_id btw-scratch 'kitty --app-id btw-scratch'"
     $sp_music "~/.config/sway/scripts/toggle-scratchpad.sh music app_id music-mark 'kitty --app-id music-mark ncmpcpp'"
     $sp_explorer "~/.config/sway/scripts/toggle-scratchpad.sh explorer app_id yazi-explorer 'kitty --app-id yazi-explorer yazi'"
-    $sp_chatgpt "~/.config/sway/scripts/toggle-scratchpad.sh chatgpt app_id org.qutebrowser.qutebrowser 'qutebrowser https://chatgpt.com'"
-    $sp_whatsapp "~/.config/sway/scripts/toggle-scratchpad.sh whatsapp app_id org.qutebrowser.qutebrowser 'whatsapp https://web.whatsapp.com'"
 }
+# Removed $sp_chatgpt / $sp_whatsapp: both keyed the scratchpad on the same app_id
+# (org.qutebrowser.qutebrowser), so they could only ever have toggled the same window as each
+# other. $sp_whatsapp had no binding at all and ran a command that does not exist
+# ("whatsapp ..."); $sp_chatgpt's only binding was already commented out. ChatGPT and
+# WhatsApp are installed as PWAs now and land on ws10 via the assign rule in ./rules.
