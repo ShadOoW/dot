@@ -75,6 +75,35 @@ and `chrome://gpu` should show Vulkan/OpenGL backed rather than "Software only".
 
 - `--enable-features=UseOzonePlatform` — Ozone has been unconditional since Chromium 117.
 
+## `--ozone-platform-hint=auto` is dead in this generation (2026-08-03)
+
+The switch is simply absent from the shipped binaries — it is not a case of being accepted
+and ignored, it no longer exists:
+
+```sh
+for b in /opt/vivaldi/vivaldi-bin /usr/lib/chromium/chromium /usr/lib/electron43/electron; do
+  printf '%s %s\n' "$b" "$(strings "$b" | grep -c ozone-platform-hint)"
+done   # → 0 for all three; `ozone-platform` is present
+```
+
+Of the installed Electron runtimes, only `electron37` still carries it. So all three flag
+files now pin `--ozone-platform=wayland` directly, which takes precedence over the hint
+anyway and works on every version present. Vivaldi had been reaching Wayland by
+auto-detection alone, not because of the flag.
+
+**`--enable-features=WaylandWindowDecorations` is NOT dead — keep it.** It survives in
+electron37 through electron42 and was only dropped in electron43:
+
+```sh
+for v in 37 39 40 41 42 43; do
+  printf 'electron%s %s\n' "$v" \
+    "$(strings /usr/lib/electron$v/electron | grep -c WaylandWindowDecorations)"
+done   # → 1 for 37–42, 0 for 43
+```
+
+Sampling only `electron43` makes it look removed. It is still load-bearing for the older
+runtimes, which are installed and in use.
+
 ## GPU/compositor pinning context
 
 `~/.local/bin/sway` pins the compositor to the Intel iGPU by path, not by node number:
