@@ -53,7 +53,7 @@ copyimg() {
     return 1
   fi
 
-  ${IMG_VIEWER:-feh} "$tmp"
+  ${IMG_VIEWER:-swayimg} "$tmp"
 }
 
 zdrag() {

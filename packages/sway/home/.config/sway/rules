@@ -4,33 +4,53 @@ for_window {
 
   # Media
   [app_id="mpv"] fullscreen
-  [class="feh"] fullscreen
+  # Was [class="feh"] — an XWayland client, matched on the X11 `class` property. swayimg is
+  # Wayland-native, so this is an app_id match now.
+  [app_id="swayimg"] fullscreen
 
-  # Popups
+  # Popups — Wayland clients (app_id)
+  #
+  # Wayland dialogs need NO rule here. sway floats any xdg_shell toplevel that sets a
+  # parent, natively: wants_floating() in sway/desktop/xdg_shell.c ends in `|| toplevel->parent`.
+  # Only add app_id rules for windows that are *not* parented and still want floating.
   [app_id="xarchiver"] floating enable
-  [app_id="ulauncher"] floating enable, border none
+  [app_id="thunar" title="File Operation Progress"] floating enable, border pixel 1
+
+  # Popups — XWayland clients only (window_role/window_type)
+  #
+  # window_role, window_type, class and instance are X11 properties; `man 5 sway` marks each
+  # "specific to X11 applications and requires XWayland". They can never match a Wayland
+  # client, so they do nothing for Vivaldi, Thunar, mpv, kitty, Element, etc. They are kept
+  # solely for the XWayland clients this system still runs on purpose: steam, and games
+  # launched through it (Proton/Wine). feh was the other one until it was replaced by swayimg
+  # on 2026-08-05; steam is now the only reason Xwayland loads at all.
+  # Do not add rules here expecting them to catch Wayland dialogs — they will not.
   [window_role="pop-up"] floating enable
   [window_role="bubble"] floating enable
   [window_role="dialog"] floating enable
   [window_type="dialog"] floating enable
-  [window_role="pop-up"] floating enable
   [window_role="task_dialog"] floating enable
-  [app_id="thunar" title="File Operation Progress"] floating enable, border pixel 1
-
-
-  # Intellij
-  [class="com-intellij-updater-Runner" instance="com-intellij-updater-Runner"] floating enable, border pixel
 
   # Marks for our scratchpad applications
   [app_id="terminal-mark"] floating enable, mark terminal, move scratchpad, border pixel 4, border color #7dcfff
   [app_id="music-mark"] floating enable, mark music, move scratchpad, border pixel 4, border color #7dcfff
   [app_id="yazi-explorer"] floating enable, mark explorer, move scratchpad, border pixel 4, border color #7dcfff
 
-  # btw stash terminal ($mod+s) — floating, centered, purple-bordered. Marked +
+  # btw stash terminal ($mod+t) — floating, centered, purple-bordered. Marked +
   # stashed like the other scratchpads; toggle-scratchpad.sh handles show/hide + sizing.
   [app_id="btw-scratch"] floating enable, mark btw, move scratchpad, border pixel 4, border color #bb9af7
 }
 
 # Workspace assignments
+#
+# These two rules split ONE process across two workspaces: Vivaldi's main window and every
+# installed PWA are the same PID, one Wayland connection, one Chromium focus state machine.
+# Chromium names a PWA window `vivaldi-<32-char extension id>-Default`, which is why the
+# second rule is a regex rather than a list — new PWAs are picked up without editing this.
+#
+# Because the split is intra-process, it interacts with focus_on_window_activation (see
+# ./styling). That must stay `focus`: with `smart`, handing a link from a PWA on ws10 to the
+# main window on ws2 left Vivaldi driving UI against a window sway kept unfocused and
+# off-screen, and the main window went unresponsive as if a popup were stuck open.
 assign [app_id="vivaldi-stable"] workspace number 2
 assign [app_id="^vivaldi-[a-zA-Z0-9]+-Default$"] workspace number 10

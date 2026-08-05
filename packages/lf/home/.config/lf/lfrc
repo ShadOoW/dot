@@ -67,14 +67,15 @@ cmd open ${{
     case $(file --mime-type "$f" -bL) in
         text/*|application/json) $EDITOR "$f";;
         image/*) 
-            # Try to find an image viewer that exists
-            for viewer in imv feh sxiv display; do
+            # Try to find an image viewer that exists. swayimg and imv are Wayland-native;
+            # the rest are X11-only fallbacks kept for non-Wayland hosts (Void/macOS).
+            for viewer in swayimg imv feh sxiv display; do
                 if command -v $viewer >/dev/null 2>&1; then
                     $viewer "$f" > /dev/null 2>&1 &
                     exit 0
                 fi
             done
-            echo "No suitable image viewer found. Install imv, feh, or sxiv."
+            echo "No suitable image viewer found. Install swayimg or imv."
             ;;
         *)
             # Safer approach to open files

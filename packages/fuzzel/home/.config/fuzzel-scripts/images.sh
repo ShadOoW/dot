@@ -24,4 +24,4 @@ filepath="$SCREENS_DIR/$selected"
 [[ -f "$filepath" ]] || exit 0
 
 wl-copy <"$filepath"
-feh "$filepath" &
+swayimg "$filepath" &

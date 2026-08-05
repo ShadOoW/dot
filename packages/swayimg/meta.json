@@ -1,0 +1,10 @@
+{
+  "description": "swayimg image viewer (Wayland-native, replaces feh)",
+  "packages": {
+    "arch": { "pacman": ["swayimg"] },
+    "void": { "xbps": ["swayimg"] }
+  },
+  "tags": ["desktop", "images", "wayland"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}
