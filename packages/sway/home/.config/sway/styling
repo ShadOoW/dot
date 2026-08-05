@@ -10,7 +10,19 @@ swaybg_command echo
 # Remove window titlebars
 default_floating_border none
 hide_edge_borders --i3 smart
-focus_on_window_activation smart
+# `focus`, not `smart`, on purpose. With `smart`, sway focuses an activating window only if
+# it is *already visible* — otherwise it merely flags it urgent (man 5 sway). Vivaldi's main
+# window and its PWAs are one process (one Wayland connection, one Chromium focus state
+# machine) split across two workspaces by the assign rules in ./rules. So opening a link from
+# the Gmail PWA on ws10 into the main window on ws2 made Vivaldi activate a window sway was
+# still keeping unfocused and off-screen. Vivaldi then drove its UI against that surface, and
+# anything grab-like it opened (menu/bubble popups are child surfaces, not sway containers —
+# they never show up in the tree) left the window modally blocked: it behaved exactly like an
+# unclosed popup with no popup anywhere to find.
+#
+# `focus` makes sway actually follow Vivaldi to ws2, so the window is visible and focused
+# before Vivaldi draws on it. Tradeoff: any client can now pull focus across workspaces.
+focus_on_window_activation focus
 force_display_urgency_hint 100
 
 ### Mouse
