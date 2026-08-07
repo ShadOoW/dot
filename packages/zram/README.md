@@ -11,11 +11,14 @@ because they are consumed before `/data` is mounted.
 
 ## Layout
 
-| Tree                | Init     | Contents                                                          |
-| ------------------- | -------- | ----------------------------------------------------------------- |
-| `etc-real/`         | **both** | `etc/sysctl.d/30-reclaim.conf`                                    |
-| `etc-real-systemd/` | Arch     | `etc/systemd/zram-generator.conf`, `etc/modules-load.d/zram.conf` |
-| `etc-real-runit/`   | Void     | `etc/sv/zramen/conf`                                              |
+| Tree                | Init     | Contents                                                                                       |
+| ------------------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `etc-real/`         | **both** | `etc/sysctl.d/30-reclaim.conf`                                                                 |
+| `etc-real-systemd/` | Arch     | `etc/systemd/zram-generator.conf`, `etc/modules-load.d/zram.conf`, `etc/tmpfiles.d/zswap.conf` |
+| `etc-real-runit/`   | Void     | `etc/sv/zramen/conf`                                                                           |
+
+`configure.sh` also writes `N` to `/sys/module/zswap/parameters/enabled` on **both** inits —
+the tmpfiles.d declaration is only the systemd-side persistence of the same thing.
 
 ## The two implementations, kept equivalent
 
@@ -42,6 +45,23 @@ explicitly (`/usr/bin/zramen` line 218).
 `ram * 0.75` froze the Arch side once or twice a day between 2026-07-28 and 2026-08-01. Not
 an OOM — a reclaim livelock, because storing a compressed page requires allocating a page.
 Full kernel evidence in **`docs/zram.md`, "The 0.75 freeze"**.
+
+## zswap must stay off
+
+zram and zswap are both compressed-anon-page caches. Stacked, a page is compressed by zswap
+into a RAM pool and then compressed **again** by zram on writeback. linux-zen ships
+`CONFIG_ZSWAP_DEFAULT_ON=y`, so this was silently the case here until 2026-08-05.
+
+Beyond the wasted CPU and up-to-6.4 GiB pool, zswap writeback allocates in order to free, in
+the reclaim path — the same hazard that made `ram * 0.75` deadly, one layer higher. Full
+write-up in **`docs/zram.md`, "zswap was stacked in front of zram the whole time"**.
+
+```sh
+cat /sys/module/zswap/parameters/enabled   # want N
+```
+
+The kernel cmdline (`zswap.enabled=0`, see `docs/grub.md`) is authoritative; the tmpfiles.d
+entry here is the repo-managed backstop, because GRUB is not managed by this repo.
 
 The complete fix is three legs, and shrinking the device is only one of them:
 

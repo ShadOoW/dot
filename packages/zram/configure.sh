@@ -77,8 +77,20 @@ install_tree "$DIR/etc-real-$INIT"
 $SUDO sysctl --system >/dev/null 2>&1 ||
   $SUDO sysctl -p /etc/sysctl.d/30-reclaim.conf >/dev/null # runit's sysctl has no --system
 
+# zswap OFF. Not optional, and not a tuning preference: stacked in front of zram it
+# double-compresses every anon page and adds an allocate-to-reclaim step ahead of zsmalloc's
+# — the same class of hazard as the 0.75 freeze. linux-zen sets CONFIG_ZSWAP_DEFAULT_ON=y, so
+# doing nothing means it is ON. Written directly here as well as declared in tmpfiles.d so
+# configure is not a no-op until the next boot. Both inits, since both boot this kernel.
+if [ -w /sys/module/zswap/parameters/enabled ] || [ -e /sys/module/zswap/parameters/enabled ]; then
+  echo N | $SUDO tee /sys/module/zswap/parameters/enabled >/dev/null || true
+fi
+
 if [ "$INIT" = systemd ]; then
   $SUDO systemctl daemon-reload # re-runs the generator so dev-zram0.swap exists now
+
+  # Apply the tmpfiles.d entry now rather than waiting for sysinit.target on the next boot.
+  $SUDO systemd-tmpfiles --create /etc/tmpfiles.d/zswap.conf >/dev/null 2>&1 || true
 
   # Only touch the device if it is not already live — restarting the setup unit under an
   # active swap device fails on EBUSY. A resize therefore needs a reboot, by design: we are
@@ -103,6 +115,7 @@ echo
 swapon --show || echo "  (no swap active)"
 printf 'min_free_kbytes   : %s\n' "$(sysctl -n vm.min_free_kbytes)"
 printf 'watermark_scale   : %s\n' "$(sysctl -n vm.watermark_scale_factor)"
+printf 'zswap enabled     : %s (want N)\n' "$(cat /sys/module/zswap/parameters/enabled 2>/dev/null || echo 'n/a')"
 echo
 echo "Verify on a FRESH BOOT, not after a daemon-reload — a reload masks the /data bug:"
 echo "  swapon --show | grep zram"

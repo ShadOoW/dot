@@ -30,6 +30,30 @@ Regenerate GRUB config after changes:
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
+## Memory: `zswap.enabled=0` (required)
+
+This box runs zram swap. zswap in front of zram double-compresses every anon page and adds an
+allocate-to-reclaim step ahead of `zsmalloc`'s — the mechanism behind the 2026-07/08 freezes.
+linux-zen ships `CONFIG_ZSWAP_DEFAULT_ON=y`, so **doing nothing means it is on**.
+
+Add to `GRUB_CMDLINE_LINUX_DEFAULT`:
+
+```
+zswap.enabled=0
+```
+
+The cmdline is the authoritative switch because it applies before any swap device is
+activated. `packages/zram` also ships a `tmpfiles.d` entry as a backstop in case this
+parameter is ever dropped — but that runs at `sysinit.target`, i.e. later. Keep both.
+
+Verify after reboot:
+
+```sh
+cat /sys/module/zswap/parameters/enabled   # want N
+```
+
+Background: `docs/zram.md`, "zswap was stacked in front of zram the whole time".
+
 ## Intel GPU + Wayland
 
 For Intel Gen9+ GPU (i915) with Wayland, add to `GRUB_CMDLINE_LINUX_DEFAULT`:

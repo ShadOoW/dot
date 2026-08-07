@@ -78,16 +78,50 @@ killer never ran, and earlyoom did not either — its `--help` states _"both mem
 must be below minimum for earlyoom to act"_, and swap was nowhere near its threshold. The
 machine had no escape hatch and simply stopped.
 
-### The fix is three-legged; zram sizing is only one leg
+### The fix is four-legged; zram sizing is only one leg
 
 | leg                                             | where                                                                           | Void? |
 | ----------------------------------------------- | ------------------------------------------------------------------------------- | ----- |
 | `zram-size = ram * 0.25`                        | `packages/zram` — caps the zspages ceiling at ~3 GiB                            | yes   |
 | `vm.min_free_kbytes` / `watermark_scale_factor` | `packages/zram/etc-real/etc/sysctl.d/30-reclaim.conf` — headroom for `zsmalloc` | yes   |
-| `earlyoom -s 100,100`                           | `packages/oom` — defeats the swap AND-clause                                    | no    |
+| **zswap off**                                   | `packages/zram/etc-real-systemd/etc/tmpfiles.d/zswap.conf` — see below          | yes¹  |
+| `earlyoom` thresholds                           | `packages/oom` — backstop only, not a leg of the fix                            | no    |
 
-Shrinking zram alone is not sufficient: without the earlyoom and watermark changes a big
-enough workload reaches the same dead end, just later. See `packages/oom/README.md`.
+¹ the sysfs write in `configure.sh` runs on both inits; only the tmpfiles.d declaration is
+systemd-only.
+
+Shrinking zram alone is not sufficient: without the watermark and zswap changes a big enough
+workload reaches the same dead end, just later. See `packages/oom/README.md`.
+
+### zswap was stacked in front of zram the whole time (found 2026-08-05)
+
+Not part of the original three-legged fix because nobody looked. linux-zen ships
+`CONFIG_ZSWAP_DEFAULT_ON=y`, nothing in this repo disabled it, and the kernel cmdline never
+mentioned it — so it had been on since install:
+
+```
+enabled=Y  compressor=zstd  max_pool_percent=20
+Zswap: 721656 kB   Zswapped: 2247456 kB
+```
+
+2.1 GiB of anon pages held in a 705 MiB RAM pool, free to grow that pool to 20% of RAM
+(~6.4 GiB). zswap and zram are **both** compressed-anon-page caches, so a page was compressed
+by zswap, then on writeback decompressed and handed to zram, which compressed it again. Arch's
+zram page warns against the combination outright.
+
+The wasted CPU and RAM are the small part. The real problem is that zswap writeback **has to
+allocate in order to free**, in the reclaim path, under pressure — a fourth allocate-to-reclaim
+step bolted in front of `zsmalloc`'s, which is the exact mechanism described above.
+
+It also masked the symptom in a way that made the OOM tuning worse: pages freed by a kill do
+not return to `MemAvailable` promptly while they sit in the pool, so earlyoom's memory
+condition stayed true after a kill and it kept killing. That is part of why the Aug 03/04 kill
+storms ran to 177 and 19 processes — see `packages/oom/README.md`.
+
+The authoritative switch is `zswap.enabled=0` on the kernel cmdline, which applies before any
+swap device is touched. GRUB is not managed by this repo (`docs/grub.md`), so the tmpfiles.d
+entry is the repo-managed enforcement against a `grub-mkconfig` run that drops the parameter.
+Belt and braces on purpose.
 
 ## Dual boot: Void gets the same treatment
 
