@@ -8,21 +8,22 @@ dot link oom            # user unit + ~/.local/bin/oom-notify
 dot pkg oom configure   # earlyoom, /etc drop-ins, sysctl, enable everything
 ```
 
-| Part                               | Does                                                                          |
-| ---------------------------------- | ----------------------------------------------------------------------------- |
-| `earlyoom -m 10,5 -s 100,100`      | kills the largest offending **process** before the kernel's blunt killer runs |
-| `system.slice` `MemoryMin=1G`      | a floor of memory the kernel will not reclaim from system services            |
-| `user@.service` `OOMScoreAdjust=0` | stops the kernel preferring your session manager over the real hog            |
-| `oom-notify.service`               | red, non-expiring notification on any OOM kill                                |
+| Part                                      | Does                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `earlyoom -M 2.5G,1.25G -S 6G,3G`         | kills the largest offending **process** before the kernel's blunt killer runs   |
+| `system.slice` `MemoryMin=1G`             | a floor of memory the kernel will not reclaim from system services              |
+| `user@.service` `OOMScoreAdjust=0`        | stops the kernel preferring your session manager over the real hog              |
+| `~/.local/bin/typescript-language-server` | 3 GiB heap ceiling on tsserver for clients that cannot send `maxTsServerMemory` |
+| `oom-notify.service`                      | red, non-expiring notification on any OOM kill                                  |
 
-## Why `-s 100,100` and not `-s 10,5` (2026-08-01)
+## Why `-s 100,100` was right, and why it is now wrong (2026-08-01 → 08-05)
 
 earlyoom's `--help`, verbatim:
 
 > Note: **both** memory and swap must be below minimum for earlyoom to act.
 
 That AND clause silently disabled earlyoom on this box. With ~39 GiB of swap advertised
-(23 GiB zram + 16 GiB NVMe swapfile), swap-free never gets near 10% before physical RAM is
+(23 GiB zram + 16 GiB NVMe swapfile), swap-free never got near 10% before physical RAM was
 exhausted. At the 2026-07-30 23:01 freeze:
 
 ```
@@ -32,8 +33,47 @@ Free swap = 27990116kB                        <- swap 68% free
 
 Memory was catastrophically low, swap looked healthy, so earlyoom stayed asleep, the kernel
 OOM killer stayed asleep, and the machine hard-locked. Pinning the swap threshold at 100%
-makes that clause always true and reduces the trigger to the memory condition — the one
-that actually predicts trouble on a machine with swap this large.
+made that clause always true, reducing the trigger to the memory condition alone.
+
+**That premise expired when the zram device shrank.** Swap is now 24.3 GiB of which 16 GiB
+is real NVMe — capacity that genuinely absorbs pressure — so swap-free is a meaningful
+signal again. Meanwhile the un-gated memory condition produced two kill storms:
+
+```
+Aug 03 17:27-17:28   177 kills in two minutes
+Aug 04 20:30          19 kills, with swap 73% FREE (18 of 24.3 GiB)
+```
+
+Neither was an out-of-memory condition; the kernel OOM killer did not fire in either.
+
+The storms happen because **VmRSS overstates what killing a browser process returns.**
+Renderers share most of their pages. Measured across Vivaldi's 38 processes on 2026-08-05:
+
+```
+sum RSS = 10107 MiB      <- what earlyoom scores and reports
+sum PSS =  5086 MiB      <- what a kill actually gives back
+```
+
+earlyoom killed a "326 MiB" renderer, recovered ~160 MiB, stayed under the threshold, and
+killed again — 177 times, with no swap gate left to stop it. This is the same PSS-vs-RSS
+effect `src/lib/memory.ts` documents for `dot sgc`.
+
+`-S 6291456,3145728` restores the brake: 6 GiB free swap means zram is full **and** ~10 GiB
+of the NVMe swapfile is gone. Combined with <2.5 GiB available RAM that is a real emergency.
+Against the Aug 04 event, this configuration would not have fired at all.
+
+## Absolute thresholds, because the percentages moved
+
+`-m`/`-s` are percentages of earlyoom's **"user mem total"**, not `MemTotal`:
+
+```
+mem total: 31852 MiB, user mem total: 20162 MiB
+```
+
+So `-m 10,5` fired at ~2.0/1.0 GiB, not the "~3.1 GiB of 31" this file used to claim. Worse,
+user-mem-total tracks unreclaimable kernel memory — the Aug 04 logs show it drifting between
+20555 and 21501 MiB — so the trigger point wandered under load, which is precisely when it
+must not. `-M`/`-S` take absolute KiB and hold still.
 
 ## The freeze this package did not catch (2026-07-28 → 08-01)
 
@@ -43,14 +83,21 @@ page out zram must allocate a page, that allocation fails at the watermark, so t
 fails and `kswapd` cannot make progress. `mode:0xc0de0` on every failure is the `zsmalloc`
 signature; `zspages` climbed to 3.8 GiB.
 
-Full write-up and kernel evidence: **`docs/zram.md`, "The 0.75 freeze"**. The fix has three
-legs and none is sufficient alone; only one of them lives here:
+Full write-up and kernel evidence: **`docs/zram.md`, "The 0.75 freeze"**. The fix has four
+legs and none is sufficient alone; **none of them is earlyoom** — earlyoom is the backstop
+for when they fail, not the defense itself:
 
-| leg                                                           | package                                               |
-| ------------------------------------------------------------- | ----------------------------------------------------- |
-| `earlyoom -s 100,100`                                         | **this one**                                          |
-| zram device 0.75 → 0.25                                       | `packages/zram`                                       |
-| `min_free_kbytes` 64→512 MiB, `watermark_scale_factor` 10→200 | `packages/zram/etc-real/etc/sysctl.d/30-reclaim.conf` |
+| leg                                                           | package                                                    |
+| ------------------------------------------------------------- | ---------------------------------------------------------- |
+| zram device 0.75 → 0.25                                       | `packages/zram`                                            |
+| `min_free_kbytes` 64→512 MiB, `watermark_scale_factor` 10→200 | `packages/zram/etc-real/etc/sysctl.d/30-reclaim.conf`      |
+| zswap off (it was on by default, stacked in front of zram)    | `packages/zram/etc-real-systemd/etc/tmpfiles.d/zswap.conf` |
+| `earlyoom` thresholds                                         | **this one** — backstop only                               |
+
+The zswap leg was found on 2026-08-05 and had been on since install: linux-zen ships
+`CONFIG_ZSWAP_DEFAULT_ON=y` and nothing here disabled it, so every anon page was compressed
+into a RAM pool and then compressed _again_ by zram. It adds a fourth allocate-to-reclaim
+step in front of `zsmalloc`'s — the same hazard, one layer up.
 
 The watermark sysctl is in `zram` rather than here on purpose: it is headroom for
 `zsmalloc`, it applies to both inits, and this package is Arch/systemd-only. **Void gets the
@@ -107,22 +154,64 @@ should be revisited.
 
 ## Thresholds
 
-`-m 10,5 -s 10,5` — SIGTERM at 10 % free, SIGKILL at 5 %, of **both** memory and swap. With
-zram (23 GiB) plus the NVMe swapfile (16 GiB, see `packages/swap`) behind it, this only fires
+```
+-M 2621440,1310720    SIGTERM at 2.5 GiB available RAM, SIGKILL at 1.25 GiB
+-S 6291456,3145728    SIGTERM at 6 GiB free swap,       SIGKILL at 3 GiB
+```
+
+**Both** conditions must hold, which is the point — see the two sections above. It fires only
 under genuine exhaustion, and it fires while there is still memory left to run the kill.
 
-`--prefer` targets what actually caused the incident (node, bun, claude, chromium, electron).
+`--prefer` targets what actually caused the 2026-07-28 incident: node, bun, claude, electron.
+**The browsers are deliberately not in that list any more.** Chromium already self-marks its
+renderers `oom_score_adj=300`, so they nominate themselves — the Aug 04 log shows them at
+`oom_score 1170`. Adding `chromium|vivaldi-bin` to `--prefer` multiplied that a second time
+and pinned earlyoom onto exactly the processes whose RSS overstates the win by 2x, which is
+what made a single trigger become a 177-kill loop. Without them, earlyoom can reach the big
+single-tenant heaps (node/claude/tsserver) where RSS ≈ PSS and one kill actually clears the
+threshold. Renderers stay very killable through their own `oom_score_adj`; they just no
+longer outrank a 3 GiB tsserver.
+
 `--avoid` protects session and system plumbing (systemd, sway, kitty, pipewire, dbus, sshd)
 so a kill is survivable instead of a logout.
 
 Names match against `comm`, **max 15 chars** — `node-MainThread` is exactly 15,
 `systemd-journal` is the truncation of `systemd-journald`.
 
+## Capping tsserver (`~/.local/bin/typescript-language-server`)
+
+TypeScript language servers are a top-3 memory family on this box and they are uncapped by
+default. tsserver's heap ceiling comes from typescript-language-server's `maxTsServerMemory`
+initializationOption, which only the **LSP client** can send — `typescript-language-server
+--help` exposes just `--stdio`, `--log-level` and `--version`, so there is no CLI equivalent.
+
+Of the three clients here, only one could set it:
+
+| client   | how it spawns tsserver                                  | capped by                             |
+| -------- | ------------------------------------------------------- | ------------------------------------- |
+| `nvim`   | `vtsls`, own init_options                               | `packages/nvim` (was 8192 → now 3072) |
+| `claude` | `typescript-language-server --stdio`, no config surface | the shim                              |
+| `helix`  | `languages.toml` entry with no `config` block           | the shim                              |
+
+The shim prepends `NODE_OPTIONS=--max-old-space-size=3072` and execs the real binary.
+`NODE_OPTIONS` is inherited by the child _node_ process that typescript-language-server
+forks for tsserver, so the ceiling lands on the process that actually holds the program
+graph rather than on the thin LSP shim in front of it.
+
+3 GiB is >2x the measured steady state (1.29 and 1.15 GiB across two live servers on
+2026-08-05). Hitting the cap costs a reindex, not work: tsserver exits and the client
+respawns it. `dot sgc` already classifies these as family `typescript-lsp` and reports
+combined heap ceilings.
+
+Removing it is one command — `rm ~/.local/bin/typescript-language-server`. The pacman binary
+at `/usr/sbin/typescript-language-server` is untouched and takes over immediately.
+
 ## Notifications
 
 `oom-notify` follows the journal and fires `notify-send -u critical -t 0` on kernel OOM
-kills, earlyoom kills, and systemd-oomd kills. Storms are throttled to one popup per 15 s
-with a `(+N more suppressed)` tail.
+kills, earlyoom kills, and systemd-oomd kills. Storms are **coalesced, never suppressed** —
+one popup replaced in place, carrying a running count. See "Coalescing, not throttling"
+below for why the original 15 s throttle was removed.
 
 The red-and-persistent part is **mako's** job, not this script's — the live notification
 daemon here is `mako` (pid 5847), not swaync, even though swaync is installed and registers
