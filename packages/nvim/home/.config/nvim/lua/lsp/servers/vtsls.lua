@@ -92,7 +92,12 @@ return {
   },
   init_options = {
     hostInfo = 'neovim',
-    maxTsServerMemory = 8192,
+    -- 8192 was a ceiling this machine cannot honour: one tsserver allowed to reach 8 GiB on
+    -- a 31 GiB box that also runs a browser and several agents is a licence to trigger the
+    -- OOM killer by itself. Measured real usage across two live servers on 2026-08-05 was
+    -- 1.29 and 1.15 GiB, so 3 GiB is still >2x headroom. If a genuinely huge project hits
+    -- the cap, tsserver exits and the client respawns it — a reindex, not lost work.
+    maxTsServerMemory = 3072,
   },
   single_file_support = true,
 }

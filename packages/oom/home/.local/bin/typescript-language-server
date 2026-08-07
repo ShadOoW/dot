@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# PATH shim that puts a heap ceiling on tsserver.
+#
+# ── Why a shim and not config ───────────────────────────────────────────────────────
+# tsserver's heap is capped by typescript-language-server's `maxTsServerMemory`
+# initializationOption, which only the LSP *client* can send. `typescript-language-server
+# --help` offers exactly three flags — --stdio, --log-level, --version — so there is no
+# CLI equivalent to set.
+#
+# Neovim sends it (packages/nvim/.../vtsls.lua, 3072). Two clients here cannot:
+#
+#   claude   spawns `typescript-language-server --stdio` directly, no LSP config surface
+#   helix    packages/helix/.../languages.toml declares the server with no `config` block
+#
+# On 2026-08-05 the two live tsservers on this box were both claude-spawned, at 1.29 and
+# 1.15 GiB, uncapped. `dot sgc` classifies them as family "typescript-lsp" and flags
+# exactly this — see the heap-ceiling insight in src/commands/sgc.ts.
+#
+# ── Why NODE_OPTIONS works here ─────────────────────────────────────────────────────
+# typescript-language-server spawns tsserver as a child *node* process, and NODE_OPTIONS
+# is inherited through the environment. --max-old-space-size is on node's NODE_OPTIONS
+# allowlist, so the ceiling lands on the child that actually holds the program graph, not
+# just on the thin LSP shim in front of it.
+#
+# Prepending rather than overwriting means an explicit NODE_OPTIONS from the caller still
+# wins — node applies the last occurrence of a repeated flag.
+#
+# ── Removing this ───────────────────────────────────────────────────────────────────
+# Delete ~/.local/bin/typescript-language-server. /usr/sbin/typescript-language-server is
+# untouched and takes over again immediately; nothing else needs reverting.
+set -euo pipefail
+
+TSSERVER_HEAP_MIB="${TSSERVER_HEAP_MIB:-3072}"
+
+# Resolve the real entrypoint. The pacman path is checked first so the common case costs a
+# single stat; the PATH scan is the fallback for an npm/volta-installed copy. Our own
+# directory is skipped during that scan so the shim can never exec itself.
+real=/usr/lib/node_modules/typescript-language-server/lib/cli.mjs
+
+if [ ! -f "$real" ]; then
+  real=""
+  self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  IFS=: read -ra path_dirs <<<"$PATH"
+  for dir in "${path_dirs[@]}"; do
+    [ -n "$dir" ] || continue
+    [ -x "$dir/typescript-language-server" ] || continue
+    [ "$(cd "$dir" 2>/dev/null && pwd)" = "$self_dir" ] && continue
+    real="$dir/typescript-language-server"
+    break
+  done
+fi
+
+if [ -z "$real" ]; then
+  echo "typescript-language-server: no real binary found behind the heap-cap shim" >&2
+  echo "  install it, or delete $0 to drop the shim" >&2
+  exit 127
+fi
+
+export NODE_OPTIONS="--max-old-space-size=$TSSERVER_HEAP_MIB${NODE_OPTIONS:+ $NODE_OPTIONS}"
+exec "$real" "$@"
