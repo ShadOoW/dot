@@ -107,7 +107,7 @@ Split by tier, not by accident — read the READMEs before changing thresholds:
   every app in one `session-c1.scope` cgroup), `MemoryMin` floors, and a critical OOM
   notification. Styling for that notification is in **`mako`**, the live notification daemon.
 
-## `dot sgc` — memory diagnosis and reclaim
+## `dot sgc` & `dot sweep` — system hygiene
 
 Was `~/.local/bin/sgc` (standalone bash, now deleted). `src/commands/sgc.ts` +
 `src/lib/memory.ts`.
@@ -116,7 +116,9 @@ Was `~/.local/bin/sgc` (standalone bash, now deleted). `src/commands/sgc.ts` +
 - `dot sgc clean` — reap stopped trees, orphaned helpers, oversized language servers
 - `dot sgc mpv` — restart the leaking wallpaper
 
-Two things to preserve if you touch it:
+We also proactively fight disk bloat using `dot sweep`. See **`docs/system-hygiene.md`** for the full philosophy on preventing Arch from degrading over time.
+
+Two things to preserve if you touch sgc:
 
 **Use PSS, never summed RSS.** RSS counts every shared page in full in every process that
 maps it, so summing across a family double-counts shared node/chromium text. Measured here:
