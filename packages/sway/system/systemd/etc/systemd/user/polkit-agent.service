@@ -1,14 +1,15 @@
 [Unit]
 Description=Polkit Authentication Agent
+PartOf=graphical-session.target
+After=graphical-session.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
 ExecStart=/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
-Restart=always
-RestartSec=1
-Environment=DISPLAY=:0
-Environment=WAYLAND_DISPLAY=wayland-0
-Environment=XDG_SESSION_TYPE=wayland
+Restart=on-failure
+RestartSec=2
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

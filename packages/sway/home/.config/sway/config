@@ -4,3 +4,8 @@ include ./exec
 include ./rules
 include ./styling
 include /etc/sway/config.d/*
+
+# Session-scoped user services (polkit agent, …) hang off graphical-session.target.
+# 50-systemd-user.conf (included above) imports WAYLAND_DISPLAY et al, but sway
+# execs are async — re-import in the same shell so the target's units never race it.
+exec "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP; systemctl --user start graphical-session.target"
