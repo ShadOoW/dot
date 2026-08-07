@@ -5,6 +5,11 @@
 {
   "[opencode]": {
     "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/omo.schema.json",
+    "disabled_hooks": [
+      "startup-toast",
+      "session-notification",
+      "background-notification"
+    ],
     "agents": {
       "sisyphus": {
         "model": "anthropic/claude-opus-5",
