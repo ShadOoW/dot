@@ -2,16 +2,16 @@ import { existsSync, readFileSync } from "fs";
 import { mkdir, rename, unlink, writeFile } from "fs/promises";
 import { join } from "path";
 import { CACHE_DIR } from "../../lib/config.ts";
-import { findClaudeWindows, notify, sendEnter, sendText } from "../../lib/kitty.ts";
+import { findWindows, notify, sendKeys, sendText } from "../../lib/kitty.ts";
 
-// Detached runner for a scheduled `dot claude send --in/--at/--auto`. Executed
-// directly (`setsid bun send-runner.ts <job.json>`), never via citty; the
-// scheduling command imports only the job helpers below (import.meta.main keeps
-// the runner body from executing on import).
+// Detached runner for a scheduled `dot cue --in/--at/--auto`. Executed
+// directly (`setsid bun runner.ts <job.json>`), never via citty; the
+// scheduling command imports only the job helpers below (import.meta.main
+// keeps the runner body from executing on import).
 
 export type JobStatus = "pending" | "fired" | "failed" | "cancelled";
 
-export interface ResumeJob {
+export interface CueJob {
   id: string;
   createdAt: number;
   fireAt: number;
@@ -19,20 +19,31 @@ export interface ResumeJob {
   windowId: number;
   windowTitle: string;
   cwd: string;
-  text: string;
+  /** App the target window was running at schedule time (retarget hint). */
+  app: string | null;
+  /** Text to paste; null = keys-only job. */
+  text: string | null;
+  /** Keys pressed after the text (kitty send-key names: enter, tab, ctrl+c, …). */
+  keys: string[];
   runnerPid: number | null;
   status: JobStatus;
   error?: string;
   firedAt?: number;
 }
 
-export const JOBS_DIR = join(CACHE_DIR, "claude-resume");
+export const JOBS_DIR = join(CACHE_DIR, "cue-jobs");
 
 export function jobFile(id: string): string {
   return join(JOBS_DIR, `${id}.json`);
 }
 
-export async function saveJob(job: ResumeJob): Promise<void> {
+/** Human label for a job's payload: `"continue" + enter`, `keys: enter`, … */
+export function describePayload(job: Pick<CueJob, "text" | "keys">): string {
+  if (job.text == null) return `keys: ${job.keys.join(" ")}`;
+  return job.keys.length > 0 ? `"${job.text}" + ${job.keys.join(" ")}` : `"${job.text}"`;
+}
+
+export async function saveJob(job: CueJob): Promise<void> {
   await mkdir(JOBS_DIR, { recursive: true });
   const path = jobFile(job.id);
   // Per-PID tmp name: the canceller and the runner's SIGTERM handler can save
@@ -43,16 +54,16 @@ export async function saveJob(job: ResumeJob): Promise<void> {
   await rename(tmp, path);
 }
 
-export function loadJob(path: string): ResumeJob | null {
+export function loadJob(path: string): CueJob | null {
   try {
-    return JSON.parse(readFileSync(path, "utf-8")) as ResumeJob;
+    return JSON.parse(readFileSync(path, "utf-8")) as CueJob;
   } catch {
     return null;
   }
 }
 
 /** Is the job's runner still this job's runner? Guards PID reuse after reboot. */
-export function runnerAlive(job: ResumeJob): boolean {
+export function runnerAlive(job: CueJob): boolean {
   if (!job.runnerPid) return false;
   try {
     const cmdline = readFileSync(`/proc/${job.runnerPid}/cmdline`, "utf-8");
@@ -62,7 +73,7 @@ export function runnerAlive(job: ResumeJob): boolean {
   }
 }
 
-export async function deleteJob(job: ResumeJob): Promise<void> {
+export async function deleteJob(job: CueJob): Promise<void> {
   await unlink(jobFile(job.id)).catch(() => {});
 }
 
@@ -100,28 +111,37 @@ async function runnerMain(): Promise<void> {
     job = fresh;
   }
 
-  const windows = await findClaudeWindows();
+  const windows = await findWindows();
   let target = windows.find((w) => w.socket === job.socket && w.windowId === job.windowId);
   if (!target) {
-    // Window or kitty instance gone — fall back to a claude session in the
-    // same working directory, but only if it's unambiguous.
-    const candidates = windows.filter((w) => w.cwd === job.cwd);
+    // Window or kitty instance gone — fall back to a window in the same
+    // working directory (preferring the same app), but only if unambiguous.
+    let candidates = windows.filter((w) => w.cwd === job.cwd);
+    if (candidates.length > 1) {
+      const sameApp = candidates.filter((w) => w.app === job.app);
+      if (sameApp.length > 0) candidates = sameApp;
+    }
     if (candidates.length === 1) target = candidates[0];
   }
 
   if (!target) {
     job.status = "failed";
-    job.error = "no claude window found at fire time";
+    job.error = "no matching kitty window found at fire time";
     await saveJob(job);
-    notify("critical", "Claude send failed", `Job ${job.id}: no claude session found (window closed?)`);
+    notify("critical", "Cue failed", `Job ${job.id}: target window not found (closed?)`);
     process.exit(1);
   }
 
-  const sent = await sendText(target.socket, target.windowId, job.text);
-  // Let the TUI ingest the text before the key event so Enter isn't coalesced
-  // into the paste.
-  await Bun.sleep(400);
-  const ok = sent && (await sendEnter(target.socket, target.windowId));
+  let ok = true;
+  if (job.text != null) {
+    ok = await sendText(target.socket, target.windowId, job.text);
+    // Let the TUI ingest the text before the key events so they aren't
+    // coalesced into the paste.
+    if (ok && job.keys.length > 0) await Bun.sleep(400);
+  }
+  if (ok && job.keys.length > 0) {
+    ok = await sendKeys(target.socket, target.windowId, job.keys);
+  }
 
   job.status = ok ? "fired" : "failed";
   job.firedAt = Date.now();
@@ -129,8 +149,8 @@ async function runnerMain(): Promise<void> {
   await saveJob(job);
   notify(
     ok ? "normal" : "critical",
-    ok ? "Claude send fired" : "Claude send failed",
-    ok ? `Sent "${job.text}" to ${target.title || target.cwd}` : `Job ${job.id}: injection failed`,
+    ok ? "Cue fired" : "Cue failed",
+    ok ? `Sent ${describePayload(job)} to ${target.title || target.cwd}` : `Job ${job.id}: injection failed`,
   );
   process.exit(ok ? 0 : 1);
 }

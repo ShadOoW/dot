@@ -4,7 +4,7 @@ import { basename, join } from "path";
 import { claudeCommandForPid, liveClaudeSessions } from "./claude-registry.ts";
 import { STATE_DIR } from "./config.ts";
 import { logWarn } from "./console.ts";
-import { kittenLs, liveSockets, socketPid, type KittyFgProcess } from "./kitty.ts";
+import { kittenLs, liveSockets, primaryProc, socketPid, type KittyFgProcess } from "./kitty.ts";
 import { getTree, walkTree, type SwayNode } from "./sway.ts";
 import { shellEscape } from "./spawn.ts";
 import type { SessionTab, SessionWindow } from "./kitty-session.ts";
@@ -31,7 +31,6 @@ const AUTORESTORE_CLAIM_PATH = join(SESSION_DIR, "autorestore.claiming");
 // Pre-warmed scratchpad kitties from the sway exec block — recreated on every
 // login, so restoring them would duplicate them.
 const SCRATCHPAD_APP_IDS = new Set(["terminal-mark", "music-mark", "yazi-explorer"]);
-const SHELL_NAMES = new Set(["zsh", "-zsh", "bash", "-bash", "fish", "-fish", "sh", "-sh"]);
 
 export type WindowKind = "claude" | "command" | "shell";
 
@@ -78,19 +77,10 @@ export interface Manifest {
 export function classifyWindow(
   fg: KittyFgProcess[] | undefined,
 ): { kind: WindowKind; command?: string[]; claudePid?: number } {
-  const procs = (fg ?? []).filter((p) => p.cmdline?.length);
-  const claudeProc = procs.find((p) => basename(p.cmdline![0]!) === "claude");
-  if (claudeProc) return { kind: "claude", claudePid: claudeProc.pid };
-  const candidates = procs.filter((p) => {
-    const head = basename(p.cmdline![0]!);
-    if (SHELL_NAMES.has(head)) return false;
-    if (head.endsWith("-mcp")) return false;
-    if (head === "headroom" || basename(p.cmdline![1] ?? "") === "headroom") return false;
-    return true;
-  });
-  if (candidates.length === 0) return { kind: "shell" };
-  candidates.sort((a, b) => (a.pid ?? Number.MAX_SAFE_INTEGER) - (b.pid ?? Number.MAX_SAFE_INTEGER));
-  return { kind: "command", command: candidates[0]!.cmdline };
+  const proc = primaryProc(fg);
+  if (!proc) return { kind: "shell" };
+  if (basename(proc.cmdline![0]!) === "claude") return { kind: "claude", claudePid: proc.pid };
+  return { kind: "command", command: proc.cmdline };
 }
 
 interface Leaf {

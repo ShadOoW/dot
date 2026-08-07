@@ -12,6 +12,8 @@ import { completionsCommand } from "./completions.ts";
 import { wgCommand } from "./wg.ts";
 import { sgcCommand } from "./sgc.ts";
 import { claudeCommand } from "./claude/index.ts";
+import { cueCommand } from "./cue/index.ts";
+import { sweepCommand } from "./sweep.ts";
 
 // Single source of truth for top-level commands: dot.ts registers these with
 // citty and completions.ts derives the zsh completion list from the same map,
@@ -35,4 +37,6 @@ export const REGISTRY = {
   wg: wgCommand,
   sgc: sgcCommand,
   claude: claudeCommand,
+  cue: cueCommand,
+  sweep: sweepCommand,
 };
