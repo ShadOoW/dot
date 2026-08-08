@@ -52,6 +52,18 @@ fi
 
 typeset -U path PATH
 
+# Disable claude-code self-updater. Without this, every `claude` invocation
+# triggers `bun install @anthropic-ai/claude-code@latest` which extracts
+# ~280 MiB into ~/.cache/managed-bun/install/cache/.tmp/ — when earlyoom
+# kills bun mid-extract, those tarballs are orphaned (observed 246 GiB).
+# https://docs.claude.com/en/docs/claude-code/env-variables#disable_autoupdater
+export DISABLE_AUTOUPDATER=true
+export CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=false
+export AUTO_UPDATER_DISABLED=true
+
+# Bun has its own self-update check on every run, same failure mode.
+export BUN_AUTO_UPDATE_DISABLED=true
+
 # Self-contained helpers — available in all shell contexts, not just interactive
 cpr() {
   {
