@@ -20,10 +20,25 @@ exec {
     # Start MRU focus tracker for Alt-Tab behavior
     ~/.config/sway/scripts/sway_mru_daemon.py &
 
-    # Pre-warm scratchpad apps — for_window rules handle mark + scratchpad
+    # mpd, Void only. On Arch this is a systemd *user* unit (packages/mpd/meta.json), which is
+    # what makes ~/.config/mpd/mpd.conf and the user's PipeWire sink reachable. Void's packaged
+    # /etc/sv/mpd is a SYSTEM service running as user `mpd` against /etc/mpd.conf: it would
+    # ignore this repo's config entirely and could not open shad's PipeWire socket, so it is
+    # deliberately not enabled and the session owns mpd instead. ncmpcpp (mod+m) is useless
+    # without it — it connects to 127.0.0.1:6600.
+    if [ ! -d /run/systemd/system ] && command -v mpd >/dev/null 2>&1; then mpd; fi &
+
+    # Pre-warm scratchpad apps — for_window rules handle mark + scratchpad.
+    #
+    # The two that exec a child binary are guarded. When the binary is absent kitty still
+    # maps a window, that window still matches the app_id rule and still takes the mark, so
+    # mod+m dutifully presented a dead terminal reading "Failed to launch child: ncmpcpp /
+    # No such file or directory / Press Enter or Esc to exit". Guarding means a missing app
+    # yields no scratchpad window at all, and the keybinding's own launch path reports it
+    # instead of caching a corpse for the rest of the session.
     kitty --app-id terminal-mark &
-    kitty --app-id music-mark ncmpcpp &
-    kitty --app-id yazi-explorer yazi &
+    command -v ncmpcpp >/dev/null 2>&1 && kitty --app-id music-mark ncmpcpp &
+    command -v yazi >/dev/null 2>&1 && kitty --app-id yazi-explorer yazi &
 
     # Start browser
     vivaldi-stable &

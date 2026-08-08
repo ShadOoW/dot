@@ -1,9 +1,18 @@
 include ./variables
 include ./keybindings
-include ./exec
 include ./rules
 include ./styling
 include /etc/sway/config.d/*
+
+# LAST on purpose. Sway reads this file top-to-bottom, so anything that spawns a client must
+# come after the `for_window` rules that classify it. With `include ./exec` third, the
+# pre-warmed scratchpad kitties were launched while the rules that give them
+# `floating enable, mark <name>, move scratchpad` had not been registered yet — a window that
+# wins that race maps unmarked, mod+z/mod+m then find no marked window and launch a duplicate,
+# and because sway marks are unique the duplicate steals the mark and strands the original
+# unmarked and invisible in the scratchpad. Being last also means these execs observe the
+# environment from config.d (50-systemd-user.conf) instead of racing it.
+include ./exec
 
 # Session-scoped user services (polkit agent, …) hang off graphical-session.target.
 # 50-systemd-user.conf (included above) imports WAYLAND_DISPLAY et al, but sway
