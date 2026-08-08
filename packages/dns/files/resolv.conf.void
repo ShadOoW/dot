@@ -3,11 +3,16 @@
 # config that every glibc (files dns) AND musl / c-ares app reads directly, so it
 # must always list at least one reachable nameserver. See docs/dns.md.
 
-# --- AdGuard Home (desktop-local resolver) ---
-# Not enabled yet. Once AdGuard answers on 127.0.0.1:53, uncomment the next line
-# (it MUST be first) to route through it; the router stays as failover.
-#nameserver 127.0.0.1
+# --- AdGuard Home (desktop-local resolver, /data/ops/dns) ---
+# MUST stay first: it is what gives this box ad/tracker blocking and the local
+# *.home.shadhq.com names. It answers on the wildcard :53, so 127.0.0.1 works
+# regardless of which interface/network is up.
+nameserver 127.0.0.1
 
-# MikroTik router (does DoH upstream; verified working)
-nameserver 192.168.88.1
+# Failover for "AdGuard is down". Deliberately a PUBLIC resolver, not the home
+# router (192.168.88.1): this is a laptop-shaped desktop that also sits on foreign
+# Wi-Fi, and an unreachable second nameserver costs a full 5 s libc timeout per
+# lookup instead of failing over. Quad9 is reachable from any network and matches
+# what AdGuard uses upstream (DoH) and what Arch declares as FallbackDNS.
+nameserver 9.9.9.9
 options edns0

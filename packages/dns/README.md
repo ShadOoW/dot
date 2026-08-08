@@ -19,11 +19,14 @@ bash packages/dns/verify.sh   # triple-checks libc + c-ares paths (VPN/Claude/in
   real file. The MikroTik hands out no DNS over DHCP, so dhcpcd's resolv.conf hook
   would otherwise write an **empty** resolv.conf on every lease — the root cause.
 - **Arch (systemd):** `/etc/resolv.conf` → systemd-resolved stub (`127.0.0.53`);
-  resolved enabled; upstream via `resolved.conf.d/dns.conf` (Quad9 now). resolved is
-  **mandatory** here — the AWS VPN client sets split-DNS only via `resolvectl`.
-- **Void (runit):** a real static `/etc/resolv.conf` (router `192.168.88.1`), which
-  both glibc and musl read. VPN split-DNS is unavailable on Void (client needs
-  `resolvectl`); the tunnel + routes still work.
+  resolved enabled; upstream via `resolved.conf.d/dns.conf` (**AdGuard**, with Quad9 +
+  Cloudflare as FallbackDNS). resolved is **mandatory** here — the AWS VPN client sets
+  split-DNS only via `resolvectl`.
+- **Void (runit):** a real static `/etc/resolv.conf` (**AdGuard** first, Quad9
+  failover), which both glibc and musl read, **plus** `/etc/resolvconf.conf` pointing
+  openresolv at a scratch path so it cannot regenerate the file behind you. VPN
+  split-DNS is unavailable on Void (client needs `resolvectl`); the tunnel + routes
+  still work.
 
 ## Why real files, not dot symlinks
 
@@ -32,17 +35,19 @@ that had moved**, so dhcpcd fell back to defaults and re-enabled its resolv.conf
 hook. Network-critical files are therefore installed as real files by `configure.sh`,
 not linked into the repo — they survive the repo being absent/moved.
 
-## AdGuard Home (one-line flip, when enabled)
+## AdGuard Home — live on both inits
 
-AdGuard (desktop-local, `127.0.0.1:53`) is scaffolded in `/data/ops/dns` but not
-enabled yet, so DNS currently goes Quad9-direct. To route through AdGuard once it's
-up, see the commented instructions in `files/resolved-dns.conf` (Arch) and
-`files/resolv.conf.void` (Void), then re-run `dot pkg dns configure`.
+AdGuard (desktop-local, `127.0.0.1:53`, `/data/ops/dns`) is what this box resolves
+through under **both** inits. Failover is a public resolver, not the router, because
+this desktop also sits on foreign Wi-Fi where an unreachable nameserver costs a 5 s
+libc timeout per lookup. Rationale and the openresolv trap that bypassed AdGuard for
+the whole 2026-08-08 Void boot: [`docs/dns.md`](../../docs/dns.md).
 
 ## Files
 
 - `files/dhcpcd.conf` → `/etc/dhcpcd.conf` (both)
 - `files/resolved-dns.conf` → `/etc/systemd/resolved.conf.d/dns.conf` (Arch)
 - `files/resolv.conf.void` → `/etc/resolv.conf` (Void)
+- `files/resolvconf.conf.void` → `/etc/resolvconf.conf` (Void; openresolv can't own resolv.conf)
 - `configure.sh` — detects init, installs the above, enables resolved on Arch
 - `verify.sh` — checks libc + c-ares resolution for internet / Claude / VPN-endpoint
