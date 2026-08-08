@@ -1,8 +1,43 @@
 #!/bin/sh
+# agentmemory MCP server, supervised by runit.
+#
+# ── Why node is invoked by absolute path instead of via the shebang ───────────────────────
+#
+# The target, ~/.cache/managed-fnm/aliases/default/bin/agentmemory, is a symlink to the
+# package's dist/cli.mjs, whose shebang is `#!/usr/bin/env node`. runsvdir is started from
+# /etc/runit/2 as `exec env - PATH=/usr/bin:/usr/sbin runsvdir ...` — a scrubbed environment
+# with node nowhere on it, because node lives in the fnm cache. So `env node` could not
+# resolve, ./run died instantly, and runsv retried it for the whole boot. The only trace was
+#
+#   /usr/bin/env: 'node': No such file or directory
+#
+# scrolling past in runsvdir's log ring, where nothing looks at it. `dot doctor` could not see
+# it either, because it shelled out to an unprivileged `sv status` that always fails
+# (/run/runit/supervise.* is 0700 root) — so the service read as merely "not enabled".
+#
+# Naming the interpreter explicitly removes the PATH dependency entirely. node and the CLI
+# both live under the same fnm alias directory, so they move together when the alias moves —
+# which is the failure AGENTS.md records for the systemd copy of this unit, where the alias
+# advanced and the globally-installed package did not follow.
 set -a
 [ -f /home/shad/.config/secrets/minimax ] && . /home/shad/.config/secrets/minimax
 [ -f /home/shad/.agentmemory/.env ] && . /home/shad/.agentmemory/.env
 set +a
 
-exec chpst -u shad \
-  /home/shad/.cache/managed-fnm/aliases/default/bin/agentmemory
+FNM_BIN=/home/shad/.cache/managed-fnm/aliases/default/bin
+
+# Fail SLOWLY and legibly rather than hot-looping. runsv restarts ./run as soon as it exits,
+# so a bare `exit 1` on a missing interpreter is an unbounded spin — the same shape as the
+# litellm loop AGENTS.md costs at ~25 min of CPU and ~270 MB of churn. runit has no
+# StartLimitBurst to lean on, so the backoff has to live here: one clear line every 30s, and a
+# service `dot doctor` reports as failed.
+for f in node agentmemory; do
+  if [ ! -e "$FNM_BIN/$f" ]; then
+    echo "agentmemory: $FNM_BIN/$f is missing — the fnm 'default' alias moved, or the" \
+      "package is not installed (npm i -g @agentmemory/agentmemory). Not retrying tightly." >&2
+    sleep 30
+    exit 1
+  fi
+done
+
+exec chpst -u shad "$FNM_BIN/node" "$FNM_BIN/agentmemory"
