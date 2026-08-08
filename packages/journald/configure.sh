@@ -14,7 +14,10 @@ SUDO=""
 # systemd-only: Void logs with socklog, not journald. meta.json cannot express "arch only"
 # (the schema validates os against linux/macos/windows even though the linker would honour a
 # distro value), so the gate lives here.
-if [ ! -d /run/systemd ]; then
+# /run/systemd/system, not /run/systemd: elogind creates the latter on Void for the logind
+# API, so the bare check passed there and this script would have tried to configure journald
+# on a box that has no journald. See packages/zram/configure.sh for the full write-up.
+if [ ! -d /run/systemd/system ]; then
   echo "journald: systemd-only — Void uses socklog, nothing to do"
   exit 0
 fi
