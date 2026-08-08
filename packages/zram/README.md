@@ -5,17 +5,21 @@ dot pkg zram configure               # installs real files into /etc, both inits
 dot pkg zram enable --init runit     # Void only: symlink /etc/sv/zramen -> /var/service
 ```
 
-`configure.sh` auto-detects the init from `/run/systemd` vs `/etc/sv`. Read its header
-before changing anything — these files **must be real files in `/etc`, never `dot link`ed**,
-because they are consumed before `/data` is mounted.
+`configure.sh` auto-detects the init from **`/run/systemd/system`** vs `/etc/sv`. Not
+`/run/systemd` — elogind creates that on Void for the logind API, so the bare check reported
+systemd on Void, installed the wrong tree, skipped `/etc/sv/zramen/conf` entirely and then
+died on `systemctl: command not found`. Void consequently ran on zramen's built-in defaults
+(lz4, priority 32767, no size ceiling) while looking configured. Read the script header before
+changing anything — these files **must be real files in `/etc`, never `dot link`ed**, because
+they are consumed before `/data` is mounted.
 
 ## Layout
 
-| Tree                | Init     | Contents                                                                                       |
-| ------------------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `etc-real/`         | **both** | `etc/sysctl.d/30-reclaim.conf`                                                                 |
-| `etc-real-systemd/` | Arch     | `etc/systemd/zram-generator.conf`, `etc/modules-load.d/zram.conf`, `etc/tmpfiles.d/zswap.conf` |
-| `etc-real-runit/`   | Void     | `etc/sv/zramen/conf`                                                                           |
+| Tree                | Init     | Contents                                                       |
+| ------------------- | -------- | -------------------------------------------------------------- |
+| `etc-real/`         | **both** | `etc/sysctl.d/30-reclaim.conf`, `etc/modules-load.d/zram.conf` |
+| `etc-real-systemd/` | Arch     | `etc/systemd/zram-generator.conf`, `etc/tmpfiles.d/zswap.conf` |
+| `etc-real-runit/`   | Void     | `etc/sv/zramen/conf`                                           |
 
 `configure.sh` also writes `N` to `/sys/module/zswap/parameters/enabled` on **both** inits —
 the tmpfiles.d declaration is only the systemd-side persistence of the same thing.

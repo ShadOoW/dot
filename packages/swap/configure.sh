@@ -83,7 +83,9 @@ Void's runit core-services run 'swapon -a', so an fstab line is all it
 needs. Do NOT run mkswap again from Void — the file is already formatted
 and re-running it would just churn the UUID.
 
-Note Void handles zram with 'zramen', not zram-generator (systemd-only),
-so the zram half of this setup is Arch-only by design.
+Note Void drives zram with 'zramen' rather than zram-generator, so the
+zram tier is configured twice (once per init) but is present on BOTH —
+see packages/zram/etc-real-runit/etc/sv/zramen/conf. This swapfile is
+the tier behind it either way.
 ------------------------------------------------------------------------
 EOF

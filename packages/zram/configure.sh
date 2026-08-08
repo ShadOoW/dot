@@ -19,23 +19,40 @@
 # See docs/zram.md and the "Early boot" section of /data/ops/CLAUDE.md.
 #
 # Three trees, because this box dual-boots Arch (systemd) and Void (runit):
-#   etc-real/          both inits  — sysctl.d reclaim watermarks
-#   etc-real-systemd/  Arch only   — zram-generator.conf, modules-load.d
+#   etc-real/          both inits  — sysctl.d reclaim watermarks, modules-load.d/zram.conf
+#   etc-real-systemd/  Arch only   — zram-generator.conf, tmpfiles.d/zswap.conf
 #   etc-real-runit/    Void only   — /etc/sv/zramen/conf
-# The shared tree is not optional on either side: the watermark tuning is what keeps
-# zsmalloc able to allocate under pressure, and without it BOTH boots can livelock the same
-# way Arch did between 2026-07-28 and 08-01. See docs/zram.md, "The 0.75 freeze".
+#
+# modules-load.d is in the SHARED tree, which is easy to get wrong: it looks like a systemd
+# mechanism, but Void reads it too. /etc/runit/core-services/02-kmods.sh runs `modules-load`
+# from the runit-void package, and that tool documents itself as "modules-load.d(5)
+# compatible" and globs /{etc,run,usr/lib}/modules-load.d/*.conf. So the file belongs to both
+# inits and is installed on purpose on Void rather than as a side effect.
+#
+# The shared tree is not optional on either side: the watermark tuning is what keeps zsmalloc
+# able to allocate under pressure, and without it BOTH boots can livelock the same way Arch
+# did between 2026-07-28 and 08-01. See docs/zram.md, "The 0.75 freeze".
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 
-if [ -d /run/systemd ]; then
+# /run/systemd/system, NOT /run/systemd — this is systemd's own sd_booted() test.
+#
+# Void runs elogind, which creates /run/systemd/{seats,sessions,users,machines,inhibit} to
+# provide the logind D-Bus API. So `[ -d /run/systemd ]` is TRUE on Void, and this script
+# spent its whole life mis-detecting the Void boot as systemd: it installed
+# zram-generator.conf/modules-load.d/tmpfiles.d into Void's /etc, never installed
+# /etc/sv/zramen/conf at all, and then died on `systemctl: command not found`. Net effect —
+# Void ran on zramen's built-in defaults (lz4, priority 32767, no size ceiling) for as long
+# as this file has existed, while appearing to be configured. Only /run/systemd/system is
+# created exclusively by systemd as PID 1.
+if [ -d /run/systemd/system ]; then
   INIT=systemd
 elif [ -d /etc/sv ]; then
   INIT=runit
 else
-  echo "zram: unrecognised init (no /run/systemd, no /etc/sv) — nothing to do" >&2
+  echo "zram: unrecognised init (no /run/systemd/system, no /etc/sv) — nothing to do" >&2
   exit 0
 fi
 
