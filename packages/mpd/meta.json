@@ -1,12 +1,13 @@
 {
-  "description": "MPD — Music Player Daemon",
+  "description": "MPD — Music Player Daemon (user-scoped on both inits; see README)",
   "packages": {
     "arch": { "pacman": ["mpd"] },
     "void": { "xbps": ["mpd"] }
   },
   "tags": ["media"],
   "services": {
-    "systemd": [{ "name": "mpd.service", "scope": "user" }],
-    "runit": [{ "name": "mpd" }]
-  }
+    "systemd": [{ "name": "mpd.service", "scope": "user" }]
+  },
+  "cleanSteps": [],
+  "os": ["linux"]
 }

@@ -1,0 +1,10 @@
+{
+  "description": "ncmpcpp — ncurses MPD client, the mod+m music scratchpad",
+  "packages": {
+    "arch": { "pacman": ["ncmpcpp", "mpc"] },
+    "void": { "xbps": ["ncmpcpp", "mpc"] }
+  },
+  "tags": ["media"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}
