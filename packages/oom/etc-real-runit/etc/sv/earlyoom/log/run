@@ -1,0 +1,13 @@
+#!/bin/sh
+# Persist earlyoom's kill lines to /var/log/earlyoom/current.
+#
+# This is not just bookkeeping — it is the event source. On Arch, oom-notify follows the
+# systemd journal to learn that something was killed; Void has no journal, so the notifier
+# tails this file instead (plus `dmesg --follow` for kernel-level OOM kills). If this log
+# service is not running, earlyoom still protects the box but the desktop notification for
+# an earlyoom kill silently stops working.
+# Rotation is configured in /var/log/earlyoom/config (n4, s1000000 — four 1 MB files), which
+# configure.sh writes, because svlogd reads its config from the log directory and that
+# directory does not exist until the service first runs. Kill lines are tiny and the -r 3600
+# report is hourly, so 4 MB is months of history, bounded.
+exec svlogd -tt /var/log/earlyoom

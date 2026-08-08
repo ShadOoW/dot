@@ -94,8 +94,55 @@ emit() {
   notify "$title" "$body"
 }
 
-# --lines=0 so we react only to new events and never replay history at startup.
-# Process substitution, not a pipe: keeps the loop (and its counters) in the main shell.
+# ── Event source ────────────────────────────────────────────────────────────────────────
+# Arch: the journal carries kernel OOM lines, earlyoom's stderr and oomd's verdicts in one
+# stream, and shad can read the kernel half thanks to the ACL on /var/log/journal (group
+# wheel) — verify with `journalctl -k -n1` if notifications ever stop appearing.
+#
+# Void: there is no journal, and nothing else aggregates these either. The box runs no syslog
+# daemon (vlogger writes to /dev/log with nothing listening) and /var/log/dmesg.log is a
+# one-shot boot dump from runit's 97-dmesg.sh core service, not a live stream. So the two
+# sources are followed separately and merged:
+#
+#   dmesg --follow                     kernel OOM kills. Void ships kernel.dmesg_restrict=1,
+#                                      which makes this EPERM for a normal user, so
+#                                      packages/oom/etc-real-runit/etc/sysctl.d/31-dmesg.conf
+#                                      turns it off — see that file for why that costs nothing
+#                                      on this host.
+#   tail -F /var/log/earlyoom/current  earlyoom kills, via the svlogd log service in
+#                                      /etc/sv/earlyoom/log. svlogd's -tt timestamp prefix is
+#                                      harmless: every pattern below is a substring match.
+#
+# Degrading is explicit, never silent: if the kernel buffer is unreadable we say so on stderr
+# and keep the earlyoom half working, because earlyoom is the path that is *expected* to fire
+# (the kernel killer is the case earlyoom exists to pre-empt).
+EARLYOOM_LOG=${EARLYOOM_LOG:-/var/log/earlyoom/current}
+
+event_stream() {
+  if [ -d /run/systemd/system ] && command -v journalctl >/dev/null 2>&1; then
+    # --lines=0 so we react only to new events and never replay history at startup.
+    exec journalctl --follow --lines=0 --output=cat --no-pager 2>/dev/null
+  fi
+
+  local pids=""
+  # -n0 for the same reason as --lines=0: never replay a historical kill on restart.
+  tail -F -n0 "$EARLYOOM_LOG" 2>/dev/null &
+  pids="$pids $!"
+
+  if dmesg >/dev/null 2>&1; then
+    dmesg --follow 2>/dev/null &
+    pids="$pids $!"
+  else
+    echo "oom-notify: kernel ring buffer unreadable (kernel.dmesg_restrict=1?) — kernel OOM" \
+      "kills will NOT notify; earlyoom kills still will. Fix: sysctl kernel.dmesg_restrict=0" >&2
+  fi
+
+  # Reap both followers when the consumer loop goes away, so a restart does not leak them.
+  trap 'kill $pids 2>/dev/null' EXIT INT TERM
+  wait
+}
+
+# Process substitution, not a pipe: keeps the loop (and its burst counters) in the main shell.
 while IFS= read -r line; do
   case $line in
     *"Out of memory: Killed process"*)
@@ -103,7 +150,7 @@ while IFS= read -r line; do
       victim=${line#*Killed process }
       victim="${victim%%)*})"
       emit "OOM — kernel killed a process" \
-        "$victim"$'\n\n'"The kernel ran out of memory. Inspect: journalctl -k -g oom"
+        "$victim"$'\n\n'"The kernel ran out of memory. Inspect: dot sgc report"
       ;;
     *"sending SIGKILL to process"* | *"sending SIGTERM to process"*)
       emit "OOM — earlyoom killed a process" "$line"
@@ -112,4 +159,4 @@ while IFS= read -r line; do
       emit "OOM — systemd-oomd killed a cgroup" "$line"
       ;;
   esac
-done < <(journalctl --follow --lines=0 --output=cat --no-pager 2>/dev/null)
+done < <(event_stream)

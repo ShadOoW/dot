@@ -5,6 +5,13 @@ exec_always {
 exec {
     mako &
     swayidle &
+
+    # Critical OOM notification. On Arch this is a systemd *user* unit (oom-notify.service);
+    # Void has no systemd user manager, so the sway session owns it there instead — which is
+    # the right owner anyway, since notify-send needs this session's D-Bus. Guarded rather
+    # than unconditional so Arch does not end up running two copies.
+    [ -d /run/systemd/system ] || ~/.local/bin/oom-notify &
+
     # Workspaces 3/4 are reserved for scripted project layouts
     # (dot tools workspace) — autotiling would fight the tabbed containers.
     autotiling-rs 5 6 7 8 9 10 &

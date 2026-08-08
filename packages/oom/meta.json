@@ -1,9 +1,13 @@
 {
   "description": "Memory safety: earlyoom + a reserved floor for system services + critical OOM notifications",
   "packages": {
-    "arch": { "pacman": ["earlyoom", "libnotify"] }
+    "arch": { "pacman": ["earlyoom", "libnotify"] },
+    "void": { "xbps": ["earlyoom", "libnotify"] }
   },
   "tags": ["system"],
+  "services": {
+    "runit": [{ "name": "earlyoom" }]
+  },
   "cleanSteps": [],
   "os": ["linux"]
 }

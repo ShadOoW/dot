@@ -69,17 +69,18 @@ entry here is the repo-managed backstop, because GRUB is not managed by this rep
 
 The complete fix is three legs, and shrinking the device is only one of them:
 
-| leg                                                           | where                                   | Arch | Void   |
-| ------------------------------------------------------------- | --------------------------------------- | ---- | ------ |
-| device 0.75 → 0.25                                            | this package                            | yes  | yes    |
-| `min_free_kbytes` 64→512 MiB, `watermark_scale_factor` 10→200 | `etc-real/etc/sysctl.d/30-reclaim.conf` | yes  | yes    |
-| `earlyoom -s 100,100`                                         | `packages/oom`                          | yes  | **no** |
+| leg                                                           | where                                   | Arch | Void |
+| ------------------------------------------------------------- | --------------------------------------- | ---- | ---- |
+| device 0.75 → 0.25                                            | this package                            | yes  | yes  |
+| `min_free_kbytes` 64→512 MiB, `watermark_scale_factor` 10→200 | `etc-real/etc/sysctl.d/30-reclaim.conf` | yes  | yes  |
+| `earlyoom` thresholds                                         | `packages/oom`                          | yes  | yes  |
 
-**Void has no earlyoom.** `packages/oom` is Arch/systemd-only by design (its drop-ins are
-systemd unit config and its notifier is a systemd user service). Covering Void would mean an
-`/etc/sv/earlyoom` runit service plus a different notifier hookup. Void therefore keeps the
-first two legs — which address the livelock mechanism itself — but has no process-granular
-killer for a genuine exhaustion event.
+All three legs now land on both inits. `packages/oom` grew a runit half — `/etc/sv/earlyoom`
+plus a `--avoid` list written against Void's own process names — so Void is no longer relying
+on the first two legs alone. What Void still does not get is the cgroup memory floor
+(`system.slice MemoryMin=1G`), because runit does not put services in cgroups; there,
+earlyoom's `--avoid` list is the only thing protecting the session and the supervision tree.
+See `packages/oom/README.md`, "Void / runit".
 
 ## Verify — after a _fresh boot_, not after a daemon-reload
 

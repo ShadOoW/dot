@@ -136,8 +136,9 @@ Two Void-specific traps, both handled in that conf:
   suggests — zramen only applies a cap when one is explicitly set (`/usr/bin/zramen:218`).
 - Stock zramen defaults to **lz4** and priority **32767**, neither matching Arch.
 
-`packages/zram/README.md` has the full side-by-side. Note Void has **no earlyoom** — see the
-table above.
+`packages/zram/README.md` has the full side-by-side. earlyoom now covers Void too
+(`/etc/sv/earlyoom`, see `packages/oom/README.md` → "Void / runit"); the leg Void still lacks
+is the cgroup memory floor, which runit has nowhere to put.
 
 ## ⚠️ These two files must be REAL FILES in /etc — never `dot link`ed
 

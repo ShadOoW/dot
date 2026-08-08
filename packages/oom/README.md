@@ -99,9 +99,10 @@ The zswap leg was found on 2026-08-05 and had been on since install: linux-zen s
 into a RAM pool and then compressed _again_ by zram. It adds a fourth allocate-to-reclaim
 step in front of `zsmalloc`'s — the same hazard, one layer up.
 
-The watermark sysctl is in `zram` rather than here on purpose: it is headroom for
-`zsmalloc`, it applies to both inits, and this package is Arch/systemd-only. **Void gets the
-zram and sysctl legs but has no earlyoom** — see `packages/zram/README.md`.
+The watermark sysctl is in `zram` rather than here on purpose: it is headroom for `zsmalloc`
+and it applies to both inits. Void gets the earlyoom leg too as of this revision — see
+"Void / runit" below; what it still does not get is the cgroup memory floor, because there
+is nothing in runit to hang one on.
 
 Named allocators in the failure dumps, worth watching: `Bun Pool 2` in
 `cpuset=lake-collect.service` (3 of 5 events; that service was at 2.3 GiB with
@@ -178,6 +179,38 @@ so a kill is survivable instead of a logout.
 Names match against `comm`, **max 15 chars** — `node-MainThread` is exactly 15,
 `systemd-journal` is the truncation of `systemd-journald`.
 
+## Void / runit
+
+Both inits boot the same kernel on the same 31 GiB box, so every threshold above is shared
+verbatim. Only the plumbing differs:
+
+| leg                                | Arch / systemd                    | Void / runit                                     |
+| ---------------------------------- | --------------------------------- | ------------------------------------------------ |
+| earlyoom argv                      | `earlyoom.service.d/10-args.conf` | `/etc/sv/earlyoom/run`                           |
+| earlyoom supervision               | `systemctl enable earlyoom`       | `/var/service/earlyoom` → `/etc/sv/earlyoom`     |
+| `system.slice` `MemoryMin=1G`      | yes                               | **no equivalent** — runit has no cgroup units    |
+| `user@.service` `OOMScoreAdjust=0` | yes                               | **n/a** — no systemd user manager to bias        |
+| notifier lifecycle                 | `oom-notify.service` (user unit)  | started from sway's `exec` block                 |
+| notifier event source              | `journalctl --follow`             | `dmesg --follow` + `tail -F` on the earlyoom log |
+
+Because two of the five legs simply do not exist on Void, **`--avoid` is carrying more weight
+there** — it is the only thing keeping the session and the supervision tree alive through a
+kill. So the Void list is written separately against Void's actual process names, verified
+with `ps -eo comm=` on the host, not copied from the systemd one:
+
+- `runit`, `runsvdir`, `runsv` — killing any of these is a reboot
+- `svlogd`, `vlogger` — service logging; losing `svlogd` loses the notifier's event source
+- `dbus-daemon` — Void's bus (Arch runs `dbus-broker`)
+- `dbus-run-sessio` — sway is exec'd under `dbus-run-session`, and `comm` truncates at 15
+  characters, so the trailing `n` must be left off or the pattern never matches
+- `elogind`, `polkitd` — seat/session management and privilege escalation
+
+The kernel half of the notifier needs one extra thing: Void ships
+`kernel.dmesg_restrict=1`, which makes `dmesg` `EPERM` for a normal user, so a _kernel_ OOM
+kill would notify nobody. `etc-real-runit/etc/sysctl.d/31-dmesg.conf` turns it off. That
+costs nothing here — `shad` is in `wheel` and already has `sudo`, so the restriction was
+never a barrier against the user, only against the user's own tooling.
+
 ## Capping tsserver (`~/.local/bin/typescript-language-server`)
 
 TypeScript language servers are a top-3 memory family on this box and they are uncapped by
@@ -208,10 +241,15 @@ at `/usr/sbin/typescript-language-server` is untouched and takes over immediatel
 
 ## Notifications
 
-`oom-notify` follows the journal and fires `notify-send -u critical -t 0` on kernel OOM
-kills, earlyoom kills, and systemd-oomd kills. Storms are **coalesced, never suppressed** —
-one popup replaced in place, carrying a running count. See "Coalescing, not throttling"
-below for why the original 15 s throttle was removed.
+`oom-notify` fires `notify-send -u critical -t 0` on kernel OOM kills, earlyoom kills, and
+systemd-oomd kills. Storms are **coalesced, never suppressed** — one popup replaced in place,
+carrying a running count. See "Coalescing, not throttling" below for why the original 15 s
+throttle was removed.
+
+Its event source depends on the init: the journal on Arch; on Void, `dmesg --follow` merged
+with `tail -F /var/log/earlyoom/current`, because there is no journal and no syslog daemon to
+aggregate the two. It degrades loudly, never silently — if the ring buffer is unreadable it
+says so on stderr and keeps the earlyoom half working, which is the path expected to fire.
 
 The red-and-persistent part is **mako's** job, not this script's — the live notification
 daemon here is `mako` (pid 5847), not swaync, even though swaync is installed and registers
@@ -262,14 +300,20 @@ notification. Every event now sends; bursts replace one popup in place via
 `x-canonical-private-synchronous` and the body carries a running count. An OOM kill is the
 last thing that should ever be silently discarded.
 
-It is a **user** service because `notify-send` needs the session D-Bus — reaching that from a
-root daemon is fragile, which is why earlyoom's own `-n` is not used. It can read the kernel
-journal via the ACL on `/var/log/journal` (group `wheel`).
+It runs **in the session** rather than as root because `notify-send` needs the session D-Bus,
+and reaching that from a root daemon is fragile — which is why earlyoom's own `-n` is not
+used. On Arch that is a systemd user unit, reading the kernel journal via the ACL on
+`/var/log/journal` (group `wheel`). On Void there is no systemd user manager, so sway's
+`exec` block owns it and `kernel.dmesg_restrict=0` is what lets it read the ring buffer.
 
 Test it without causing a real OOM:
 
 ```sh
+# Arch
 systemd-cat -t kernel echo 'Out of memory: Killed process 1 (canary)'
+# Void
+echo 'sending SIGTERM to process 1 uid 1000 "canary": badness 0' |
+  sudo tee -a /var/log/earlyoom/current
 ```
 
 ## Gotcha

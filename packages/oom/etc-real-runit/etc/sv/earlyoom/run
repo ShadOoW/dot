@@ -1,0 +1,55 @@
+#!/bin/sh
+# earlyoom under runit — the Void half of the memory-safety backstop.
+#
+# Thresholds, --prefer and the PSS-vs-RSS reasoning behind them are documented once, in
+# ../../../../etc-real-systemd/etc/systemd/system/earlyoom.service.d/10-args.conf. Read that
+# file before touching any number here, and change both together: the two inits boot the same
+# kernel on the same 31 GiB box, so a threshold that is right on Arch is right on Void.
+#
+#   -r 3600              report memory levels hourly, not every minute
+#   -M 2621440,1310720   SIGTERM at 2.5 GiB available RAM, SIGKILL at 1.25 GiB   (absolute KiB)
+#   -S 6291456,3145728   SIGTERM at 6 GiB free swap,       SIGKILL at 3 GiB      (absolute KiB)
+#
+# Absolute (-M/-S) rather than percentage (-m/-s) because the percentages are taken against
+# earlyoom's "user mem total", which drifts with unreclaimable kernel memory — it was observed
+# wandering 20555-21501 MiB — so a percentage trigger moves exactly when it must not.
+#
+# ── --avoid differs from the systemd side, and has to ─────────────────────────────────────
+#
+# Process names are matched against comm, which the kernel truncates to 15 characters. The
+# systemd list names systemd/systemd-journal/dbus-broker, none of which exist here. Void's
+# equivalents, all verified against `ps -eo comm=` on this host:
+#
+#   runit runsvdir runsv    the supervision tree itself — killing any of these is a reboot
+#   svlogd vlogger          service logging; svlogd death loses the earlyoom log below
+#   dbus-daemon             Void's bus implementation (Arch runs dbus-broker)
+#   dbus-run-sessio         sway is exec'd under `dbus-run-session`; exactly 15 chars, so the
+#                           trailing "n" is truncated away and MUST be omitted to match
+#   elogind polkitd         seat/session management and privilege escalation
+#
+# pipewire/wireplumber/Xwayland are listed even though they are not currently running: an
+# --avoid entry that matches nothing is free, and a missing one is a dead session.
+#
+# ── This file REPLACES the one Void's earlyoom package ships ──────────────────────────────
+#
+# `xbps-query -R --files earlyoom` lists /etc/sv/earlyoom/run, so the distro provides a
+# working service already — it just runs earlyoom bare, on the -m 10,5 percentage defaults
+# that drift with unreclaimable kernel memory and with no --avoid list at all. On this box
+# that combination is what killed the session manager on 2026-07-28. configure.sh overwrites
+# it (rm first, then install) precisely so the thresholds above are the ones in effect.
+#
+# Consequence to expect: xbps treats /etc/sv/earlyoom/run as a config file, so a future
+# `xbps-install -u earlyoom` will leave the new upstream copy beside it as
+# `run.new-<version>` rather than clobbering this one. That is the desired behaviour, but it
+# does mean an upstream change to the service is easy to miss — re-run `dot pkg oom
+# configure` after an earlyoom update and diff away any run.new-* it leaves behind.
+#
+# `exec 2>&1` merges stderr into stdout so the ./log service captures earlyoom's kill lines.
+# That log is the event source oom-notify tails on runit, since there is no journal to follow.
+exec 2>&1
+exec earlyoom \
+  -r 3600 \
+  -M 2621440,1310720 \
+  -S 6291456,3145728 \
+  --avoid '^(runit|runsvdir|runsv|svlogd|vlogger|sway|swayidle|kitty|ly|ly-dm|Xwayland|mako|dbus-daemon|dbus-run-sessio|elogind|polkitd|pipewire|pipewire-pulse|wireplumber|sshd|udevd|iwd|dhcpcd|agetty|sudo|login)$' \
+  --prefer '^(node|node-MainThread|bun|claude|electron|insomnia|iii)$'
