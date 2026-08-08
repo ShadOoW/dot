@@ -18,6 +18,7 @@ Run every one of these before forming any opinion:
 If ticket context was provided: `$ARGUMENTS` — use it to understand the feature's intent before reading any code.
 
 Do not proceed to Phase 2 until you have a complete mental model of:
+
 - What the feature branch is trying to accomplish
 - What main introduced that caused the conflict
 - What each conflicted file's purpose is in the broader system
@@ -29,12 +30,14 @@ Do not proceed to Phase 2 until you have a complete mental model of:
 For each conflicted file, classify it before resolving:
 
 **TRIVIAL** — mechanical, no semantic ambiguity:
+
 - Import reordering
 - Formatting / whitespace
 - Version bumps in obvious places
 - Adding unrelated fields to different parts of the same object
 
 **NON-TRIVIAL** — requires judgment, has semantic weight:
+
 - Logic changes touching the same function or branch
 - Both sides modify the same state, config, or data structure with different intent
 - One side deletes something the other side modifies
@@ -43,6 +46,7 @@ For each conflicted file, classify it before resolving:
 - Any change where "taking both" or "taking one side" could silently break behavior
 
 **LOCKFILE** — `package-lock.json`, `bun.lock`, `yarn.lock`, etc.:
+
 - If the corresponding manifest (`package.json`, etc.) is resolvable, resolve the manifest first, then regenerate the lockfile by running the appropriate install command
 - If the manifest itself is NON-TRIVIAL, treat the lockfile as blocked until the manifest is confirmed
 
@@ -54,11 +58,12 @@ For each conflicted file, classify it before resolving:
 
 **LOCKFILE conflicts**: after resolving the manifest, run the install command automatically. Note in report.
 
-**NON-TRIVIAL conflicts**: 
+**NON-TRIVIAL conflicts**:
 
 **Stop. Do not touch the file yet.**
 
 Present the conflict to the user with:
+
 - The conflicted file and location
 - What the feature branch intended (based on git log + diff)
 - What main introduced and why (based on git log + diff)
@@ -91,6 +96,7 @@ After all commits are resolved, before running `git rebase --continue`, present 
 ### Conflicts Resolved
 
 List every conflicted file with:
+
 - Classification (TRIVIAL / NON-TRIVIAL / LOCKFILE)
 - What resolution was applied
 - Confidence level (HIGH / MEDIUM / LOW) and why
@@ -102,6 +108,7 @@ List every judgment call, even on trivial conflicts. If you assumed "take both s
 ### Non-Trivial Resolutions
 
 For each NON-TRIVIAL conflict, restate:
+
 - The resolution applied (as confirmed by the user)
 - Any remaining risk or follow-up needed
 

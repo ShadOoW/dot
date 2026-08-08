@@ -21,6 +21,7 @@ Lessons stored in agentmemory follow this format:
 - source: BRC-XXXX ticket or commit hash
 
 Applying lessons by combination:
+
 - `high` or `medium`, no intent → strong guidance, apply consistently
 - `low`, no intent → suggestion, mention uncertainty if relevant
 - any confidence + `{intent: enforce}` → hard rule, never deviate,
@@ -77,7 +78,7 @@ Session note:           [flag if learn-from-commits already ran this session —
 build and maintain this table as you process each commit in order:
 
 | Candidate | Seen in N commits | Confidence |
-|-----------|-------------------|------------|
+| --------- | ----------------- | ---------- |
 
 - New pattern → add row at LOW
 - Seen again → increment count, elevate confidence one level
@@ -99,14 +100,14 @@ names an anti-pattern. These are the highest-signal lessons.
 
 **Then scan additions** — only in dimensions where the diff has actual signal:
 
-| Dimension | What to look for |
-|-----------|-----------------|
-| Types | Aliases, generics, casting, inference, what was avoided |
-| File structure | Placement logic, when to split a flat file into a folder |
-| Within-file organization | Region conventions, ordering |
-| State and async | Loading states, tri-state booleans, guards |
-| Data | Fetching, filtering, pagination, ID-based hydration |
-| UI | Flex/grid rules, prop design, conditional rendering |
+| Dimension                | What to look for                                         |
+| ------------------------ | -------------------------------------------------------- |
+| Types                    | Aliases, generics, casting, inference, what was avoided  |
+| File structure           | Placement logic, when to split a flat file into a folder |
+| Within-file organization | Region conventions, ordering                             |
+| State and async          | Loading states, tri-state booleans, guards               |
+| Data                     | Fetching, filtering, pagination, ID-based hydration      |
+| UI                       | Flex/grid rules, prop design, conditional rendering      |
 
 For any moved, renamed, or newly created file, run `ls` on the file's parent,
 grandparent, and further ancestors until you reach a level where the directory
@@ -265,8 +266,8 @@ Collect the structured outputs. Do not re-run any Augment queries in the parent.
 
 Output a compact audit table before proceeding — required for every run:
 
-| Candidate | Confidence | Total snippets | Source type |
-|-----------|------------|----------------|-------------|
+| Candidate | Confidence | Total snippets | Source type         |
+| --------- | ---------- | -------------- | ------------------- |
 | [title]   | HIGH       | N              | removal/replacement |
 
 Do not proceed to Step 4 without this table.
@@ -275,6 +276,7 @@ If any HIGH lesson reports "N+" instead of an exact count, downgrade to MEDIUM
 until the count is exact.
 
 Apply cross-commit recurrence adjustment (only if input had multiple commits):
+
 - Same candidate seen in 2 commits → elevate its confidence one level
 - Same candidate seen in 3+ commits → always HIGH
 
@@ -298,24 +300,25 @@ Evidence: [one concrete example from the diff]
 
 **Choosing layer and scope:**
 
-| Layer | When to use |
-|-------|-------------|
-| `frontend` | app/client/web specific — React, MUI, Redux |
-| `backend` | sms/server specific — Parse, Node, API design |
-| `shared` | Applies to files in more than one top-level project (app/, sms/, lib/, doc/) |
+| Layer      | When to use                                                                  |
+| ---------- | ---------------------------------------------------------------------------- |
+| `frontend` | app/client/web specific — React, MUI, Redux                                  |
+| `backend`  | sms/server specific — Parse, Node, API design                                |
+| `shared`   | Applies to files in more than one top-level project (app/, sms/, lib/, doc/) |
 
 **Layer decision test:** Does this rule apply to files under more than one top-level
 project directory? If yes → `shared`. If the rule only makes sense in one project's
 context even when the TypeScript pattern looks similar → use the more specific layer.
 
-| Scope | When to use |
-|-------|-------------|
-| `react` | React/component-specific — ignore in backend sessions |
-| `parse` | Parse platform specific — ignore in frontend sessions |
-| `ts-universal` | General TypeScript — relevant everywhere |
+| Scope          | When to use                                                     |
+| -------------- | --------------------------------------------------------------- |
+| `react`        | React/component-specific — ignore in backend sessions           |
+| `parse`        | Parse platform specific — ignore in frontend sessions           |
+| `ts-universal` | General TypeScript — relevant everywhere                        |
 | `domain-model` | How orders/events/classes are represented — relevant everywhere |
 
 **Format constraints:**
+
 - Title must be 3–5 words. Count before presenting. Reword immediately if outside range — do not explain the constraint, just fix it.
 - Rule must be actionable when read cold, 6 months from now, by someone who
   never saw this commit
@@ -337,20 +340,24 @@ A reword that violates them must be re-revised or split before adopting.
 ## 5. Dedup
 
 **Always write an explicit result block, even when trivial:**
+
 ```
 Step 5 — Dedup: Store empty — all candidates → ➕ NEW
 ```
+
 or list each candidate's match result individually.
 
 Check every candidate against the loaded lessons list. Apply the first match:
 
 **Identical principle:**
 Strengthen — do not save a new lesson:
+
 ```bash
 curl -s -X POST http://localhost:3111/agentmemory/lesson-strengthen \
   -H "Content-Type: application/json" \
   -d '{"memId": "mem_xxx"}'
 ```
+
 If the new commit reveals better wording, flag as a revision — do not re-save.
 Mark: 🔁 STRENGTHENED
 
@@ -363,6 +370,7 @@ Mark: ✏️ REVISE mem_xxx — show current and proposed full text
 
 **Contradicts an existing lesson:**
 Show both versions with diff and Augment evidence. Force resolution now:
+
 > "Keep existing mem_xxx or replace with new evidence?"
 
 Wait for answer before continuing.
@@ -395,6 +403,7 @@ Source:   removal/replacement | repeated | single-instance | pre-existing
 ```
 
 **Strengthened:**
+
 ```
 🔁 mem_xxx — "title"
    Augment: X snippets confirming still active in codebase
@@ -402,6 +411,7 @@ Source:   removal/replacement | repeated | single-instance | pre-existing
 ```
 
 **Revisions proposed:**
+
 ```
 ✏️ mem_xxx — "title"
    Current:  [full current text]
@@ -412,6 +422,7 @@ Source:   removal/replacement | repeated | single-instance | pre-existing
 **Contradictions:** already resolved above — show final state only
 
 **Dropped candidates** (from Step 2 accounting — listed here for visibility):
+
 ```
 Dropped: [description] — [reason]
 ```
@@ -421,6 +432,7 @@ These were seen once with no verification. Not saved now as individual lessons.
 Will be re-evaluated by review-lessons — enforced entries are promoted regardless of recurrence.
 
 List each with title, one-line description, and intent flag if applicable:
+
 - "title" {intent: enforce} — description
 - "title" — description
 
@@ -429,6 +441,7 @@ The {intent: enforce} flag must be preserved in the watchlist content so
 review-lessons can read it when promoting entries later.
 
 **Summary:**
+
 ```
 New:       N (X high, Y medium, Z low)
 Enforced:  E of the above (counted within their confidence bucket, not separately)
@@ -506,6 +519,7 @@ WATCHLIST: "[title]" {intent: enforce}? — [description]
 ---
 
 ```
+
 Plus the full challenge-learning.md content.
 
 **Step 3 — Dispatch all reviewers in a single message.** Default: one sub-agent
@@ -581,6 +595,7 @@ Confirm with 'save' or 'save 1, 3'
 ```
 
 On confirmation, execute in this order:
+
 1. Saves: memory_save(type="pattern") for each — include {intent: enforce}
    in the content string for any lesson promoted via "enforce [title]"
 2. Strengthens: `lesson-strengthen` for each
@@ -597,10 +612,12 @@ confirm the mem ID from the save response appears in results.
 Do not use `GET /agentmemory/memories` — it filters out recently saved memories.
 
 Confirm for each save:
+
 - The mem ID from the save response appears in smart_search results
 - Saved content matches approved text exactly — not truncated
 
 **If a mem ID is not retrievable:**
+
 1. Retry that save once
 2. If retry fails, output: `MANUAL SAVE NEEDED: memory_save(type='pattern', content='...')`
 

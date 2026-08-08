@@ -27,12 +27,14 @@ Read the **Proposed lessons**, **Dropped candidates**, and **Watchlist** section
 at the top of this prompt in full before challenging anything.
 
 Identify:
+
 - Every proposed new lesson (HIGH and MEDIUM)
 - Every `{intent: enforce}` assignment
 - Every watchlisted LOW lesson
 - The dropped candidates and their stated reasons
 
 Output before proceeding:
+
 ```
 Challenging N lessons ([X high, Y medium], Z enforced).
 Watchlisted: W entries. Dropped: D entries to review.
@@ -117,12 +119,14 @@ If not general: [what constraint makes it narrow]
 Check layer and scope against this decision tree:
 
 Layer:
+
 - Does the rule apply to files under both `app/client/web` AND `sms/server`?
   → `shared`
 - Does it only make sense in one context even if the TypeScript surface is similar?
   → use the more specific layer (`frontend` or `backend`)
 
 Scope:
+
 - `ts-universal`: would this rule appear in any TypeScript codebase, not just this one?
 - `domain-model`: does it depend on knowing what Template, Order, Scope, or Unit mean
   in this specific domain?
@@ -156,6 +160,7 @@ grep -rE "[violation regex]" [paths] --include="*.ts" --include="*.tsx" -l | wc 
 ```
 
 **Check 2 — Documentation (supporting):**
+
 ```bash
 grep -r "[key term]" AGENTS.md README.md docs/ 2>/dev/null | head -20
 ```
@@ -225,13 +230,13 @@ Action:  [what changes, if anything]
 
 **Verdicts:**
 
-| Verdict | Meaning | Action |
-|---------|---------|--------|
-| ✅ CONFIRMED | Passed all applicable vectors | Save as proposed |
-| ⬇️ DOWNGRADE | Confidence too high, or scope tag wrong | Show revised format line |
-| 🚫 REMOVE ENFORCE | Intent not justified | Save without enforce tag — show what evidence would justify adding it back |
-| ❌ REJECT | Lesson should not be saved | State reason — is it a duplicate, consequence, or too narrow? |
-| ❓ UNRESOLVED | Genuine uncertainty | State the specific question you cannot answer from available evidence |
+| Verdict           | Meaning                                 | Action                                                                     |
+| ----------------- | --------------------------------------- | -------------------------------------------------------------------------- |
+| ✅ CONFIRMED      | Passed all applicable vectors           | Save as proposed                                                           |
+| ⬇️ DOWNGRADE      | Confidence too high, or scope tag wrong | Show revised format line                                                   |
+| 🚫 REMOVE ENFORCE | Intent not justified                    | Save without enforce tag — show what evidence would justify adding it back |
+| ❌ REJECT         | Lesson should not be saved              | State reason — is it a duplicate, consequence, or too narrow?              |
+| ❓ UNRESOLVED     | Genuine uncertainty                     | State the specific question you cannot answer from available evidence      |
 
 ---
 
@@ -240,6 +245,7 @@ Action:  [what changes, if anything]
 After producing all verdicts, review your own challenge pass:
 
 For each verdict, answer internally:
+
 - Did I actually re-run the evidence, or did I re-read the original claim?
 - Is my objection substantive (changes the rule) or stylistic (changes the wording)?
 - Would a different phrasing of the lesson text resolve my objection without

@@ -8,6 +8,7 @@ applies their response with due-diligence challenges.
 ## Input
 
 `$ARGUMENTS` contains one or both of:
+
 - The output of an external review pass (e.g. claude.ai meta-review) —
   optional context grounding the user's decisions
 - The user's verdicts, pushbacks, and proposed prompt fixes
@@ -76,8 +77,7 @@ run `memory_smart_search` by title and confirm the returned mem ID appears.
 
 ## 4. Refine prompts
 
-Apply user-proposed prompt fixes only after passing them through section
-2. If the file is a symlink, resolve via `readlink -f` and edit the real
+Apply user-proposed prompt fixes only after passing them through section 2. If the file is a symlink, resolve via `readlink -f` and edit the real
 target.
 
 **Concision rules — non-negotiable:**
@@ -97,10 +97,10 @@ target.
 
 a. Draft the edit.
 b. For each added sentence, ask: would removing it change what the next
-   reader does? If no, remove.
+reader does? If no, remove.
 c. Repeat (b) until no sentence fails the test.
 d. Final pass: if you added more than ~15 lines per logical change, you
-   have prose to cut.
+have prose to cut.
 
 Apply the final, trimmed edits in one pass. Do not narrate the
 iterations in the conversation.

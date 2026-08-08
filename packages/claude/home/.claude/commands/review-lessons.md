@@ -20,6 +20,7 @@ Lessons stored in agentmemory follow this format:
 - source: BRC-XXXX ticket or commit hash
 
 Applying lessons by combination:
+
 - `high` or `medium`, no intent → strong guidance, apply consistently
 - `low`, no intent → suggestion, mention uncertainty if relevant
 - any confidence + `{intent: enforce}` → hard rule, never deviate,
@@ -78,23 +79,26 @@ For each theme, run **3 Augment queries with different phrasings** and request
 5 results per query. Collect all snippets before evaluating anything.
 
 Example for a theme about type design:
+
 - Query 1: `"TypeScript type alias Recorded wrapper"`
 - Query 2: `"avoid unnecessary type definition"`
 - Query 3: `"base type reuse instead of alias"`
 
 **If a query returns 0 or irrelevant results:**
+
 1. Rephrase with different terminology and retry once
 2. If still no results, note the failed query and continue
 3. Never mark a lesson UNVERIFIED without having tried at least 3 distinct queries
 
 **Watchlist promotion:**
+
 - Entry carries {intent: enforce} → promote immediately to type="pattern"
   with {intent: enforce} in the saved content, regardless of Augment results.
   Output: ✅ PROMOTE (enforced) — "title" — team directive, saved regardless of evidence
 - Entry has no intent flag → run 3 Augment queries. Promote if found in 2+
   snippets. Keep watching if still 0 results.
   Output: ✅ PROMOTE — "title" — found in X snippets
-          ⏳ KEEP WATCHING — "title" — still 0 results
+  ⏳ KEEP WATCHING — "title" — still 0 results
 
 Output per theme:
 
@@ -119,13 +123,13 @@ accuracy evaluation entirely. It is a team decision, not an observation — alwa
 verdict ✅ KEEP regardless of Augment evidence, age, or codebase uniformity.
 Never verdict ❌ DELETE or 🔍 UNVERIFIED on accuracy grounds for an enforced lesson.
 
-| Augment evidence | Verdict |
-|-----------------|---------|
-| Pattern confirmed in 3+ snippets | Accurate |
-| Pattern confirmed in 1–2 snippets | Probably accurate — note uncertainty |
-| Pattern contradicted by snippets | Inaccurate → ❌ DELETE |
+| Augment evidence                               | Verdict                                      |
+| ---------------------------------------------- | -------------------------------------------- |
+| Pattern confirmed in 3+ snippets               | Accurate                                     |
+| Pattern confirmed in 1–2 snippets              | Probably accurate — note uncertainty         |
+| Pattern contradicted by snippets               | Inaccurate → ❌ DELETE                       |
 | 0 relevant snippets, lesson older than 30 days | Presumed accurate by age → ✅ KEEP with note |
-| 0 relevant snippets, lesson newer than 30 days | → 🔍 UNVERIFIED |
+| 0 relevant snippets, lesson newer than 30 days | → 🔍 UNVERIFIED                              |
 
 **Specificity** — is it actionable without additional context?
 
@@ -151,11 +155,11 @@ the same situation as: ⚠️ INTERNAL CONTRADICTION mem_xxx vs mem_yyy
 
 **Final verdicts:**
 
-| Verdict | Meaning |
-|---------|---------|
-| ✅ KEEP | Accurate, specific, unique, durable |
-| ⚠️ REVISE | Correct principle — needs rewrite |
-| ❌ DELETE | Inaccurate or fully absorbed by another lesson |
+| Verdict       | Meaning                                                           |
+| ------------- | ----------------------------------------------------------------- |
+| ✅ KEEP       | Accurate, specific, unique, durable                               |
+| ⚠️ REVISE     | Correct principle — needs rewrite                                 |
+| ❌ DELETE     | Inaccurate or fully absorbed by another lesson                    |
 | 🔍 UNVERIFIED | 0 Augment results, lesson under 30 days — kept pending your input |
 
 ---
@@ -165,6 +169,7 @@ the same situation as: ⚠️ INTERNAL CONTRADICTION mem_xxx vs mem_yyy
 Group output by verdict. Show full content for every lesson — never truncate.
 
 **✅ KEEP:**
+
 ```
 mem_xxx — "title" [age: X days]
 Content: [full text]
@@ -173,6 +178,7 @@ Reason:  [confirmed by snippets / presumed accurate by age / relationship to oth
 ```
 
 **⚠️ REVISE:**
+
 ```
 mem_xxx — "title" [age: X days]
 Content:  [full current text]
@@ -182,6 +188,7 @@ Augment:  [which snippets informed the rewrite]
 ```
 
 **❌ DELETE:**
+
 ```
 mem_xxx — "title" [age: X days]
 Content: [full text]
@@ -189,6 +196,7 @@ Reason:  [contradicted by X snippets / absorbed into mem_yyy]
 ```
 
 **🔍 UNVERIFIED:**
+
 ```
 mem_xxx — "title" [age: X days]
 Content: [full text]
@@ -198,6 +206,7 @@ To resolve: "verify mem_xxx against [file]" or "delete mem_xxx"
 ```
 
 **⚠️ Internal contradictions:**
+
 ```
 mem_xxx — "title" vs mem_yyy — "title"
 Conflict:        [what they disagree on]
@@ -208,9 +217,11 @@ Resolve now: reply "keep mem_xxx" or "keep mem_yyy"
 **💡 Gaps** (patterns visible in Augment snippets with no corresponding lesson):
 Max 3, only if clearly absent. These are LOW confidence hypotheses with no
 commit evidence — do not format as ready-to-save rules. List as observations:
+
 > "No lesson covers [pattern] — seen in X snippets across [theme] queries."
 
 **Watchlist promotions:**
+
 ```
 ✅ PROMOTE (enforced) — "title" — team directive, no Augment confirmation needed
 ✅ PROMOTE — "title" — found in X snippets, ready to save as pattern
@@ -218,6 +229,7 @@ commit evidence — do not format as ready-to-save rules. List as observations:
 ```
 
 **Summary:**
+
 ```
 Total:    N lessons
 Verdicts: X keep | Y revise | Z delete | W unverified
@@ -242,6 +254,7 @@ Coverage:    [strong — 0 gaps | partial — 1–2 gaps | weak — 3 gaps]
 Execute approved operations in this exact order to avoid double-deletes:
 
 **1. Standalone deletes:**
+
 ```bash
 curl -s -X POST http://localhost:3111/agentmemory/forget \
   -H "Content-Type: application/json" \
@@ -252,10 +265,10 @@ curl -s -X POST http://localhost:3111/agentmemory/forget \
 `forget(mem_xxx)` → `memory_save(type="pattern", content="[approved rewrite]")`
 
 **3. Watchlist promotions** (delete old watchlist entry, save promoted lesson
-   with {intent: enforce} if flagged, re-save remaining entries):
-   forget(mem_watchlist_id) →
-   memory_save(type="pattern", content="[promoted lesson with intent tag if enforced]")
-   memory_save(type="watchlist", content=[remaining entries, preserving their intent flags])
+with {intent: enforce} if flagged, re-save remaining entries):
+forget(mem_watchlist_id) →
+memory_save(type="pattern", content="[promoted lesson with intent tag if enforced]")
+memory_save(type="watchlist", content=[remaining entries, preserving their intent flags])
 
 **4. New watchlist entries** (from approved gaps):
 `memory_save(type="watchlist", content="[description]")`
@@ -269,6 +282,7 @@ curl -s http://localhost:3111/agentmemory/memories
 ```
 
 Confirm:
+
 - Standalone deleted IDs are absent
 - Revision old IDs are absent, new IDs present with correct content
 - Promoted watchlist lessons appear as `type="pattern"`
@@ -276,6 +290,7 @@ Confirm:
 - Count arithmetic is correct across all operations
 
 **If count is wrong:**
+
 1. Identify the discrepancy
 2. Retry the failed operation once
 3. If retry fails: `MANUAL ACTION NEEDED: [operation] [full content]`

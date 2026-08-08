@@ -80,7 +80,7 @@ Then state your recommendation:
 
 - **ADD TO AGENTS.md** — architectural principle that always applies
   → Show exactly where: "Insert after `#### [existing standard title]`
-    in the `### [Category]` section"
+  in the `### [Category]` section"
 - **ADD TO WATCHLIST** — needs more evidence before becoming a hard rule
   → Format the watchlist entry (see Step 5b)
 - **SKIP** — too narrow, too obvious, or confidence is too low

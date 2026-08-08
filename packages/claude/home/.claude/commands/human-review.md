@@ -5,6 +5,7 @@ pipeline. The pipeline ran on a commit diff and produced a proposed save batch.
 You are the last gate before anything is written to the memory store.
 
 **Hard constraints — enforced throughout, not just at the start:**
+
 - Work only from the run output in $ARGUMENTS. No codebase access.
 - Do not attempt Augment queries, grep, or any external verification.
 - Do not rewrite lessons from scratch — suggest targeted wording changes only.
@@ -48,6 +49,7 @@ Evidence: [concrete example from the diff]
 **intent: enforce** — hard rule in all new code. Flag violations as tech debt.
 
 Applied in future sessions:
+
 - `high` / `medium`, no enforce → strong guidance
 - `low`, no enforce → suggestion
 - any confidence + `{intent: enforce}` → hard rule, never deviate
@@ -58,13 +60,14 @@ Applied in future sessions:
 
 **learn-from-commits** extracts candidates and assigns confidence:
 
-| Level | Required evidence |
-|-------|------------------|
-| HIGH | 5+ snippets across ≥2 of 3 Augment queries. Diff evidence = supporting signal only. Structural lessons also require grep ≥3 files. |
-| MEDIUM | 2–4 snippets, OR 1 snippet + explicit diff removal/replacement. Diff-only = LOW regardless. |
-| LOW | 0–1 snippets. |
+| Level  | Required evidence                                                                                                                  |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| HIGH   | 5+ snippets across ≥2 of 3 Augment queries. Diff evidence = supporting signal only. Structural lessons also require grep ≥3 files. |
+| MEDIUM | 2–4 snippets, OR 1 snippet + explicit diff removal/replacement. Diff-only = LOW regardless.                                        |
+| LOW    | 0–1 snippets.                                                                                                                      |
 
 **challenge-learning** re-verifies on five attack vectors:
+
 1. Evidence — re-runs key Augment query fresh (not cached)
 2. Causality — correctly attributes the change?
 3. Generalizability — survives the next 10 commits?
@@ -82,40 +85,42 @@ Match each adversarial verdict against these patterns. Cite the failure mode
 by name when flagging a verdict.
 
 **Extraction pass:**
+
 - **Over-generalization** — one instance stated as universal convention.
-  *Example: "Place order by scope class" proposed as HIGH enforce when grep
-  found 179 violations.*
+  _Example: "Place order by scope class" proposed as HIGH enforce when grep
+  found 179 violations._
 - **Consequence conflation** — lesson is a side effect of another lesson,
   not independently actionable.
-  *Example: "Remove as-cast" kept when it was purely a consequence of the
-  named-alias lesson.*
+  _Example: "Remove as-cast" kept when it was purely a consequence of the
+  named-alias lesson._
 - **Enforce inflation** — enforce assigned because a commit touched 3+ files,
   without checking the violation rate in the rest of the codebase.
-  *Example: "Re-guard role in handlers" proposed as enforce when 98% of
-  handlers did not follow the pattern.*
+  _Example: "Re-guard role in handlers" proposed as enforce when 98% of
+  handlers did not follow the pattern._
 
 **Adversarial pass:**
+
 - **Current-code blindness** — checker looked at current code (post-commit)
   instead of the diff for causality, missing what was removed.
-  *Example: checker marked "Record intersection eliminates casts" as UNRESOLVED
-  because the casts were already gone from the current file.*
+  _Example: checker marked "Record intersection eliminates casts" as UNRESOLVED
+  because the casts were already gone from the current file._
 - **Evidence-domain confusion** — downgraded scope from ts-universal to
   domain-model because the evidence was domain-specific, even though the
   rule itself requires no domain knowledge.
-  *Example: "Named alias for repeated types" incorrectly retagged to
-  domain-model when the rule applies to any TypeScript codebase.*
+  _Example: "Named alias for repeated types" incorrectly retagged to
+  domain-model when the rule applies to any TypeScript codebase._
 - **Technical-over-practical** — found a technically valid objection that
   misses why the lesson is useful in practice.
-  *Example: "mergeSx" rejected because the "silent drop" causality claim
-  was imprecise, even though the cascade-ordering value is real.*
+  _Example: "mergeSx" rejected because the "silent drop" causality claim
+  was imprecise, even though the cascade-ordering value is real._
 - **Imprecise count downgrade** — "12+" notation triggered automatic
   confidence downgrade when the actual count was sufficient.
 - **Layer over-correction** — changed `shared` → `frontend` without
   verifying the pattern is absent from sms/server.
 - **Contradiction mismatch** — violation count from the adversarial pass
   conflicts with the grep result in the confidence audit table.
-  *Example: adversarial reported "60% violations" but confidence sub-agent
-  had reported 0 surviving anti-patterns.*
+  _Example: adversarial reported "60% violations" but confidence sub-agent
+  had reported 0 surviving anti-patterns._
 
 ---
 
@@ -128,17 +133,19 @@ Verdicts are one line. Reasons are one sentence. Concrete, not hedged.
 
 ### Section 1 — Signal vs noise
 
-*Work only from run output. Produce a concrete verdict on every lesson.*
+_Work only from run output. Produce a concrete verdict on every lesson._
 
 For each proposed lesson (after adversarial revisions), evaluate two
 independent dimensions:
 
 **(a) Content** — Is this genuinely non-obvious to a competent developer on
 this team? Or does it restate something they already know?
+
 - ✅ NON-OBVIOUS | ⚠️ BORDERLINE | ❌ OBVIOUS
 
 **(b) Wording** — Would a developer recall and apply this rule while coding?
 Or is it too abstract, too long, or too jargon-heavy to be actionable?
+
 - ✅ USABLE | ⚠️ NEEDS SHARPENING | ❌ UNUSABLE
 
 For any ⚠️ or ❌, give a one-sentence fix targeting the specific dimension
@@ -149,7 +156,7 @@ how it says it.
 
 ### Section 2 — Enforce sanity check
 
-*Work only from run output. Produce a concrete verdict on every enforce lesson.*
+_Work only from run output. Produce a concrete verdict on every enforce lesson._
 
 For every `{intent: enforce}` lesson, check three things from the run output:
 
@@ -163,6 +170,7 @@ sub-agent's grep result in the audit table? If they contradict each other,
 flag as NUMBER CONFLICT — one pass ran a different query.
 
 Verdict per enforce lesson:
+
 - ✅ JUSTIFIED — at least one criterion clearly met, numbers consistent
 - ⚠️ PREMATURE — criteria marginal; state which condition is weak
 - ❌ OVERREACHING — criteria not met; enforce should be removed
@@ -175,7 +183,7 @@ correct or dismissed valid evidence.
 
 ### Section 3 — Adversarial verdict review
 
-*Work only from run output. Cite the failure mode by name.*
+_Work only from run output. Cite the failure mode by name._
 
 For each adversarial verdict, produce:
 
@@ -193,7 +201,7 @@ this verdict. State specifically what is missing.
 
 ### Section 4 — Watchlist assessment
 
-*Work only from run output. Note whether each entry is new this run or pre-existing.*
+_Work only from run output. Note whether each entry is new this run or pre-existing._
 
 For each watchlist entry:
 
@@ -212,8 +220,8 @@ to evaluate staleness and the run output should include it.
 
 ### Section 5 — Prompt improvement log
 
-*Only issues that would change the save/reject outcome of a lesson if fixed.
-No cosmetic or efficiency issues. Maximum 5, ranked by impact.*
+_Only issues that would change the save/reject outcome of a lesson if fixed.
+No cosmetic or efficiency issues. Maximum 5, ranked by impact._
 
 ```
 Priority: [1–5, where 1 = highest impact]
@@ -227,7 +235,7 @@ Fix: [exact instruction to add or change — one sentence]
 
 ### Section 6 — Save recommendations
 
-*One block per lesson. Include all lessons: confirmed, revised, watchlisted, rejected.*
+_One block per lesson. Include all lessons: confirmed, revised, watchlisted, rejected._
 
 ```
 [N] "title"
@@ -262,20 +270,20 @@ Most important decision right now:       [one sentence — what needs human judg
 
 ## Translating verdicts to Claude Code commands
 
-| Verdict | Claude Code command |
-|---------|-------------------|
-| SAVE AS PROPOSED | `save` or `save 1, 3, 5` for selective |
-| SAVE WITH REWORD | Edit inline in Claude Code, then `save` |
-| DOWNGRADE CONFIDENCE | `override [N] medium` or `override [N] low` |
-| REMOVE ENFORCE | `override [N] remove enforce` |
-| WATCHLIST | Included automatically when you `save` |
-| DROP | `override [N] drop` |
-| OVERRIDE WATCHLIST TO SAVE | `promote [title]` or `enforce [title]` |
-| OVERRIDE ADVERSARIAL REJECT | `override [N] save` |
-| RESOLVE UNRESOLVED | `resolve [N] [your reasoning]` |
-| STRENGTHEN EXISTING | Direct curl (no Claude Code command): |
-| | `curl -s -X POST http://localhost:3111/agentmemory/lesson-strengthen` |
-| | `-H "Content-Type: application/json" -d '{"memId": "mem_xxx"}'` |
+| Verdict                     | Claude Code command                                                   |
+| --------------------------- | --------------------------------------------------------------------- |
+| SAVE AS PROPOSED            | `save` or `save 1, 3, 5` for selective                                |
+| SAVE WITH REWORD            | Edit inline in Claude Code, then `save`                               |
+| DOWNGRADE CONFIDENCE        | `override [N] medium` or `override [N] low`                           |
+| REMOVE ENFORCE              | `override [N] remove enforce`                                         |
+| WATCHLIST                   | Included automatically when you `save`                                |
+| DROP                        | `override [N] drop`                                                   |
+| OVERRIDE WATCHLIST TO SAVE  | `promote [title]` or `enforce [title]`                                |
+| OVERRIDE ADVERSARIAL REJECT | `override [N] save`                                                   |
+| RESOLVE UNRESOLVED          | `resolve [N] [your reasoning]`                                        |
+| STRENGTHEN EXISTING         | Direct curl (no Claude Code command):                                 |
+|                             | `curl -s -X POST http://localhost:3111/agentmemory/lesson-strengthen` |
+|                             | `-H "Content-Type: application/json" -d '{"memId": "mem_xxx"}'`       |
 
 ---
 
