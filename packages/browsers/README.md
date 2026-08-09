@@ -1,16 +1,49 @@
 # browsers — Chromium/Vivaldi/Electron launch flags
 
-Three flag files, each read by a different launcher:
+Three flag files, each read by a different launcher. **None of them supports comments.**
 
-| File                  | Read by                                               | Comments allowed?                                |
-| --------------------- | ----------------------------------------------------- | ------------------------------------------------ |
-| `vivaldi-stable.conf` | `/usr/bin/vivaldi-stable` (shell)                     | **yes** — it does `sed -e '/^\s*#/d'` (line 123) |
-| `chromium-flags.conf` | `/usr/bin/chromium` (compiled ELF launcher since 150) | **unverified — keep it comment-free**            |
-| `electron.flags.conf` | electron apps                                         | unverified — keep it comment-free                |
+| File                  | Read by                                             | Comments allowed?                 |
+| --------------------- | --------------------------------------------------- | --------------------------------- |
+| `vivaldi-stable.conf` | `/usr/bin/vivaldi` → `/opt/vivaldi/vivaldi` (shell) | **no** — plain `cat`, see below   |
+| `chromium-flags.conf` | nothing — `/usr/bin/chromium` never reads it        | n/a — keep it comment-free anyway |
+| `electron.flags.conf` | electron apps                                       | unverified — keep it comment-free |
 
-Only `vivaldi-stable.conf` has a shell wrapper whose comment-stripping can be read. Arch's
-chromium 150 ships a stripped binary launcher, so a `#` line there is an unproven risk for
-no benefit. Reasoning that would otherwise be a comment goes here instead.
+Every flag file in this package is flags-only, one per line. Reasoning that would otherwise
+be a comment goes here instead.
+
+## A `#` in `vivaldi-stable.conf` opens ~100 tabs and downloads `vivaldi-bin` (2026-08-09)
+
+`/opt/vivaldi/vivaldi` does **no** comment stripping and **no** quoting:
+
+```sh
+VIVALDI_USER_FLAGS="$(cat "$XDG_CONFIG_HOME/vivaldi-$CHROME_VERSION_EXTRA.conf")"   # line 123
+exec -a "$0" "$HERE/vivaldi-bin" $VIVALDI_USER_FLAGS "$@"                           # line 133
+```
+
+Unquoted expansion word-splits the _entire file_, prose included. Every word of a comment
+becomes one argv entry, and Chromium treats each non-`--` argv entry as a URL to open. An
+earlier revision of this file carried a 19-line comment block explaining the `--use-gl`
+story below. The results:
+
+- **~100 tabs**, one word each. Bare numbers resolve as IPs — `150` became `0.0.0.150`.
+- **A download of `file:///opt/vivaldi/vivaldi-bin`**, because the comment quoted a shell
+  snippet containing that absolute path, and an existing absolute path is a valid `file:`
+  URL pointing at an ELF binary.
+- **The flags the comment warned against were actually applied.** Off the live process
+  table: `--use-gl=egl --use-gl=disabled --disable-gpu-compositing`, straight out of the
+  prose. The comment documenting the SIGILL crash below was re-causing it, and Vivaldi's
+  own crash-restart re-read the file — self-sustaining. The `--restart` in the same cmdline
+  is that relaunch.
+
+It presents as intermittent only because a running instance absorbs new launches through
+its singleton socket; the file is re-parsed solely on a cold start or a crash-restart.
+
+Verify — both must print nothing:
+
+```sh
+grep -n '#' ~/.config/vivaldi-stable.conf
+pgrep -af vivaldi-bin | grep -o 'use-gl=[a-z]*'
+```
 
 ## Never use `--use-gl=egl` (2026-08-01)
 
