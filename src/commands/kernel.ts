@@ -2,10 +2,25 @@ import { defineCommand } from "citty";
 import { createInterface } from "readline";
 import { commandExists, logError, logInfo, logSection, logSuccess, logWarn } from "../lib/console.ts";
 
-const KEEP_COUNT = 2;
+/**
+ * Extra purgeable kernels to retain as fallbacks, on top of what vkpurge already
+ * protects.
+ *
+ * This is *not* "how many kernels to keep". `vkpurge list` never offers the running
+ * kernel or one owned by an installed package — see `list_kernels()` in vkpurge(8),
+ * which skips `$running` and anything matching `xbps-query -o /boot/vmlinu[xz]-*`.
+ * Its output is already the safe-to-delete set.
+ *
+ * The previous value of 2 double-counted those exclusions and made the command a
+ * no-op: with `vkpurge list` reporting exactly [6.18.36_1, 6.18.38_1] on this host,
+ * `slice(0, -2)` left nothing to remove while 473 MB of /boot sat idle and the
+ * command cheerfully printed "nothing to remove". Keeping 1 leaves three bootable
+ * options — running, installed, and one older — for ~236 MB.
+ */
+const KEEP_PURGEABLE = 1;
 
 export const kernelCommand = defineCommand({
-  meta: { description: "Remove old Void Linux kernels, keeping the 2 newest" },
+  meta: { description: "Remove old Void Linux kernels that vkpurge reports as purgeable" },
   args: {
     check: { type: "boolean", description: "Show what would be removed without making changes" },
     yes: { type: "boolean", description: "Skip confirmation prompt" },
@@ -31,8 +46,8 @@ export const kernelCommand = defineCommand({
     });
     const sorted = new TextDecoder().decode(sortResult.stdout).trim().split("\n").filter(Boolean);
 
-    const toKeep = sorted.slice(-KEEP_COUNT);
-    const toRemove = sorted.slice(0, -KEEP_COUNT);
+    const toKeep = sorted.slice(-KEEP_PURGEABLE);
+    const toRemove = sorted.slice(0, -KEEP_PURGEABLE);
 
     logSection("kernels");
 
