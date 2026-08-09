@@ -8,6 +8,9 @@ set {
     $window ~/.config/fuzzel-scripts/windows.sh
     $clipboard ~/.config/fuzzel-scripts/clipboard.sh
     $clipboard_delete ~/.config/fuzzel-scripts/clipboard.sh --delete
+    # Phone bridge. push needs no root; pull needs READ_CLIPBOARD granted to Termux.
+    $clipboard_phone_push ~/.config/sway/scripts/clipboard-phone.sh push
+    $clipboard_phone_pull ~/.config/sway/scripts/clipboard-phone.sh pull
     $images ~/.config/fuzzel-scripts/images.sh
     $projects dot tools workspace --pick
     
