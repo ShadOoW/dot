@@ -1,8 +1,8 @@
 {
-  "description": "Atuin shell history sync and search",
+  "description": "Atuin shell history sync and search — installed via cargo so both distros share one binary and one schema",
   "packages": {
-    "arch": { "pacman": ["atuin"] },
-    "void": { "xbps": ["atuin"] },
+    "arch": { "cargo": ["atuin"] },
+    "void": { "cargo": ["atuin"] },
     "macos": { "brew": ["atuin"] }
   },
   "tags": ["shell"],
