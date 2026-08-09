@@ -1,12 +1,36 @@
 #!/bin/sh
 # Persist the collector's output to /var/log/runit/dot-usage/current.
 #
-# Without a log service, runsv sends ./run's stdout to runsvdir's tiny log ring, where
+# Without a log service, runsv sends ./run's stdout to runsvdir's tiny argv ring, where
 # nothing ever reads it — which is how the agentmemory interpreter failure stayed
 # invisible for a whole boot. The daemon is deliberately quiet in steady state, so
 # anything here is a tick that failed or a source that could not be enabled.
 #
-# Rotation is set in /var/log/runit/dot-usage/config (n4, s1000000), written by
-# configure.sh because svlogd reads its config from the log directory and that
-# directory does not exist until the service first runs.
-exec svlogd -tt /var/log/runit/dot-usage
+# ── Why this creates its own directory ──────────────────────────────────────────────
+# svlogd exits immediately when its log directory is absent, and runsv re-execs this
+# script the instant it does — an unbounded hot loop at roughly 1 Hz. Worse, the only
+# trace is svlogd's warning scrolling through runsvdir's argv ring:
+#
+#   $ ps -eo args | grep runsvdir
+#   runsvdir -P /run/runit/runsvdir/current log: ...unable to open log directory:
+#     /var/log/runit/dot-usage: file does not exist
+#
+# which is exactly the class of silent failure AGENTS.md records. An earlier version of
+# this file assumed configure.sh had already created the directory; enabling the service
+# without running it first produced precisely that loop. A log service that cannot log
+# must not also be the thing that burns a core, so the directory is created here and
+# configure.sh is an optimisation rather than a prerequisite.
+LOGDIR=/var/log/runit/dot-usage
+
+if ! mkdir -p "$LOGDIR" 2>/dev/null; then
+  echo "dot-usage/log: cannot create $LOGDIR — is /var writable? Not retrying tightly." >&2
+  sleep 30
+  exit 1
+fi
+
+# svlogd reads its rotation config from the log directory itself, so it cannot exist
+# before the directory does. Four 1 MB files: the daemon only speaks up when a tick
+# fails, so this is years of history, bounded.
+[ -f "$LOGDIR/config" ] || printf 'n4\ns1000000\n' >"$LOGDIR/config"
+
+exec svlogd -tt "$LOGDIR"
