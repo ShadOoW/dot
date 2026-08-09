@@ -22,6 +22,48 @@ export async function run(cmd: string[], opts: SpawnOpts = {}): Promise<{ exitCo
   return { exitCode, stdout, stderr, out: (stdout + stderr).trim() };
 }
 
+/**
+ * Re-runs this exact `dot` invocation as root, inheriting the terminal so sudo or doas
+ * can prompt for a password. Never returns — it exits with the child's status.
+ *
+ * ── Why commands escalate themselves instead of being run under sudo ────────────────
+ * `sudo dot …` cannot work, and fails in a way that looks like dot is not installed:
+ *
+ *     $ sudo dot usage acct on
+ *     sudo: dot: command not found
+ *
+ * `dot` is a shim in ~/.local/bin, and sudo resets PATH to its compiled-in
+ * `secure_path`, which does not include it. Telling people to type the full
+ * `sudo bun /data/config/dot/dot.ts …` instead just moves the problem onto them.
+ *
+ * So a subcommand that needs root runs unprivileged, notices, and escalates only the
+ * part that needs it. The password prompt then belongs to the command that actually
+ * needed the privilege, which is also what makes the reason legible at the prompt.
+ *
+ * `process.execPath` is the bun binary and `Bun.main` the entry script, so the child is
+ * the same code rather than a PATH lookup that could resolve to something else.
+ */
+export function reexecAsRoot(reason: string): never {
+  if (process.getuid?.() === 0) {
+    throw new Error("reexecAsRoot called while already root — check the uid before escalating");
+  }
+  const priv = Bun.which("doas") ? "doas" : "sudo";
+  if (!Bun.which(priv)) {
+    console.error(`  ✗ ${reason}, but neither doas nor sudo is installed`);
+    process.exit(1);
+  }
+
+  console.log(`  · ${reason} — escalating with ${priv}`);
+  const r = Bun.spawnSync([priv, process.execPath, Bun.main, ...process.argv.slice(2)], {
+    // stdin included on purpose: sudo prefers /dev/tty but falls back to stdin, and
+    // without it a password prompt in a pipeline hangs with no way to answer.
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  process.exit(r.exitCode ?? 1);
+}
+
 export async function spawnInherit(cmd: string[], opts: SpawnOpts = {}): Promise<{ exitCode: number }> {
   if (!capturing) {
     const r = Bun.spawnSync(cmd, { stdout: "inherit", stderr: "inherit", ...opts });

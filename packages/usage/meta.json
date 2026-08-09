@@ -1,0 +1,9 @@
+{
+  "description": "dot usage collector — tracks which installed software is actually used so unused packages can be found",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] }
+  },
+  "tags": ["system", "hygiene"],
+  "os": ["linux"]
+}

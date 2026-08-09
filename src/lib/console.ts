@@ -41,6 +41,22 @@ export function formatBytes(bytes: number): string {
   return `${bytes.toFixed(1)} TB`;
 }
 
+/**
+ * Writes a whole payload to stdout, honouring backpressure.
+ *
+ * Needed for anything large — a `--json` dump of a usage database is ~100 KB — where
+ * every simpler option loses bytes once stdout is a pipe rather than a terminal:
+ * `console.log` returns before the pipe drains and the tail is lost when the process
+ * exits, `fs.writeSync` performs a short write and reports it, and
+ * `Bun.write(Bun.stdout, …)` never resolves at all. The write callback fires only
+ * after the data is handed off, so awaiting it is the one reliable signal.
+ */
+export function writeStdout(text: string): Promise<void> {
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  process.stdout.write(text, (err) => (err ? reject(err) : resolve()));
+  return promise;
+}
+
 export function commandExists(cmd: string): boolean {
   const r = Bun.spawnSync(["which", cmd], { stdout: "ignore", stderr: "ignore" });
   return r.exitCode === 0;

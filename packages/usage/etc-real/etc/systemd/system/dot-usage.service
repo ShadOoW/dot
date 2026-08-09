@@ -1,0 +1,35 @@
+[Unit]
+Description=dot usage collector — records which installed software is actually used
+Documentation=file:///data/config/dot/docs/usage-tracking.md
+# The repo and its state both live on /data, a separate btrfs subvolume. Without this
+# the unit starts before the mount, finds no dot.ts, and restart-loops.
+RequiresMountsFor=/data /var/lib
+
+[Service]
+Type=simple
+ExecStart=/home/shad/.bun/bin/bun /data/config/dot/dot.ts usage daemon --interval 10
+Restart=on-failure
+RestartSec=30
+
+# A broken interpreter path must become a *failed* unit you notice, not an unbounded
+# loop. AGENTS.md records agentmemory.service restarting ~590 times per boot on
+# status=203/EXEC precisely because RestartSec never tripped the default 5-in-10s
+# limit. 3 attempts in 5 minutes gives up while a real transient still recovers.
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+# Needs root for /proc/PID/exe on other users' processes and for acct(2), but nothing
+# else — so drop the rest.
+CapabilityBoundingSet=CAP_SYS_PACCT CAP_SYS_PTRACE CAP_DAC_READ_SEARCH
+NoNewPrivileges=yes
+ProtectHome=read-only
+ReadWritePaths=/var/lib/dot
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

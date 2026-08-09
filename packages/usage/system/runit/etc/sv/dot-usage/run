@@ -1,0 +1,42 @@
+#!/bin/sh
+# `dot usage daemon`, supervised by runit. Samples /proc, drains the kernel's process
+# accounting file, and periodically rescans atimes and shell history, into
+# /var/lib/dot/usage.db.
+#
+# ── Why this runs as root ────────────────────────────────────────────────────────────
+# /proc/PID/exe is only readable for processes you could ptrace. Measured on this host
+# as uid 1000: 168 of 636 PIDs resolvable. Everything invisible that way is exactly
+# what matters least often but hurts most to get wrong — the supervised daemons. Root
+# also owns the two other prerequisites: acct(2) needs CAP_SYS_PACCT, and
+# /var/lib/dot must be writable by the collector but readable by your reports.
+#
+# ── Why every path here is absolute ─────────────────────────────────────────────────
+# /etc/runit/2 starts the supervisor as `exec env - PATH=$PATH runsvdir ...`, i.e. with
+# a scrubbed environment. bun is not a distro package on this host — it lives in
+# /home/shad/.bun/bin, which is nowhere on that PATH — so a bare `bun` resolves to
+# nothing, ./run dies immediately, and runsv restarts it for the entire boot. That is
+# the exact failure AGENTS.md records for agentmemory.service (~590 restarts per boot
+# on a missing interpreter) and for litellm (~25 min of CPU burned at 5s intervals).
+#
+# ── Why it fails slowly ─────────────────────────────────────────────────────────────
+# runsv re-execs ./run the instant it exits and runit has no StartLimitBurst to lean
+# on, so the backoff has to live in this script: one legible line every 30s, and a
+# service `dot doctor` reports as failed, instead of a silent hot loop.
+
+BUN=/home/shad/.bun/bin/bun
+DOT=/data/config/dot/dot.ts
+INTERVAL=10
+
+# /data is a separate btrfs subvolume. runit stage 1 mounts it before stage 2 starts
+# the supervisor, so this should never trip — but if it ever does, saying so beats
+# spinning on a missing file.
+for f in "$BUN" "$DOT"; do
+  if [ ! -e "$f" ]; then
+    echo "dot-usage: $f is missing — bun is not installed at that path, or /data is not" \
+      "mounted yet. Not retrying tightly." >&2
+    sleep 30
+    exit 1
+  fi
+done
+
+exec "$BUN" "$DOT" usage daemon --interval "$INTERVAL"

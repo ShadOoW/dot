@@ -1,0 +1,12 @@
+#!/bin/sh
+# Persist the collector's output to /var/log/runit/dot-usage/current.
+#
+# Without a log service, runsv sends ./run's stdout to runsvdir's tiny log ring, where
+# nothing ever reads it — which is how the agentmemory interpreter failure stayed
+# invisible for a whole boot. The daemon is deliberately quiet in steady state, so
+# anything here is a tick that failed or a source that could not be enabled.
+#
+# Rotation is set in /var/log/runit/dot-usage/config (n4, s1000000), written by
+# configure.sh because svlogd reads its config from the log directory and that
+# directory does not exist until the service first runs.
+exec svlogd -tt /var/log/runit/dot-usage
