@@ -77,6 +77,51 @@ of bug. See `docs/zram.md`.
 
 ---
 
+## This file is Arch-centric — where it does _not_ apply on the Void boot
+
+This machine dual-boots. Everything above about early boot is a **systemd** property, and
+the two inits diverge in opposite directions. Audited 2026-08-08; see
+`docs/system-analysis.md`.
+
+**The `etc-real/` rule does not constrain service definitions under runit.**
+`/etc/runit/core-services/03-filesystems.sh` mounts fstab _before_ stage 2 execs
+`runsvdir`, so `/data` is present when the service dir is scanned — proven by all 26
+`/data/ops` services showing Δboot = 0. 26 of 43 `/var/service` symlinks point into
+`/data/ops` and that is safe. The rule stays fully in force for the Arch boot, where
+generators genuinely run before `data.mount`.
+
+**The interpreter-path hazard is worse under runit, not better.** `/etc/runit/2` runs
+`exec env - PATH=$PATH runsvdir`, scrubbing the environment for every `run` script. There
+is also no `StartLimitBurst` to fall back on, so the backoff must live in the script:
+print one line, `sleep 30`, `exit 1`. See `packages/agentmemory/.../sv/agentmemory/run`
+and `packages/usage/.../sv/dot-usage/run`.
+
+**runit discards stderr, and has no journal.** `runsv` wires only _stdout_ to the svlogd
+pipe. A service with no `exec 2>&1` and a Go-style stderr logger produces a **0-byte**
+`current` while running perfectly — 12 of 30 log dirs on this host. Worse, seven native
+services (`sshd`, `dbus`, `dhcpcd`, `elogind`, `iwd`, `nix-daemon`, `udevd`) pipe
+`log/run` into `vlogger`, which writes to `/dev/log`; no syslog daemon runs and the socket
+does not exist, so **sshd's auth log goes nowhere**. Under systemd both streams land in
+the journal for free, which is why this is invisible until you switch inits. Any unit this
+repo ships for runit needs its own `log/run`.
+
+**Diagnosing runit unprivileged.** `sv status` always fails as a normal user
+(`/run/runit/supervise.*` is 0700 root) — that is what once made `dot doctor` report every
+service as "not enabled". Compare each `runsv` child's `etimes` against its sibling
+`svlogd`'s instead: svlogd is started once and never restarted, so
+**`svlogd_etimes ≫ child_etimes` is a precise crash-and-restart signature.**
+
+**Timestamps.** svlogd stamps UTC (`-tt`); the host is `+01:00`. Add an hour to every
+`/var/log/runit/*` line before correlating with `ps`. Derive boot from `/proc/stat btime`.
+
+**Tooling parity.** `dot doctor`, `cache`, `update`, `kernel` and `sweep` are all
+distro-guarded. `docs/system-hygiene.md` and `docs/nvidia.md` are still Arch-only and
+prescribe commands (`paccache`, `systemctl`, `mkinitcpio`) that do not exist here — this
+host uses **dracut**. Void's unmerged-config marker is `<file>.new-<version>`, never
+`.pacnew`; searching for the wrong one yields a confident false all-clear.
+
+---
+
 ## Units this repo ships
 
 `system/{systemd,runit}/…` unit files are picked up per-init (`src/lib/pkg.ts:184-186`), plus
