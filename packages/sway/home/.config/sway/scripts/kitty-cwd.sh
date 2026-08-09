@@ -3,4 +3,4 @@
 # Previously used $PWD, which is sway's environment (your home dir), not the
 # focused terminal — so it never opened where you were.
 dir=$(~/.config/sway/scripts/kitty-focused-cwd.sh 2>/dev/null) || dir="$HOME"
-kitty --directory="$dir"
+kitty --single-instance --directory="$dir"

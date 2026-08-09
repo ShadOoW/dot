@@ -3,7 +3,19 @@
 # Logo key. Use Mod1 for Alt.
 set {
     $mod Mod4
-    $term kitty
+    # --single-instance: every kitty window is an os-window of ONE kitty
+    # process. Cold start is ~590 ms (all of it executing kitty.main's Python
+    # imports — `kitty --config NONE` is exactly as slow); handing the request
+    # to a live instance is ~29 ms. --app-id, --directory, --session and the
+    # launching environment all still apply per window, so sway rules,
+    # scratchpad marks and `dot tools workspace` are unaffected.
+    #
+    # The tradeoff is deliberate: one process now owns every terminal, so a
+    # kitty crash takes them all. earlyoom's --avoid list (packages/oom) already
+    # covers kitty, which is what keeps memory pressure from being that crash.
+    # Concurrent launches are safe — the instance election is a socket bind, so
+    # the three prewarms in ./exec reliably produce one process.
+    $term kitty --single-instance
     $menu ~/.config/fuzzel-scripts/app-launcher.sh
     $window ~/.config/fuzzel-scripts/windows.sh
     $clipboard ~/.config/fuzzel-scripts/clipboard.sh
@@ -15,10 +27,10 @@ set {
     $projects dot tools workspace --pick
     
     # Scratchpad settings
-    $sp_terminal "~/.config/sway/scripts/toggle-scratchpad.sh terminal app_id terminal-mark 'kitty --app-id terminal-mark'"
-    $sp_btw "~/.config/sway/scripts/toggle-scratchpad.sh btw app_id btw-scratch 'kitty --app-id btw-scratch'"
-    $sp_music "~/.config/sway/scripts/toggle-scratchpad.sh music app_id music-mark 'kitty --app-id music-mark ncmpcpp'"
-    $sp_explorer "~/.config/sway/scripts/toggle-scratchpad.sh explorer app_id yazi-explorer 'kitty --app-id yazi-explorer yazi'"
+    $sp_terminal "~/.config/sway/scripts/toggle-scratchpad.sh terminal app_id terminal-mark 'kitty --single-instance --app-id terminal-mark'"
+    $sp_btw "~/.config/sway/scripts/toggle-scratchpad.sh btw app_id btw-scratch 'kitty --single-instance --app-id btw-scratch'"
+    $sp_music "~/.config/sway/scripts/toggle-scratchpad.sh music app_id music-mark 'kitty --single-instance --app-id music-mark ncmpcpp'"
+    $sp_explorer "~/.config/sway/scripts/toggle-scratchpad.sh explorer app_id yazi-explorer 'kitty --single-instance --app-id yazi-explorer yazi'"
 }
 # Removed $sp_chatgpt / $sp_whatsapp: both keyed the scratchpad on the same app_id
 # (org.qutebrowser.qutebrowser), so they could only ever have toggled the same window as each

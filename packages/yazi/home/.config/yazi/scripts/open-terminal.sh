@@ -4,4 +4,4 @@
 # inside the yazi-explorer container (which would cause sway to un-hide it).
 DIR="${1:-.}"
 swaymsg '[app_id=yazi-explorer] move scratchpad' 2>/dev/null
-nohup env -u KITTY_LISTEN_ON kitty --working-directory "$DIR" -- "${SHELL:-bash}" >/dev/null 2>&1 &
+nohup env -u KITTY_LISTEN_ON kitty --single-instance --working-directory "$DIR" -- "${SHELL:-bash}" >/dev/null 2>&1 &

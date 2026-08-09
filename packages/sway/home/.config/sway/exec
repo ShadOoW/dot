@@ -36,9 +36,9 @@ exec {
     # No such file or directory / Press Enter or Esc to exit". Guarding means a missing app
     # yields no scratchpad window at all, and the keybinding's own launch path reports it
     # instead of caching a corpse for the rest of the session.
-    kitty --app-id terminal-mark &
-    command -v ncmpcpp >/dev/null 2>&1 && kitty --app-id music-mark ncmpcpp &
-    command -v yazi >/dev/null 2>&1 && kitty --app-id yazi-explorer yazi &
+    kitty --single-instance --app-id terminal-mark &
+    command -v ncmpcpp >/dev/null 2>&1 && kitty --single-instance --app-id music-mark ncmpcpp &
+    command -v yazi >/dev/null 2>&1 && kitty --single-instance --app-id yazi-explorer yazi &
 
     # Start browser
     vivaldi-stable &
