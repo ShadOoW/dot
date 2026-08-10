@@ -6,7 +6,6 @@ import { completionsUpdater } from "./completions.ts";
 import { denoUpdater } from "./deno.ts";
 import { flatpakUpdater } from "./flatpak.ts";
 import { fnmUpdater } from "./fnm.ts";
-import { iwmenuUpdater } from "./iwmenu.ts";
 import { lyUpdater } from "./ly.ts";
 import { npmUpdater } from "./npm.ts";
 import { pacmanUpdater } from "./pacman.ts";
@@ -45,7 +44,6 @@ export const UPDATERS: Updater[] = [
   fnmUpdater,
   anyzigUpdater,
   lyUpdater,
-  iwmenuUpdater,
   zinitUpdater,
 ];
 

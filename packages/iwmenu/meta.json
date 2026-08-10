@@ -1,6 +1,10 @@
 {
-  "description": "iwmenu — iwd Wi-Fi menu (rofi/fuzzel/bemenu frontend)",
-  "packages": {},
+  "description": "iwmenu — iwd Wi-Fi menu (rofi/fuzzel/bemenu frontend), bound to $mod+n in sway. Not published on crates.io: install with `cargo install --locked --git https://github.com/e-tho/iwmenu`. Cargo records the git remote, so `dot update global` refreshes it from the same source once cargo-install-update is present.",
+  "packages": {
+    "arch": { "cargo": ["iwmenu"] },
+    "void": { "cargo": ["iwmenu"] }
+  },
   "tags": ["network", "wayland"],
+  "cleanSteps": [],
   "os": ["linux"]
 }
