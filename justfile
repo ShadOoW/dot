@@ -51,7 +51,7 @@ _check-data:
 	  | xargs -r taplo check
 
 _check-kdl:
-	kdlfmt format --check packages/zellij/config.kdl
+	kdlfmt check packages/zellij/config.kdl
 
 _check-ts:
 	bun x tsc --noEmit
