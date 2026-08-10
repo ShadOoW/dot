@@ -49,7 +49,8 @@ export const pkgbuildsUpdater: Updater = {
 
       logInfo(`${name}: building ${template}…`);
       const cacheDir = join(CACHE_DIR, name);
-      const result = await spawnInherit(["bash", buildScript, cacheDir]);
+      // build.sh installs the finished package with `sudo xbps-install`.
+      const result = await spawnInherit(["bash", buildScript, cacheDir], { pty: false });
       if (result.exitCode !== 0) { logError(`${name}: build failed`); ok = false; }
     }
     return ok;

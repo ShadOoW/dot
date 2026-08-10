@@ -10,7 +10,7 @@ export const pacmanUpdater: Updater = {
     if (check) { logInfo(`pacman: ${getVersion("pacman", ["--version"])}`); return true; }
     const priv = commandExists("doas") ? "doas" : "sudo";
     logSection("pacman");
-    const r = await spawnInherit([priv, "pacman", "-Syu", "--noconfirm"]);
+    const r = await spawnInherit([priv, "pacman", "-Syu", "--noconfirm"], { pty: false });
     return r.exitCode === 0;
   },
 };

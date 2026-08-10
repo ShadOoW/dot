@@ -9,7 +9,7 @@ export const xbpsUpdater: Updater = {
     if (!commandExists("xbps-install")) return true;
     if (check) { logInfo(`xbps: ${getVersion("xbps-query", ["--version"])}`); return true; }
     logSection("xbps");
-    const r = await spawnInherit(["sudo", "xbps-install", "-Syu"]);
+    const r = await spawnInherit(["sudo", "xbps-install", "-Syu"], { pty: false });
     return r.exitCode === 0;
   },
 };

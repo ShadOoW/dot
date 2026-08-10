@@ -7,6 +7,20 @@ interface SpawnOpts {
   env?: Record<string, string>;
 }
 
+/**
+ * `pty: false` keeps the child on the real terminal even while capturing.
+ *
+ * The capture path below wraps children in script(1), which calls setsid() and makes its
+ * own pty the child's *controlling* terminal. sudo scopes its credential cache by
+ * controlling terminal (`timestamp_type=tty`, the default), so a `sudo` inside the wrapper
+ * cannot see — or refresh — the ticket that `dot update --sudoloop` keeps alive on the real
+ * terminal: it prompts again on every wrapped command, and again each time its own 5-minute
+ * window lapses. Anything that authenticates MUST opt out and give up the pty niceties.
+ */
+interface InheritOpts extends SpawnOpts {
+  pty?: boolean;
+}
+
 export function shellEscape(args: string[]): string {
   return args.map(arg => {
     if (/^[\w.,@:/=+-]+$/.test(arg)) return arg;
@@ -64,22 +78,24 @@ export function reexecAsRoot(reason: string): never {
   process.exit(r.exitCode ?? 1);
 }
 
-export async function spawnInherit(cmd: string[], opts: SpawnOpts = {}): Promise<{ exitCode: number }> {
+export async function spawnInherit(cmd: string[], opts: InheritOpts = {}): Promise<{ exitCode: number }> {
+  const { pty = true, ...spawnOpts } = opts;
+
   if (!capturing) {
-    const r = Bun.spawnSync(cmd, { stdout: "inherit", stderr: "inherit", ...opts });
+    const r = Bun.spawnSync(cmd, { stdout: "inherit", stderr: "inherit", ...spawnOpts });
     return { exitCode: r.exitCode ?? 1 };
   }
 
   // Wrap with script(1) to give the subprocess a real PTY — prevents programs
   // from switching to "pipe mode" (no progress bars, different line-break format).
   // cwd is passed to script itself and inherited by the child via sh -c.
-  const hasScript = !!Bun.which("script");
+  const hasScript = pty && !!Bun.which("script");
   const spawnCmd = hasScript
     ? ["script", "-q", "-e", "-c", shellEscape(cmd), "/dev/null"]
     : cmd;
 
   const proc = Bun.spawn(spawnCmd, {
-    ...opts,
+    ...spawnOpts,
     stdout: "pipe",
     // script merges child stdout+stderr through the PTY; fall back pipes both.
     stderr: hasScript ? "inherit" : "pipe",

@@ -9,7 +9,7 @@ export const yayUpdater: Updater = {
     if (!commandExists("yay")) return true;
     if (check) { logInfo(`yay: ${getVersion("yay", ["--version"])}`); return true; }
     logSection("yay");
-    const r = await spawnInherit(["yay", "-Sau", "--noconfirm", "--sudoloop"]);
+    const r = await spawnInherit(["yay", "-Sau", "--noconfirm", "--sudoloop"], { pty: false });
     return r.exitCode === 0;
   },
 };

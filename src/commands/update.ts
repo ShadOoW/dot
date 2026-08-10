@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
-import { HOME_DIR } from "../lib/config.ts";
+import { CACHE_DIR, HOME_DIR } from "../lib/config.ts";
 import { commandExists, getVersion, logDesc, logInfo, logSection, logWarn } from "../lib/console.ts";
 import { detectDistro } from "../lib/pkg.ts";
 import { analyzeStep, captureInProcess } from "../lib/ai.ts";
@@ -11,11 +11,14 @@ import type { StepCallback } from "../lib/updaters/index.ts";
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 async function withSudoLoop<T>(run: () => Promise<T>): Promise<T> {
+  // Authenticate on the real terminal. Every privileged updater must run on this same
+  // controlling terminal or it will miss the ticket — see `pty` in src/lib/spawn.ts.
   const init = Bun.spawnSync(["sudo", "-v"], { stdio: ["inherit", "inherit", "inherit"] });
   if (init.exitCode !== 0) throw new Error("sudo: authentication failed");
-  // Refresh every 55s — well within the default 5-minute sudo timeout
+  // Refresh every 55s — well within the default 5-minute sudo timeout. `-n` so a lapsed
+  // ticket fails fast here instead of blocking on a prompt nobody can see.
   const timer = setInterval(() => {
-    Bun.spawnSync(["sudo", "-v"], { stdio: ["pipe", "pipe", "pipe"] });
+    Bun.spawnSync(["sudo", "-n", "-v"], { stdio: ["ignore", "ignore", "ignore"] });
   }, 55_000);
   try {
     return await run();
@@ -44,7 +47,14 @@ function showInfo() {
   for (const [cmd, args] of tools) {
     if (commandExists(cmd)) logInfo(`${cmd}: ${getVersion(cmd, args)}`);
   }
-  if (existsSync(join(HOME_DIR, ".local/bin/zig"))) logInfo("zig: installed (anyzig)");
+  // anyzig is a multiplexer, not a toolchain: it fetches whatever `minimum_zig_version` the
+  // project's build.zig.zon names. Updating it never changes the compiler a build gets, so
+  // reporting a bare "installed" here reads as a zig version and is exactly the wrong idea.
+  if (existsSync(join(HOME_DIR, ".local/bin/zig"))) {
+    const verFile = join(CACHE_DIR, "anyzig.version");
+    const ver = existsSync(verFile) ? readFileSync(verFile, "utf8").trim() : "untracked";
+    logInfo(`zig: anyzig ${ver} — compiler picked per project from build.zig.zon`);
+  }
 
   console.log("\nPackage managers:");
   for (const pm of ["xbps-install", "flatpak", "npm", "bun", "yarn", "pnpm", "pipx", "cargo"]) {
@@ -122,7 +132,7 @@ export const sourceUpdateCommand = defineCommand({
   async run({ args }) {
     const check = args.check ?? false;
     const ok = await withAI(args.ai ?? false, async (step) => {
-      logDesc("Builds and updates source tools: pkgbuilds, fnm, anyzig, ly, iwmenu, and zinit.");
+      logDesc("Builds and updates source tools: pkgbuilds, fnm, anyzig, ly, and zinit.");
       logSection("source tools");
       return runGroup("source", check, step);
     });
