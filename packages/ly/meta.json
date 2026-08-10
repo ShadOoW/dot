@@ -1,8 +1,8 @@
 {
-  "description": "Ly TUI display manager",
+  "description": "Ly TUI display manager (built from source by `dot update source`)",
   "packages": {
-    "arch": { "pacman": ["ly"] },
-    "void": { "xbps": ["ly"] }
+    "arch": { "pacman": ["pam", "libxcb"] },
+    "void": { "xbps": ["pam-devel", "libxcb-devel"] }
   },
   "tags": ["system", "desktop"],
   "cleanSteps": [],
