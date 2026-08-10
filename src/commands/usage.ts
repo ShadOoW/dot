@@ -12,7 +12,7 @@ import { reexecAsRoot } from "../lib/spawn.ts";
 import {
   ACCT_V3_SIZE,
   acctActive,
-  ATUIN_DB,
+  atuinDbs,
   findUnused,
   formatAge,
   importHistory,
@@ -21,6 +21,7 @@ import {
   loadUsage,
   openStore,
   PACCT_FILE,
+  refreshAttribution,
   resolveDbPath,
   sampleProc,
   scanAtimes,
@@ -114,11 +115,27 @@ function collectOnce(
   }
 
   if (want.history) {
-    const since = Number(store.getMeta("history:cursor") ?? 0);
-    const imp = importHistory(index, since);
-    counts.history = store.record(imp.observations, index);
-    store.setMeta("history:cursor", String(imp.cursor));
-    if (!quiet) logInfo(`history ${imp.rows} new commands -> ${imp.observations.length} programs`);
+    // One cursor per database, keyed by path: each user's atuin timestamps advance
+    // independently, and a single shared cursor would let the first database read
+    // suppress every other user's newer history.
+    const dbs = atuinDbs();
+    let rows = 0;
+    let programs = 0;
+    for (const dbPath of dbs) {
+      const key = `history:cursor:${dbPath}`;
+      const imp = importHistory(index, Number(store.getMeta(key) ?? 0), dbPath);
+      counts.history += store.record(imp.observations, index);
+      store.setMeta(key, String(imp.cursor));
+      rows += imp.rows;
+      programs += imp.observations.length;
+    }
+    if (!quiet) {
+      logInfo(
+        dbs.length
+          ? `history ${rows} new commands -> ${programs} programs (${dbs.length} db${dbs.length > 1 ? "s" : ""})`
+          : "history no atuin database found for any user",
+      );
+    }
   }
 
   return counts;
@@ -154,6 +171,8 @@ const collect = defineCommand({
     const store = openForWrite(args.db);
     try {
       const index = loadPkgIndex(args.pkgdb);
+      const fixed = refreshAttribution(store, index);
+      if (fixed) logInfo(`re-attributed ${fixed} executable(s) whose owning manager had changed`);
       const counts = collectOnce(store, index, wantedSources(args), DEFAULT_INTERVAL);
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
       logSuccess(`recorded ${total} observations into ${store.path}`);
@@ -174,6 +193,10 @@ const daemon = defineCommand({
     const interval = Math.max(1, Number(args.interval ?? DEFAULT_INTERVAL));
     const store = openForWrite(args.db);
     const index = loadPkgIndex(args.pkgdb);
+    // Cheap (~1400 rows) and only at startup, so a code change that alters attribution
+    // repairs the existing rows on the next restart rather than leaving them stale.
+    const fixed = refreshAttribution(store, index);
+    if (fixed) console.log(`dot usage daemon: re-attributed ${fixed} executable(s)`);
 
     // A restart must not lose the accounting file: point acct(2) at it again, since
     // the kernel forgets on reboot. Failure is not fatal — proc sampling still works.
@@ -474,12 +497,15 @@ const status = defineCommand({
     logSection("Sources");
     const on = acctActive();
     console.log(
-      `  ${on ? colors.green("●") : colors.yellow("○")} acct     kernel process accounting ${on ? "on" : "off — `dot usage acct on` as root for complete coverage"}`,
+      `  ${on ? colors.green("●") : colors.yellow("○")} acct     kernel process accounting ${on ? "on" : "off — run `dot usage acct on`, which asks for a password"}`,
     );
     console.log(`  ${colors.green("●")} proc     /proc polling${process.getuid?.() === 0 ? "" : colors.dim(" (unprivileged: only your own processes)")}`);
     console.log(`  ${colors.green("●")} atime    relatime on /, so ~1 day granularity`);
+    // Listing the databases found, rather than testing one $HOME-derived path, is what
+    // makes the root service's view visible: it reads every user's history, not its own.
+    const dbs = atuinDbs();
     console.log(
-      `  ${existsSync(ATUIN_DB) ? colors.green("●") : colors.yellow("○")} history  ${existsSync(ATUIN_DB) ? ATUIN_DB : "no atuin database"}`,
+      `  ${dbs.length ? colors.green("●") : colors.yellow("○")} history  ${dbs.length ? dbs.join(", ") : "no atuin database found for any user"}`,
     );
   },
 });

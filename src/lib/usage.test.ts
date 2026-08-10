@@ -4,10 +4,13 @@ import { tmpdir } from "os";
 import { join } from "path";
 import {
   ACCT_V3_SIZE,
+  atuinDbs,
   commandsIn,
   depToName,
   findUnused,
+  humanHomes,
   loadPacmanIndex,
+  ownerOf,
   parseAcct,
   parsePacmanDesc,
   parsePlist,
@@ -410,5 +413,84 @@ describe("findUnused", () => {
     const index = indexOf([pkg("small", { size: 10 }), pkg("big", { size: 1000 }), pkg("mid", { size: 100 })]);
     const res = findUnused(index, [], { days: 90, now: NOW });
     expect(res.candidates.map((c) => c.pkg.name)).toEqual(["big", "mid", "small"]);
+  });
+});
+
+describe("multi-user attribution (the root-service bug)", () => {
+  // The collector runs as root under a supervisor that scrubs the environment, so $HOME
+  // is unset or /root. Anchoring attribution on it filed every user-installed binary as
+  // `unmanaged` for 30 hours before this was caught.
+  const passwd = (body: string) => {
+    fixture = mkdtempSync(join(tmpdir(), "dot-passwd-"));
+    const f = join(fixture, "passwd");
+    writeFileSync(f, body);
+    return f;
+  };
+
+  test("real users are taken from passwd; system and service accounts are not", () => {
+    const f = passwd(
+      [
+        "root:x:0:0::/root:/bin/bash",
+        "bin:x:1:1::/:/usr/bin/nologin",
+        "shad:x:1000:1000::/home/shad:/bin/zsh",
+        "alice:x:1001:1001::/home/alice:/bin/bash",
+        "_svc:x:1002:1002::/var/lib/svc:/usr/bin/nologin",
+        "nobody:x:65534:65534::/var/empty:/bin/false",
+        "",
+      ].join("\n"),
+    );
+    const homes = humanHomes(f);
+    expect(homes).toContain("/home/shad");
+    expect(homes).toContain("/home/alice");
+    expect(homes).not.toContain("/var/lib/svc");
+    expect(homes).not.toContain("/var/empty");
+    expect(homes).not.toContain("/");
+  });
+
+  test("a user-installed binary is attributed no matter whose home it is in", () => {
+    const index = indexOf([pkg("zsh", { bins: ["/usr/bin/zsh"] })]);
+    const homes = ["/home/shad", "/home/alice"];
+    const owner = (p: string) => ownerOf(p, index, homes);
+
+    expect(owner("/home/alice/.cargo/bin/dua")).toEqual({ manager: "cargo", pkg: "dua" });
+    expect(owner("/home/shad/.bun/bin/prettier")).toEqual({ manager: "bun", pkg: "prettier" });
+    expect(owner("/home/shad/.local/bin/iii")).toEqual({ manager: "local", pkg: "iii" });
+    expect(owner("/home/shad/.local/share/uv/tools/ruff/bin/ruff")).toEqual({ manager: "uv", pkg: "ruff" });
+    expect(owner("/home/shad/go/bin/task")).toEqual({ manager: "go", pkg: "task" });
+    // Distro packages and nix still win, and are unaffected by homes.
+    expect(owner("/usr/bin/zsh")).toEqual({ manager: "xbps", pkg: "zsh" });
+  });
+
+  test("dot cache's managed-<tool> namespace is attributed to the tool", () => {
+    // ~/.cargo is a symlink to ~/.cache/managed-cargo and /proc/PID/exe resolves it, so
+    // the resolved path is the only one the collector ever sees. Missing this filed a
+    // cargo-installed atuin, plus rustup's cargo and rustc, as `unmanaged`.
+    const index = indexOf([]);
+    const owner = (p: string) => ownerOf(p, index, ["/home/shad"]);
+    expect(owner("/home/shad/.cache/managed-cargo/bin/atuin")).toEqual({ manager: "cargo", pkg: "atuin" });
+    expect(owner("/home/shad/.cache/managed-rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc")).toEqual({
+      manager: "rustup",
+      pkg: "rustc",
+    });
+    expect(owner("/home/shad/.cache/managed-go/bin/task")).toEqual({ manager: "go", pkg: "task" });
+    // The conventional path still works where dot cache has not redirected it.
+    expect(owner("/home/shad/.cargo/bin/dua")).toEqual({ manager: "cargo", pkg: "dua" });
+  });
+
+  test("a version-manager tree inside a home reports the version manager", () => {
+    // ~/.cache/managed-fnm/... is under a home but the useful answer is fnm.
+    const index = indexOf([]);
+    expect(ownerOf("/home/shad/.cache/managed-fnm/node-versions/v26/installation/bin/node", index, ["/home/shad"])).toEqual({
+      manager: "fnm",
+      pkg: "node",
+    });
+  });
+
+  test("a path in no home and no package is unmanaged, not misfiled", () => {
+    expect(ownerOf("/srv/random/thing", indexOf([]), ["/home/shad"])).toEqual({ manager: "unmanaged", pkg: null });
+  });
+
+  test("atuinDbs returns nothing when no home has one, rather than a phantom path", () => {
+    expect(atuinDbs(["/nonexistent-home-a", "/nonexistent-home-b"])).toEqual([]);
   });
 });

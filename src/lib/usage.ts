@@ -567,13 +567,61 @@ export interface Owner {
 const NIX_STORE = /^\/nix\/store\/[a-z0-9]{32}-(.+?)(\/|$)/;
 
 /**
+ * Home directories of real, human users, plus this process's own.
+ *
+ * The collector runs as root under a supervisor that scrubs the environment, so
+ * `$HOME` is either unset or `/root` — never the home of the person whose tools are
+ * being attributed. Anchoring on `$HOME` silently mis-filed every user-installed
+ * binary: measured on this host after 30 hours as a root service,
+ * `/home/shad/.bun/bin/bun` and `/home/shad/.local/bin/iii` came back `unmanaged`
+ * instead of `bun` and `local`. The `fnm` rule survived only because it happens to
+ * match a path substring rather than a home prefix.
+ *
+ * So the homes come from the passwd database instead of the environment. uid >= 1000
+ * excludes system accounts; `nologin`/`false` shells exclude service accounts that
+ * still own a directory.
+ */
+export function humanHomes(passwd = "/etc/passwd"): string[] {
+  const out = new Set<string>();
+  try {
+    for (const line of readFileSync(passwd, "utf8").split("\n")) {
+      const [, , uidRaw, , , home, shell] = line.split(":");
+      const uid = Number(uidRaw);
+      if (!home || !Number.isFinite(uid) || uid < 1000 || uid >= 65534) continue;
+      if (shell && /(nologin|\/false)$/.test(shell)) continue;
+      if (home === "/" || !home.startsWith("/")) continue;
+      out.add(home.replace(/\/$/, ""));
+    }
+  } catch {
+    /* no passwd readable — fall back to the environment alone */
+  }
+  // Keep the invoking user's home too, for a home outside the passwd convention.
+  if (HOME_DIR.startsWith("/")) out.add(HOME_DIR.replace(/\/$/, ""));
+  return [...out];
+}
+
+let homesCache: string[] | undefined;
+
+/**
+ * The part of `path` under some user's home, or null. Returns e.g. `.cargo/bin/dua`
+ * so the caller can test manager-specific subpaths without knowing whose home it was.
+ */
+function underHome(path: string, homes: string[]): string | null {
+  for (const h of homes) {
+    if (path.startsWith(`${h}/`)) return path.slice(h.length + 1);
+  }
+  return null;
+}
+
+/**
  * Which manager, if any, is responsible for a path.
  *
- * Everything that is not xbps still matters: a tool installed three different ways
- * is a maintenance problem, and one dropped into ~/.local/bin by hand will never be
- * upgraded by anything. Bucketing them explicitly is what lets the report say so.
+ * Everything that is not a distro package still matters: a tool installed three
+ * different ways is a maintenance problem, and one dropped into ~/.local/bin by hand
+ * will never be upgraded by anything. Bucketing them explicitly is what lets the
+ * report say so.
  */
-export function ownerOf(path: string, index: PkgIndex): Owner {
+export function ownerOf(path: string, index: PkgIndex, homes = (homesCache ??= humanHomes())): Owner {
   const native = index.byPath.get(path);
   if (native) return { manager: index.manager, pkg: native };
 
@@ -581,17 +629,37 @@ export function ownerOf(path: string, index: PkgIndex): Owner {
   if (nix) return { manager: "nix", pkg: nix[1]! };
 
   const name = basename(path);
-  if (path.startsWith(`${HOME_DIR}/.cargo/bin/`)) return { manager: "cargo", pkg: name };
-  if (path.startsWith(`${HOME_DIR}/.bun/bin/`)) return { manager: "bun", pkg: name };
+  // Checked before the home rules: a version manager's tree can live under a cache
+  // directory that is itself inside a home, and the manager is the useful answer.
   if (path.includes("/fnm_multishells/") || path.includes("/managed-fnm/")) return { manager: "fnm", pkg: name };
-  if (path.startsWith(`${HOME_DIR}/go/bin/`)) return { manager: "go", pkg: name };
-  if (path.startsWith(`${HOME_DIR}/.local/share/pnpm/`)) return { manager: "pnpm", pkg: name };
-  if (path.startsWith(`${HOME_DIR}/.local/bin/`)) return { manager: "local", pkg: name };
+
+  const rel = underHome(path, homes);
+  if (rel) {
+    // `dot cache` redirects each toolchain's cache into ~/.cache/managed-<tool> (13 of
+    // them here) and symlinks the conventional location at it — ~/.cargo is a symlink
+    // to ~/.cache/managed-cargo. /proc/PID/exe reports the *resolved* path, so the
+    // conventional-name rules below never match anything the collector actually sees:
+    // the freshly cargo-installed atuin came back `unmanaged`, as did rustup's cargo
+    // and rustc. The directory name is the tool name, so one rule covers the whole
+    // namespace and any future addition to it.
+    const managed = /^\.cache\/managed-([a-z0-9]+)\//.exec(rel);
+    if (managed) return { manager: managed[1]!, pkg: name };
+
+    // Conventional locations, for hosts where `dot cache` has not redirected them.
+    if (rel.startsWith(".cargo/bin/")) return { manager: "cargo", pkg: name };
+    if (rel.startsWith(".bun/bin/")) return { manager: "bun", pkg: name };
+    if (rel.startsWith(".bun/install/global/")) return { manager: "bun", pkg: name };
+    if (rel.startsWith("go/bin/")) return { manager: "go", pkg: name };
+    if (rel.startsWith(".local/share/pnpm/")) return { manager: "pnpm", pkg: name };
+    if (rel.startsWith(".local/share/uv/")) return { manager: "uv", pkg: name };
+    if (rel.startsWith(".local/bin/")) return { manager: "local", pkg: name };
+  }
+
   if (path.startsWith("/usr/local/")) return { manager: "local", pkg: name };
   if (path.startsWith("/opt/")) return { manager: "opt", pkg: path.split("/")[2] ?? name };
 
   // A path inside a package-owned tree that is not itself a listed file — a
-  // wrapper written by a post-install script, say. Attribute by directory.
+  // wrapper written by a post-install script, say.
   return { manager: "unmanaged", pkg: null };
 }
 
@@ -630,6 +698,40 @@ export interface UsageStore {
   getMeta(key: string): string | null;
   setMeta(key: string, value: string): void;
   close(): void;
+}
+
+/**
+ * Recomputes `bin.manager` / `bin.pkg` for every recorded executable, returning how
+ * many rows changed.
+ *
+ * Attribution is a pure function of (path, package index), so the columns are a cache,
+ * not a fact — and a stale cache is exactly what the `$HOME` bug produced: 30 hours of
+ * rows where `/home/shad/.bun/bin/bun` was filed `unmanaged`, frozen in place because a
+ * `bin` row is only ever written once, when its path is first seen.
+ *
+ * Refreshing on every index load makes that self-healing instead of needing a migration,
+ * and it also picks up ordinary churn: a binary that moves from ~/.local/bin into a
+ * distro package should stop being reported as hand-dropped.
+ */
+export function refreshAttribution(store: UsageStore, index: PkgIndex): number {
+  const rows = store.db
+    .query<{ id: number; key: string; manager: string | null; pkg: string | null }, []>(
+      "SELECT id, key, manager, pkg FROM bin",
+    )
+    .all();
+  const update = store.db.query<never, [string, string | null, number]>("UPDATE bin SET manager = ?, pkg = ? WHERE id = ?");
+
+  let changed = 0;
+  const tx = store.db.transaction(() => {
+    for (const r of rows) {
+      const owner = r.key.startsWith("/") ? ownerOf(r.key, index) : nameOwner(r.key.slice(r.key.indexOf(":") + 1), index);
+      if (owner.manager === r.manager && owner.pkg === (r.pkg ?? null)) continue;
+      update.run(owner.manager, owner.pkg, r.id);
+      changed++;
+    }
+  });
+  tx();
+  return changed;
 }
 
 /** Picks the system db when it exists (or can be created), else the per-user one. */
@@ -1010,6 +1112,20 @@ export function scanAtimes(index: PkgIndex, now = Math.floor(Date.now() / 1000))
 // ────────────────────────────────────────────────────────────────────────────────
 
 export const ATUIN_DB = join(HOME_DIR, ".local/share/atuin/history.db");
+
+/**
+ * Every atuin history database on the machine, one per human user.
+ *
+ * The collector is a root service, so `ATUIN_DB` — which is `$HOME`-derived — points
+ * at `/root/.local/share/atuin/history.db`, a file that does not exist. The symptom
+ * was silent: `dot usage status` simply reported `history  no data` after 30 hours of
+ * otherwise-healthy collection, and `history:cursor` stayed at 0. Enumerating homes
+ * from the passwd database instead means the service reads the histories of the people
+ * who actually typed the commands.
+ */
+export function atuinDbs(homes = humanHomes()): string[] {
+  return homes.map((h) => join(h, ".local/share/atuin/history.db")).filter((p) => existsSync(p));
+}
 
 /**
  * Words that are the shell itself, not software. `cd` and `z` ranked 4th and 7th by
