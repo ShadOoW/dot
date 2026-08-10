@@ -9,6 +9,17 @@ import { shellEscape } from "./spawn.ts";
 
 export const SESSIONS_DIR = join(STATE_DIR, "kitty-sessions");
 
+/**
+ * Prefix for every kitty launch this CLI performs.
+ *
+ * --single-instance makes the new window an os-window of the one running kitty
+ * process: ~29 ms instead of the ~590 ms a cold kitty needs to execute
+ * kitty.main's Python imports. --app-id, --directory, --session and the
+ * launching environment are all still honoured per window, which is what keeps
+ * the sway-side app_id matching in workspace/session restore working.
+ */
+export const KITTY = ["kitty", "--single-instance"] as const;
+
 export interface SessionWindow {
   cwd: string;
   /** Shell command line; omitted → plain login shell. */
