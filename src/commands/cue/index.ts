@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 import { isCancel, select } from "@clack/prompts";
 import { colors, logError, logInfo, logSuccess, logWarn } from "../../lib/console.ts";
-import { findWindows, getScreenText, sendKeys, sendText, type TermWindow } from "../../lib/kitty.ts";
+import { findWindows, getScreenText, sendKeys, sendText, socketPid, type TermWindow } from "../../lib/kitty.ts";
 import { run } from "../../lib/spawn.ts";
 import {
   JOBS_DIR,
@@ -29,7 +29,7 @@ import {
  *   dot cue --keys enter                  # window holds the text, just submit
  *
  * With --in/--at/--auto it schedules the same injection for later via a
- * detached runner — built to wake a rate-limited claude session back up, but
+ * detached runner — built to wake a rate-limited agent session back up, but
  * any window is a valid target:
  *
  *   dot cue --in 4h --text "continue"
@@ -109,7 +109,7 @@ async function gitRoot(): Promise<string> {
 }
 
 function windowLabel(w: TermWindow): string {
-  const pid = w.socket.replace(/^unix:\/tmp\/kitty-/, "");
+  const pid = socketPid(w.socket) ?? "?";
   return `${w.title || "(untitled)"} — ${w.cwd} [${w.app ?? "shell"}] (kitty ${pid})${w.isSelf ? " (this window)" : ""}`;
 }
 
@@ -347,9 +347,17 @@ export const cueCommand = defineCommand({
       const target = await resolveRepoWindow(args.match);
       if (!target) process.exit(1);
 
+      if (args["dry-run"]) {
+        // --dry-run used to be read only on the scheduled path below, so an
+        // immediate `dot cue --text … --dry-run` resolved a window and then
+        // pasted into it for real while printing "change nothing".
+        logInfo(`Would send ${describePayload(payload)} to ${windowLabel(target)} now`);
+        return;
+      }
+
       if (payload.text != null) {
         if (!(await sendText(target.socket, target.windowId, payload.text))) {
-          logError("kitten send-text failed");
+          logError("send-text failed");
           process.exit(1);
         }
         // Let the TUI ingest the paste before the key events so they aren't
@@ -357,7 +365,7 @@ export const cueCommand = defineCommand({
         if (payload.keys.length > 0) await Bun.sleep(400);
       }
       if (payload.keys.length > 0 && !(await sendKeys(target.socket, target.windowId, payload.keys))) {
-        logError(payload.text != null ? "kitten send-key failed — text pasted but keys not sent" : "kitten send-key failed");
+        logError(payload.text != null ? "send-key failed — text pasted but keys not sent" : "send-key failed");
         process.exit(1);
       }
       logSuccess(`Sent ${describePayload(payload)} to ${target.title || target.cwd}`);
@@ -416,13 +424,9 @@ export const cueCommand = defineCommand({
 
     const when = `${new Date(fireAt).toLocaleString()} (in ${formatRemaining(fireAt - Date.now())})`;
     if (args["dry-run"]) {
-      logInfo(`Would send ${describePayload(job)} at ${when} via:`);
-      if (job.text != null) {
-        console.log(colors.dim(`    kitten @ --to ${job.socket} send-text --match id:${job.windowId} -- ${job.text}`));
-      }
-      if (job.keys.length > 0) {
-        console.log(colors.dim(`    kitten @ --to ${job.socket} send-key --match id:${job.windowId} ${job.keys.join(" ")}`));
-      }
+      logInfo(`Would send ${describePayload(job)} at ${when}, to window ${job.windowId} on ${job.socket}:`);
+      if (job.text != null) console.log(colors.dim(`    send-text  ${JSON.stringify(job.text)}`));
+      if (job.keys.length > 0) console.log(colors.dim(`    send-key   ${job.keys.join(" ")}`));
       return;
     }
 

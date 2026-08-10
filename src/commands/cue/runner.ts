@@ -145,7 +145,7 @@ async function runnerMain(): Promise<void> {
 
   job.status = ok ? "fired" : "failed";
   job.firedAt = Date.now();
-  if (!ok) job.error = "kitten send-text/send-key failed";
+  if (!ok) job.error = "send-text/send-key failed";
   await saveJob(job);
   notify(
     ok ? "normal" : "critical",
