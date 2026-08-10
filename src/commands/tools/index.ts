@@ -7,7 +7,6 @@ import { colors, logInfo } from "../../lib/console.ts";
 import { compressCommand } from "./compress.ts";
 import { recordCommand } from "./record.ts";
 import { passphraseCommand } from "./passphrase.ts";
-import { workspaceCommand } from "./workspace.ts";
 
 const chrootCommand = defineCommand({
   meta: { description: "Display the Void Linux chroot recovery instructions" },
@@ -39,7 +38,6 @@ export const toolsCommand = defineCommand({
     record: recordCommand,
     chroot: chrootCommand,
     passphrase: passphraseCommand,
-    workspace: workspaceCommand,
   },
   async run({ rawArgs }) {
     // citty runs this parent handler after a subcommand too — only print
@@ -53,7 +51,6 @@ Subcommands:
   record                     Record screen (Wayland/wf-recorder)
   chroot                      Show Void Linux chroot recovery instructions
   passphrase                  Generate a secure diceware passphrase
-  workspace                   Launch or focus a sway+kitty project workspace
 
 Examples:
   dot tools compress ~/screenshots/
@@ -61,8 +58,6 @@ Examples:
   dot tools record --mode monitor --quality high
   dot tools chroot
   dot tools passphrase --words 6
-  dot tools workspace bruce
-  dot tools workspace --pick
 `);
   },
 });

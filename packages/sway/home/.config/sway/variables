@@ -8,7 +8,7 @@ set {
     # imports — `kitty --config NONE` is exactly as slow); handing the request
     # to a live instance is ~29 ms. --app-id, --directory, --session and the
     # launching environment all still apply per window, so sway rules,
-    # scratchpad marks and `dot tools workspace` are unaffected.
+    # scratchpad marks and `dot session restore` are unaffected.
     #
     # The tradeoff is deliberate: one process now owns every terminal, so a
     # kitty crash takes them all. earlyoom's --avoid list (packages/oom) already
@@ -24,7 +24,7 @@ set {
     $clipboard_phone_push ~/.config/sway/scripts/clipboard-phone.sh push
     $clipboard_phone_pull ~/.config/sway/scripts/clipboard-phone.sh pull
     $images ~/.config/fuzzel-scripts/images.sh
-    $projects dot tools workspace --pick
+    $projects dot session restore --pick
     
     # Scratchpad settings
     $sp_terminal "~/.config/sway/scripts/toggle-scratchpad.sh terminal app_id terminal-mark 'kitty --single-instance --app-id terminal-mark'"

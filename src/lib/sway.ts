@@ -21,6 +21,10 @@ export interface SwayNode {
   marks?: string[];
   num?: number;
   focused?: boolean;
+  /** Container split kind: splith, splitv, tabbed, stacked, or none for leaves. */
+  layout?: string;
+  /** Absolute geometry; a child's share of its parent's rect is how ppt is recovered. */
+  rect?: { x: number; y: number; width: number; height: number };
   window_properties?: { class?: string; instance?: string };
   nodes?: SwayNode[];
   floating_nodes?: SwayNode[];

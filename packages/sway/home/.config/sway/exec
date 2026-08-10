@@ -13,7 +13,7 @@ exec {
     [ -d /run/systemd/system ] || ~/.local/bin/oom-notify &
 
     # Workspaces 3/4 are reserved for scripted project layouts
-    # (dot tools workspace) — autotiling would fight the tabbed containers.
+    # (dot session restore) — autotiling would fight the tabbed containers.
     autotiling-rs 5 6 7 8 9 10 &
     wl-paste --watch cliphist -db-path /data/stash/clipboard/cliphist -max-items 1000000 store &
 
@@ -42,7 +42,13 @@ exec {
 
     # Start browser
     vivaldi-stable &
-    # Restores the pre-reboot terminal/claude snapshot taken by
-    # `dot claude session reboot`; silent no-op when none is pending.
-    dot claude session restore --if-pending &
+    # Rebuilds the snapshot taken by `dot session reboot`/`save`; silent no-op when nothing
+    # is armed. Consumes a one-shot token, so it fires once per save.
+    #
+    # `recover` runs AFTER it, not alongside, and the ordering is load-bearing. Reading
+    # transcript mtimes cannot tell an orderly shutdown from a crash, so the only thing that
+    # distinguishes them is whether those sessions are live again — and restore is what makes
+    # them live. Run concurrently, recover finishes in ~0.1s while restore is still waiting on
+    # windows, and every planned reboot would announce itself as a crash.
+    dot session restore --if-pending && dot session recover --notify &
 }

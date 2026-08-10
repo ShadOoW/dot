@@ -10,7 +10,7 @@ import { statusCommand } from "./status.ts";
 import { graphCommand } from "./graph.ts";
 import { completionsCommand } from "./completions.ts";
 import { sgcCommand } from "./sgc.ts";
-import { claudeCommand } from "./claude/index.ts";
+import { sessionCommand } from "./session/index.ts";
 import { cueCommand } from "./cue/index.ts";
 import { sweepCommand } from "./sweep.ts";
 import { usageCommand } from "./usage.ts";
@@ -35,7 +35,7 @@ export const REGISTRY = {
   graph: graphCommand,
   completions: completionsCommand,
   sgc: sgcCommand,
-  claude: claudeCommand,
+  session: sessionCommand,
   cue: cueCommand,
   sweep: sweepCommand,
   usage: usageCommand,
