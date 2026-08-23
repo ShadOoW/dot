@@ -157,10 +157,31 @@ the VPN. Both are now applied by `packages/dns/configure.sh` rather than by hand
 ```
 
 Both glibc (`files dns`) and musl read that one file, so there's no split brain to
-begin with. **Caveat:** AWS VPN _split-DNS_ is unavailable on Void because the
-client's configure-dns needs `resolvectl` (systemd-resolved). The tunnel and pushed
-routes still work; only VPN-internal DNS _names_ won't resolve. (Future option: a
-small `resolvectl` shim that edits resolv.conf, to unify VPN DNS on Void too.)
+begin with.
+
+> **Caveat — stronger than it used to read here.** This file previously claimed that on
+> Void "the tunnel and pushed routes still work; only VPN-internal DNS names won't
+> resolve." **That is false.** `configure-dns`'s `call_resolvectl` does `exit $exit_code`
+> on any non-zero result, and a missing `resolvectl` exits **127** — measured, by running
+> the real script with a PATH that has everything except `resolvectl`:
+>
+> ```
+> --up exit code with resolvectl ABSENT: 127
+> ```
+>
+> OpenVPN treats a non-zero `--up` as fatal (`F,WARNING: Failed running command
+(--up/--down)`), so on Void the AWS VPN **cannot connect at all** — it fails the same
+> way, and with the same misleading "Connection failed. Try again.", as the Arch outage
+> documented above. It is not a degraded-DNS caveat; it is a hard blocker.
+>
+> Unfixed as of 2026-08-23, because it is unverifiable from the Arch boot. The fix is the
+> `resolvectl` shim floated below, and it needs testing _on_ Void.
+
+A shim is the only route to VPN DNS on Void, but note it collides with this package's
+central invariant — **one authority for `/etc/resolv.conf`** (see openresolv below). A
+shim that rewrites resolv.conf becomes a second writer, so it must either write through
+the same static file this package owns, or the invariant has to be restated to name the
+shim as the exception. Decide that before writing it.
 
 #### openresolv is the third writer, and it is not optional
 

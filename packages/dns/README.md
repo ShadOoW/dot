@@ -28,9 +28,11 @@ bash packages/dns/verify.sh   # triple-checks libc + c-ares paths (VPN/Claude/in
   that split-DNS.
 - **Void (runit):** a real static `/etc/resolv.conf` (**AdGuard** first, Quad9
   failover), which both glibc and musl read, **plus** `/etc/resolvconf.conf` pointing
-  openresolv at a scratch path so it cannot regenerate the file behind you. VPN
-  split-DNS is unavailable on Void (client needs `resolvectl`); the tunnel + routes
-  still work.
+  openresolv at a scratch path so it cannot regenerate the file behind you. **The AWS
+  VPN cannot connect at all on Void** — `configure-dns` needs `resolvectl`, exits 127
+  without it, and OpenVPN treats a failed `--up` as fatal. (An earlier version of this
+  README said the tunnel "still works"; it does not. See
+  [`docs/dns.md`](../../docs/dns.md).)
 
 ## Why real files, not dot symlinks
 
