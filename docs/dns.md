@@ -89,15 +89,65 @@ sudo dhcpcd -n            # re-request; both boots now ask as 01:<mac>
 ### Arch (systemd) — systemd-resolved is mandatory here
 
 ```
-/etc/resolv.conf → /run/systemd/resolve/stub-resolv.conf   (nameserver 127.0.0.53)
-systemd-resolved upstream: /etc/systemd/resolved.conf.d/dns.conf  (DNS=9.9.9.9)
+/etc/resolv.conf  = real file, AdGuard first  (packages/dns/files/resolv.conf.arch)
+/etc/systemd/resolved.conf.d/dns.conf         DNS= / DNS=127.0.0.1, DNSStubListener=no
+/etc/nsswitch.conf  hosts: mymachines resolve [!UNAVAIL=return] files myhostname dns
+systemd-resolved: ENABLED (not merely started)
 ```
 
-resolv.conf → the resolved stub means glibc (nss-resolve) **and** musl/c-ares (via
-the stub) both go through resolved → **no split brain**. resolved cannot be dropped
-on Arch: the AWS VPN client's `Service/Resources/openvpn/configure-dns` sets the
-VPN's pushed split-DNS **only** via `resolvectl dns tun0 …` / `resolvectl revert
-tun0`, and `exit`s non-zero if `resolvectl` is missing.
+resolved cannot be dropped on Arch: the AWS VPN client's
+`Service/Resources/openvpn/configure-dns` installs the VPN's pushed split-DNS **only**
+via `resolvectl dns tun0 …` / `resolvectl revert tun0`, and `exit`s non-zero if that
+call fails. OpenVPN treats a failed `--up` script as **fatal**, so any breakage in that
+one script presents as a whole-VPN outage.
+
+Because AdGuard owns the wildcard `:53` here, this is _not_ the stock systemd layout —
+resolv.conf does **not** point at resolved's stub, and three things have to hold at once:
+
+1. **`DNSStubListener=no`.** AdGuard binds `0.0.0.0:53`; resolved's stub (`127.0.0.53`)
+   collides on TCP while UDP slips through `SO_REUSEADDR`, so AdGuard crash-loops.
+2. **resolv.conf is a real file at `127.0.0.1`, not the stub symlink.** With the stub
+   off, nothing answers on `127.0.0.53`, so pointing resolv.conf there is a black hole
+   for every musl / c-ares client. Consequence to accept: musl clients talk to AdGuard
+   directly and therefore do **not** get VPN split-DNS. Unavoidable while AdGuard holds
+   the wildcard — there is no address left for resolved to listen on.
+3. **`resolve` stays in the nsswitch `hosts` line.** This is what makes glibc go through
+   resolved and actually _use_ the per-link DNS the VPN installs. Drop it and lookups
+   fall straight through to `dns` → resolv.conf → AdGuard: the VPN connects fine and
+   VPN-internal names still fail. Safe only because resolved's upstream is AdGuard, so
+   nss-resolve answers still carry blocking and the `*.home.shadhq.com` names.
+
+#### `DNS=` accumulates across drop-ins — it does not override
+
+A drop-in that sets `DNS=127.0.0.1` does not replace a `DNS=9.9.9.9` in the main
+`/etc/systemd/resolved.conf`; the lists are **merged**, and the main file's entry sorts
+first. Measured here: `DNS Servers: 9.9.9.9 127.0.0.1`, `Current DNS Server: 9.9.9.9`
+— resolved answering nss from Quad9 while every file on disk claimed AdGuard was the
+upstream. `resolved-dns.conf` therefore resets each list with a bare `DNS=` /
+`FallbackDNS=` before assigning, so the drop-in is authoritative regardless of the main
+file (which `pacman -Qkk systemd` shows is hand-modified on this host) or a future
+`.pacnew`. `verify.sh` asserts the resulting upstream is exactly `127.0.0.1`.
+
+#### The 2026-08-10 outage: disabling resolved to free port 53
+
+`/data/ops/dns`'s "Port 53 already bound" recipe ends with `rm -f /etc/resolv.conf` +
+a static `nameserver 127.0.0.1`. Applied here it went one step further and left
+`systemd-resolved` **disabled**, and `resolve` was separately dropped from nsswitch.
+Every ordinary lookup kept working — `getent`, `curl`, `dig`, node — so nothing looked
+wrong for 13 days, during which the AWS VPN refused every single connection.
+
+The mechanism is worth knowing because the error message names nothing relevant:
+`resolvectl` reaches resolved over D-Bus, and the activation file for
+`org.freedesktop.resolve1` points at the **alias** `dbus-org.freedesktop.resolve1.service`.
+That alias symlink is created by `systemctl enable` (the unit's `[Install] Alias=`), so a
+_disabled_ resolved makes D-Bus activation fail with **`unknown unit`** — not "service
+not running". `configure-dns` exits 1, OpenVPN aborts a fully established tunnel, and
+the GUI says only **"Connection failed. Try again."** after a _successful_ SAML login,
+which reads exactly like an ISP blocking the protocol.
+
+So: **`enable`, never just `start`** — and never reach for `disable` to free `:53`.
+`DNSStubListener=no` is the lever that frees the port; disabling the unit only breaks
+the VPN. Both are now applied by `packages/dns/configure.sh` rather than by hand.
 
 ### Void (runit) — no systemd-resolved
 
@@ -132,8 +182,12 @@ and **both inits now resolve through it** — that is what makes ad/tracker bloc
 the local `*.home.shadhq.com` names work for this box and not just for LAN clients:
 
 - **Arch:** `DNS=127.0.0.1`, `FallbackDNS=9.9.9.9 1.1.1.1` in
-  `packages/dns/files/resolved-dns.conf`. resolv.conf stays on the stub, so
-  glibc + musl + VPN-split-DNS all keep working, now via AdGuard.
+  `packages/dns/files/resolved-dns.conf` — each preceded by a list-resetting bare
+  assignment, or the main `resolved.conf`'s own `DNS=` wins (see above). glibc reaches
+  AdGuard _through_ resolved (nss-resolve), which is what preserves VPN split-DNS;
+  musl/c-ares reaches it directly via the real `/etc/resolv.conf`. resolv.conf is
+  **not** on resolved's stub here — `DNSStubListener=no` is required so AdGuard can
+  bind the wildcard `:53`.
 - **Void:** `nameserver 127.0.0.1` first in `packages/dns/files/resolv.conf.void`.
 
 Failover on Void is deliberately **Quad9, not the router** (`192.168.88.1`): this box

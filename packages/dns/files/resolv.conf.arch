@@ -1,0 +1,26 @@
+# /etc/resolv.conf — managed by dot (packages/dns). ARCH ONLY.
+#
+# Installed as a REAL file by configure.sh, deliberately NOT a symlink to
+# systemd-resolved's stub: AdGuard owns the wildcard :53 on this box, so resolved runs
+# with DNSStubListener=no (see resolved-dns.conf) and nothing answers on 127.0.0.53.
+# Pointing resolv.conf at the stub would therefore be a black hole for every
+# musl / c-ares app.
+#
+# Who reads this file: musl and c-ares clients, which bypass nsswitch entirely.
+# glibc does NOT normally get here — nsswitch lists `resolve` first, so it goes
+# through systemd-resolved, which is what gives the AWS VPN its per-link split DNS.
+# See docs/dns.md.
+
+# --- AdGuard Home (desktop-local resolver, /data/ops/dns) ---
+# MUST stay first: it is what gives this box ad/tracker blocking and the local
+# *.home.shadhq.com names. It answers on the wildcard :53, so 127.0.0.1 works
+# regardless of which interface/network is up.
+nameserver 127.0.0.1
+
+# Failover for "AdGuard is down". Deliberately a PUBLIC resolver, not the home
+# router (192.168.88.1): this box also sits on foreign Wi-Fi, where an unreachable
+# second nameserver costs a full 5 s libc timeout per lookup instead of failing over.
+# Quad9 matches what AdGuard uses upstream (DoH) and what resolved declares as
+# FallbackDNS.
+nameserver 9.9.9.9
+options edns0

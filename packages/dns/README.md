@@ -18,10 +18,14 @@ bash packages/dns/verify.sh   # triple-checks libc + c-ares paths (VPN/Claude/in
 - **Both distros:** installs `/etc/dhcpcd.conf` with **`nohook resolv.conf`** as a
   real file. The MikroTik hands out no DNS over DHCP, so dhcpcd's resolv.conf hook
   would otherwise write an **empty** resolv.conf on every lease — the root cause.
-- **Arch (systemd):** `/etc/resolv.conf` → systemd-resolved stub (`127.0.0.53`);
-  resolved enabled; upstream via `resolved.conf.d/dns.conf` (**AdGuard**, with Quad9 +
-  Cloudflare as FallbackDNS). resolved is **mandatory** here — the AWS VPN client sets
-  split-DNS only via `resolvectl`.
+- **Arch (systemd):** `/etc/resolv.conf` as a **real file at AdGuard** (`127.0.0.1`),
+  _not_ resolved's stub — AdGuard owns the wildcard `:53`, so resolved runs with
+  `DNSStubListener=no` and nothing answers on `127.0.0.53`. resolved is **enabled**
+  (not merely started), its upstream is AdGuard via `resolved.conf.d/dns.conf`, and
+  `resolve` is kept in the `nsswitch.conf` hosts line. All three are required: the AWS
+  VPN client sets split-DNS only via `resolvectl` (so resolved must be _enabled_, or
+  D-Bus activation fails with `unknown unit`), and only nss-resolve actually _uses_
+  that split-DNS.
 - **Void (runit):** a real static `/etc/resolv.conf` (**AdGuard** first, Quad9
   failover), which both glibc and musl read, **plus** `/etc/resolvconf.conf` pointing
   openresolv at a scratch path so it cannot regenerate the file behind you. VPN
@@ -46,8 +50,14 @@ the whole 2026-08-08 Void boot: [`docs/dns.md`](../../docs/dns.md).
 ## Files
 
 - `files/dhcpcd.conf` → `/etc/dhcpcd.conf` (both)
-- `files/resolved-dns.conf` → `/etc/systemd/resolved.conf.d/dns.conf` (Arch)
+- `files/resolved-dns.conf` → `/etc/systemd/resolved.conf.d/dns.conf` (Arch; upstream
+  **and** `DNSStubListener=no`. Each list is reset with a bare `DNS=` first — drop-ins
+  _accumulate_ with the main `resolved.conf` instead of overriding it)
+- `files/resolv.conf.arch` → `/etc/resolv.conf` (Arch; real file, AdGuard first)
 - `files/resolv.conf.void` → `/etc/resolv.conf` (Void)
 - `files/resolvconf.conf.void` → `/etc/resolvconf.conf` (Void; openresolv can't own resolv.conf)
-- `configure.sh` — detects init, installs the above, enables resolved on Arch
-- `verify.sh` — checks libc + c-ares resolution for internet / Claude / VPN-endpoint
+- `configure.sh` — detects init, installs the above, enables resolved + keeps
+  `resolve` in nsswitch on Arch
+- `verify.sh` — checks libc + c-ares resolution for internet / Claude / VPN-endpoint,
+  and on Arch hard-fails if resolved is disabled, unreachable via `resolvectl`, not
+  upstreamed to AdGuard, or missing from nsswitch

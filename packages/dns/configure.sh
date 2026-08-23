@@ -24,16 +24,46 @@ sudo install -m 644 "$DIR/files/dhcpcd.conf" /etc/dhcpcd.conf
 echo "✓ /etc/dhcpcd.conf (nohook resolv.conf)"
 
 if [ "$INIT" = systemd ]; then
-  # 2a) Arch: systemd-resolved is the single DNS front-end. It is MANDATORY here —
-  #     the AWS VPN client's configure-dns sets split-DNS only via resolvectl. With
-  #     resolv.conf -> resolved's stub, glibc (nss-resolve) AND musl/c-ares (stub
-  #     127.0.0.53) both go through resolved, so there is no split-brain.
+  # 2a) Arch: systemd-resolved is MANDATORY, and it must be ENABLED — not merely
+  #     started, and never disabled. The AWS VPN client's configure-dns installs the
+  #     pushed split-DNS only via `resolvectl dns tun0 …`, and resolvectl reaches
+  #     resolved over D-Bus. The activation file for org.freedesktop.resolve1 names the
+  #     ALIAS dbus-org.freedesktop.resolve1.service, and that alias symlink exists only
+  #     while the unit is enabled (its [Install] Alias=). So a *disabled* resolved makes
+  #     resolvectl fail with "activation request failed: unknown unit" — configure-dns
+  #     exits 1, and OpenVPN treats a failed --up script as FATAL. The symptom is
+  #     maximally misleading: SAML auth succeeds, the tunnel comes up, an IP is
+  #     assigned and routes are pushed, and only then is it torn down as
+  #     "Connection failed. Try again." — which reads like an ISP/protocol block.
+  #     That cost 13 days of "the VPN is broken since we changed ISP". See docs/dns.md.
   sudo mkdir -p /etc/systemd/resolved.conf.d
   sudo install -m 644 "$DIR/files/resolved-dns.conf" /etc/systemd/resolved.conf.d/dns.conf
-  sudo systemctl enable --now systemd-resolved
-  sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+  # Retire the hand-made drop-in this package now supersedes: DNSStubListener lives in
+  # dns.conf, and two files setting one key is how it drifts.
+  sudo rm -f /etc/systemd/resolved.conf.d/no-stub.conf
+  sudo systemctl enable systemd-resolved
+  # resolv.conf is a REAL file pointing at AdGuard, NOT resolved's stub: the stub
+  # listener is off so AdGuard can own the wildcard :53, so 127.0.0.53 answers nothing.
+  # rm first — install onto a symlink follows it and would clobber the link target.
+  sudo rm -f /etc/resolv.conf
+  sudo install -m 644 "$DIR/files/resolv.conf.arch" /etc/resolv.conf
+  # `resolve` MUST stay in the nsswitch hosts line. Without it glibc skips resolved and
+  # goes straight to `dns` (-> resolv.conf -> AdGuard): resolvectl would then succeed,
+  # so the VPN *connects*, but its per-link split DNS is never consulted and
+  # VPN-internal names still do not resolve. Safe only because resolved's upstream is
+  # AdGuard (DNS=127.0.0.1 above) — with a public upstream this is what made the
+  # desktop bypass AdGuard during the 2026-07-22 hajib rollout.
+  if grep -qE '^hosts:.*[[:space:]]resolve([[:space:]]|$)' /etc/nsswitch.conf; then
+    echo "· /etc/nsswitch.conf already routes through nss-resolve"
+  else
+    sudo sed -i.dot-bak \
+      's/^hosts:.*/hosts: mymachines resolve [!UNAVAIL=return] files myhostname dns/' \
+      /etc/nsswitch.conf
+    echo "✓ /etc/nsswitch.conf (nss-resolve restored, so VPN split-DNS is consulted)"
+  fi
   sudo systemctl restart systemd-resolved
-  echo "✓ resolv.conf -> systemd-resolved stub (127.0.0.53); upstream via resolved.conf.d/dns.conf"
+  echo "✓ systemd-resolved enabled (stub off, upstream AdGuard on 127.0.0.1)"
+  echo "✓ /etc/resolv.conf (real file, AdGuard first) — musl/c-ares path"
 else
   # 2b) Void (runit): no systemd-resolved. Ship a REAL static resolv.conf that both
   #     glibc (files dns) and musl read. NOTE: AWS VPN split-DNS is unavailable on

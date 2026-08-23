@@ -42,16 +42,53 @@ else
   echo "  (node not found — skipping c-ares check)"
 fi
 
-echo "== systemd-resolved (Arch only) =="
-if command -v resolvectl >/dev/null 2>&1 && systemctl is-active --quiet systemd-resolved 2>/dev/null; then
-  resolvectl query "$CLAUDE" >/dev/null 2>&1 && ok "resolved resolves $CLAUDE" || bad "resolved FAILED"
-  echo "  upstream: $(resolvectl status 2>/dev/null | awk -F': ' '/Current DNS Server/{print $2; exit}')"
+echo "== systemd-resolved / AWS VPN split-DNS =="
+# Branch on the INIT, never on "is resolved running?". The old check was
+#   if resolvectl exists && systemd-resolved is-active; then …; else "(Void path)"
+# so on Arch a *disabled* resolved fell into the Void branch and the script printed
+# ALL DNS PATHS OK — for the 13 days the AWS VPN refused every connection, because
+# every ordinary lookup really did work. Distro-guard it: on Arch, no resolved is a
+# hard failure. See docs/dns.md.
+if [ -d /run/systemd/system ]; then
+  systemctl is-enabled --quiet systemd-resolved 2>/dev/null &&
+    ok "systemd-resolved enabled" ||
+    bad "systemd-resolved NOT enabled — resolvectl's D-Bus activation needs the enable-time alias"
+  systemctl is-active --quiet systemd-resolved 2>/dev/null &&
+    ok "systemd-resolved active" || bad "systemd-resolved NOT active"
+
+  # The load-bearing check: can resolvectl actually reach resolved? This is what the
+  # AWS VPN client's configure-dns does on --up, and a non-zero exit there is FATAL to
+  # OpenVPN — reported in the GUI as the thoroughly misleading "Connection failed".
+  if resolvectl status >/dev/null 2>&1; then
+    ok "resolvectl reaches resolved (AWS VPN configure-dns can set split-DNS)"
+    resolvectl query "$CLAUDE" >/dev/null 2>&1 && ok "resolved resolves $CLAUDE" || bad "resolved FAILED"
+    # Assert the upstream, do not just print it. DNS= ACCUMULATES across
+    # resolved.conf and its drop-ins, so a stray `DNS=9.9.9.9` in the main file
+    # silently wins over the drop-in's 127.0.0.1 and every nss-resolve lookup bypasses
+    # AdGuard — no ad blocking, no *.home.shadhq.com — while every check here still
+    # passed. packages/dns/files/resolved-dns.conf resets the list to prevent it.
+    GLOBAL_DNS="$(resolvectl status 2>/dev/null | awk -F': ' '/^ *DNS Servers/{print $2; exit}')"
+    echo "  global DNS Servers: ${GLOBAL_DNS:-<none>}"
+    echo "  current upstream:   $(resolvectl status 2>/dev/null | awk -F': ' '/Current DNS Server/{print $2; exit}')"
+    [ "$GLOBAL_DNS" = "127.0.0.1" ] &&
+      ok "resolved upstream is AdGuard alone" ||
+      bad "resolved upstream is '$GLOBAL_DNS', expected exactly '127.0.0.1' — lookups bypass AdGuard"
+  else
+    bad "resolvectl CANNOT reach resolved -> AWS VPN --up exits 1 -> 'Connection failed. Try again.'"
+  fi
+
+  # resolvectl working is necessary but not sufficient: if glibc skips resolved, the
+  # split-DNS it installs is never consulted and VPN-internal names stay unresolvable.
+  grep -qE '^hosts:.*[[:space:]]resolve([[:space:]]|$)' /etc/nsswitch.conf &&
+    ok "nsswitch routes through nss-resolve (VPN split-DNS is consulted)" ||
+    bad "nsswitch hosts line lacks 'resolve' — VPN connects but its split-DNS is bypassed"
+
   # If the AWS VPN is up, tun0 should have its pushed split-DNS server.
   if ip link show tun0 >/dev/null 2>&1; then
     resolvectl status tun0 2>/dev/null | grep -q 'DNS Servers' && ok "VPN split-DNS present on tun0" || echo "  (tun0 up but no per-link DNS)"
   fi
 else
-  echo "  (no systemd-resolved — Void path)"
+  echo "  (runit/Void — no systemd-resolved; AWS VPN split-DNS unavailable by design)"
 fi
 
 echo
