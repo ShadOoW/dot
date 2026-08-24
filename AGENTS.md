@@ -2,7 +2,9 @@
 
 Stow-style dotfiles manager. `dot link <pkg>` walks `packages/<pkg>/` and creates
 **symlinks** — `home/…` → `$HOME/…`, `system/{base,systemd,runit}/…` → `/…`
-(see `src/lib/pkg.ts` for the path mapping, `src/commands/link.ts` for the linking).
+(`src/lib/pkg.ts` maps the paths, `src/commands/link.ts` links). The CLI itself lives at
+**`/data/code/fleet/apps/dot`** since commit 02c065c — every `src/…` path below is relative
+to that, not to this repo.
 
 This repo lives at **`/data/config/dot`**. Related: `/data/ops` (services; its `CLAUDE.md` is
 the authoritative host-conventions file) and `/data/config/network` (router).
@@ -124,8 +126,9 @@ host uses **dracut**. Void's unmerged-config marker is `<file>.new-<version>`, n
 
 ## Units this repo ships
 
-`system/{systemd,runit}/…` unit files are picked up per-init (`src/lib/pkg.ts:184-186`), plus
-distro units merely enabled via `meta.json` `services` (`src/lib/service.ts`).
+`system/{systemd,runit}/…` unit files are picked up per-init (`collectFiles` in
+`src/lib/pkg.ts`), plus distro units merely enabled via `meta.json` `services`
+(`src/lib/service.ts`).
 
 Interpreter paths in a shipped unit are a liability: pin something stable, or exec via an
 absolute path you control. `agentmemory.service` pointed `ExecStart` at
@@ -184,4 +187,4 @@ process _shape and size_, not names, so they keep working as the toolchain chang
 - `packages/<pkg>/meta.json` declares per-distro deps, tags, `cleanSteps`. Packages are
   discovered by directory scan (`PACKAGES_DIR` in `src/lib/config.ts`) — there is no central
   registry to update when adding or removing one.
-- `just fmt` / `just check` before committing (`ruff` over `packages/`, `kdlfmt` for zellij).
+- `just format` / `just check` before committing (`ruff` over `packages/`, `kdlfmt` for zellij).
