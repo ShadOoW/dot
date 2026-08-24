@@ -1,0 +1,9 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "launchOptions": {
+      "channel": "chromium"
+    }
+  },
+  "outputDir": "/home/shad/.local/state/agent-web/output"
+}

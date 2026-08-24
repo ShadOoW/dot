@@ -1,0 +1,13 @@
+{
+  "sites": [
+    {
+      "match": "localhost:8080",
+      "session": "code",
+      "loginUrl": "http://localhost:8080/app/signin",
+      "userVar": "BRUCE_LOCAL_USER",
+      "passVar": "BRUCE_LOCAL_PASS",
+      "loggedInMarker": "Recrutements",
+      "notes": "Bruce web client (/data/code/work/bruce/app/client/web/code). Dev server: npm run debug (vite --port 8080). Backend: development-client.api.bruce.work. App routes are prefixed /app/."
+    }
+  ]
+}

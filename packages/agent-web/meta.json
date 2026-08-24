@@ -1,0 +1,6 @@
+{
+  "description": "Browser verification for coding agents — playwright-cli recipe, rules and site map shared by Claude Code, opencode and omp",
+  "packages": {},
+  "tags": ["ai", "dev"],
+  "os": ["linux", "macos"]
+}
