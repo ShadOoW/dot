@@ -184,6 +184,12 @@ process _shape and size_, not names, so they keep working as the toolchain chang
 ## Conventions
 
 - **Never commit secrets.** `~/.npmrc`, `~/.config/secrets/*` and similar stay out of packages.
+  Credential _templates_ go in `packages/secrets/templates/`, never under a package's `home/`:
+  `collectFiles` cannot reach `templates/`, so `dot link` cannot plant a template inside the live
+  credential store. It did, for three of them — `~/.config/secrets` held `.minimax.example`,
+  `.deepseek.example` and `.agent-web.example` as symlinks into this repo, and the only thing
+  stopping the login loader from sourcing them was the leading dot. `packages/*/home/.config/secrets/`
+  is gitignored so the shape cannot come back. See `packages/secrets/README.md`.
 - `packages/<pkg>/meta.json` declares per-distro deps, tags, `cleanSteps`. Packages are
   discovered by directory scan (`PACKAGES_DIR` in `src/lib/config.ts`) — there is no central
   registry to update when adding or removing one.

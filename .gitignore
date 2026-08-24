@@ -4,3 +4,7 @@ backup/
 node_modules/
 __pycache__/
 *.pyc
+
+# Credential templates belong in packages/secrets/templates/, which `dot link` cannot reach.
+# Anything here would be symlinked into the live credential store, so keep it uncommittable.
+packages/*/home/.config/secrets/

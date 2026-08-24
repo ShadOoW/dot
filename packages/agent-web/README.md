@@ -9,8 +9,8 @@ must prove it in a real browser, with a login that persists between sessions.
 bun install -g @playwright/cli@latest   # the browser driver
 dot link agent-web                      # place files
 bash packages/agent-web/configure.sh    # vendor skill + omp/opencode copies + profile dirs
-cp ~/.config/secrets/.agent-web.example ~/.config/secrets/agent-web
-$EDITOR ~/.config/secrets/agent-web && chmod 600 ~/.config/secrets/agent-web
+install -m 600 packages/secrets/templates/agent-web ~/.config/secrets/agent-web
+$EDITOR ~/.config/secrets/agent-web
 ```
 
 ## What lives where
@@ -21,7 +21,10 @@ $EDITOR ~/.config/secrets/agent-web && chmod 600 ~/.config/secrets/agent-web
 | `home/.claude/skills/web-verify/SKILL.md` | the step-by-step recipe agents follow                        |
 | `home/.config/agent-web/sites.json`       | per-site login map (URL, session name, credential var names) |
 | `home/.config/agent-web/cli.config.json`  | pins the bundled Chrome-for-Testing build                    |
-| `home/.config/secrets/.agent-web.example` | credential template; real values stay untracked              |
+
+The credential template is not here: it is `packages/secrets/templates/agent-web`, because a
+template under `home/.config/secrets/` gets symlinked into the live credential store. See
+`packages/secrets/README.md`.
 
 Not tracked, created at runtime: `~/.local/state/agent-web/profiles/<project>` (logged-in browser
 profiles), `~/.local/state/agent-web/output` (snapshots, console logs),
@@ -43,5 +46,5 @@ omp reads `~/.omp/agent/RULES.md` and opencode reads `~/.config/opencode/AGENTS.
 `dot link` cannot map from one source file. `configure.sh` copies the canonical rules there, so the
 refresh step above is required after editing them.
 
-`dot pkg agent-web configure` elevates with sudo, which this script does not need — run the script
-directly instead.
+`dot pkg agent-web configure` asks for a sudo ticket before it starts and then runs the script as
+you, which this script does not need — run it directly instead.

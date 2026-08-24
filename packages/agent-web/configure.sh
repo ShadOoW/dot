@@ -46,9 +46,9 @@ fi
 # 5. browser profiles (runtime state, never tracked)
 mkdir -p "$HOME/.local/state/agent-web/profiles" "$HOME/.local/state/agent-web/output"
 
-# 6. credentials
+# 6. credentials — owned by packages/secrets, which also keeps the directory 700 and files 600
 if [ ! -f "$HOME/.config/secrets/agent-web" ]; then
-  echo "NOTE: copy ~/.config/secrets/.agent-web.example to ~/.config/secrets/agent-web, fill it, chmod 600"
+  echo "NOTE: no ~/.config/secrets/agent-web yet. Run 'dot pkg secrets configure' for the command."
 fi
 
 echo "agent-web configured"
