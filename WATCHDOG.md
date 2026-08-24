@@ -14,6 +14,9 @@ signature** and the second-order coupling that file does not list.
 
 ---
 
+> All `src/…` paths in this document are relative to the moved CLI at
+> **`/data/code/fleet/apps/dot`** (entry `apps/dot/dot.ts`); this repo has no TS of its own.
+
 ## 1. Early boot — `/data` is unmounted until `local-fs.target`
 
 Anything systemd, the kernel, or udev reads before the mount must be a **real file**
@@ -142,7 +145,7 @@ probe. blocker.
 unguarded `pacman` call kills the rest of the command. And a pacman-shaped assumption on Void
 produces a confident _false pass_: the drift scan looked for `*.pacnew`, which Void never
 writes (its marker is `<file>.new-<version>`), printed "no drift", then threw. Flag: new
-`pacman|paccache|yay|vkpurge|xbps-*` literals in `src/**` outside `sweep.ts`'s `SYSTEMS`
+`pacman|paccache|yay|vkpurge|xbps-*` literals in `apps/dot/src/**` outside `sweep.ts`'s `SYSTEMS`
 table or without a `commandExists()` probe; any `if (distro === …)` in a command that has a
 table; any distro branch whose non-matching side emits _success_.
 
@@ -154,16 +157,19 @@ no `meta.json` at all and therefore claim to apply everywhere, macOS included.
 ## 8. Gate blind spots — absorb these yourself
 
 `just check` (the recipe is `check`; **`just fmt` does not exist**, it is `format`) runs
-stylua/shfmt/ruff-format/prettier/kdlfmt/taplo plus `tsc --noEmit` and `bun test`. What it
-does **not** catch, and you therefore must:
+stylua/shfmt/ruff-format/prettier/kdlfmt/taplo; the CLI's `tsc --noEmit` and `bun test`
+gates moved with it to `/data/code/fleet/apps/dot`. What it does **not** catch, and you
+therefore must:
 
 - **No linter of any language.** `ruff.toml` is format-only; no shellcheck, no eslint. Unquoted
   expansions, `set -euo pipefail` omissions, undefined Python names all pass.
-- **TS has no formatter and no lint**, and `tsconfig` lacks `noUncheckedIndexedAccess` — direct
-  risk in the code parsing `/proc/*/smaps_rollup` and `pacman -Q` output.
-- **Tests exist only for `src/lib/` (9 files).** `src/commands/link.ts` — the symlink engine —
-  has none, nor do `sgc`/`doctor`/`sweep`/`kernel`.
-- **`packages/` is never type-checked** (`tsconfig.include: ["dot.ts","src"]`).
+- **The TS CLI (`/data/code/fleet/apps/dot`) has no formatter and no lint**, and its `tsconfig`
+  lacks `noUncheckedIndexedAccess` — direct risk in the code parsing `/proc/*/smaps_rollup`
+  and `pacman -Q` output.
+- **CLI tests exist only under `apps/dot/src/lib/` (9 files).** `apps/dot/src/commands/link.ts` —
+  the symlink engine — has none, nor do `sgc`/`doctor`/`sweep`/`kernel`.
+- **`packages/` is never type-checked** — the old `tsconfig.include: ["dot.ts","src"]` gate was
+  deleted with the CLI, and no TS remains in this repo.
 - **Extensionless shell is outside `just check`** (`find -name "*.sh"`), but pre-commit's
   shfmt hook _rewrites_ it by shebang — so runit `run` scripts get reformatted by a gate that
   never validates them. `.zsh` is covered by neither.

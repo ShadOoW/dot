@@ -27,7 +27,7 @@
 # The /etc files live under etc-real*/ rather than system/ because unit drop-ins, runit service
 # dirs and sysctl.d are all read before /data is mounted (or, for runsvdir, early enough that
 # depending on the btrfs pool is a bad trade). dot's linker only walks home/ and system/
-# (src/lib/pkg.ts collectFiles), so they physically cannot be symlinked. See AGENTS.md.
+# (/data/code/fleet/apps/dot/src/lib/pkg.ts collectFiles), so they physically cannot be symlinked. See AGENTS.md.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUDO=""

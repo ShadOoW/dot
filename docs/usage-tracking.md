@@ -256,11 +256,11 @@ end of file regardless of length; after a truncate the next record lands at offs
 
 ## Files
 
-| Path                    | Role                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `src/lib/usage.ts`      | sources, xbps index, store, dependency propagation                                               |
-| `src/commands/usage.ts` | `collect`, `daemon`, `report`, `unused`, `acct`, `status`                                        |
-| `src/lib/usage.test.ts` | 28 tests over the plist reader, the `acct_v3` layout, command parsing, and the propagation rules |
-| `packages/usage/`       | runit service, systemd unit (in `etc-real/`), `configure.sh`                                     |
-| `/var/lib/dot/usage.db` | the store                                                                                        |
-| `/var/lib/dot/pacct`    | kernel accounting spool, drained each tick                                                       |
+| Path                                              | Role                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `/data/code/fleet/apps/dot/src/lib/usage.ts`      | sources, xbps index, store, dependency propagation                                               |
+| `/data/code/fleet/apps/dot/src/commands/usage.ts` | `collect`, `daemon`, `report`, `unused`, `acct`, `status`                                        |
+| `/data/code/fleet/apps/dot/src/lib/usage.test.ts` | 28 tests over the plist reader, the `acct_v3` layout, command parsing, and the propagation rules |
+| `packages/usage/`                                 | runit service, systemd unit (in `etc-real/`), `configure.sh`                                     |
+| `/var/lib/dot/usage.db`                           | the store                                                                                        |
+| `/var/lib/dot/pacct`                              | kernel accounting spool, drained each tick                                                       |

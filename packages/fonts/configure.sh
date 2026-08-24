@@ -15,7 +15,7 @@ fc-cache -fv
 # section of /data/ops/CLAUDE.md.
 #
 # It lives under etc-real/ rather than system/ ON PURPOSE: dot's linker only walks home/
-# and system/ (src/lib/pkg.ts collectFiles), so `dot link fonts` cannot recreate the
+# and system/ (/data/code/fleet/apps/dot/src/lib/pkg.ts collectFiles), so `dot link fonts` cannot recreate the
 # symlink that made FONT silently never apply.
 src="$DIR/etc-real/etc/vconsole.conf"
 dst=/etc/vconsole.conf

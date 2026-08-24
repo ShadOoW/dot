@@ -1,6 +1,6 @@
 # ly - Display Manager
 
-ly is **built from source**, not installed from a repository. `src/lib/updaters/ly.ts` clones
+ly is **built from source**, not installed from a repository. `/data/code/fleet/apps/dot/src/lib/updaters/ly.ts` clones
 `codeberg.org/fairyglade/ly`, builds it with anyzig and installs the resulting DESTDIR tree.
 `meta.json` therefore declares only the link dependencies (`pam`, `libxcb`) — Void has no `ly`
 package at all, and Arch's would fight the build (see below).

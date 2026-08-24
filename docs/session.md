@@ -2,11 +2,10 @@
 
 Every open terminal, the coding-agent conversations inside them, and the sway layout
 holding them — saved as data and put back later. Implemented as
-[`dot session`](../src/commands/session/), with the pieces in
-[`src/lib/session.ts`](../src/lib/session.ts) (capture and restore planning),
-[`agents.ts`](../src/lib/agents.ts), [`session-select.ts`](../src/lib/session-select.ts),
-[`session-slots.ts`](../src/lib/session-slots.ts) and
-[`sway-layout.ts`](../src/lib/sway-layout.ts).
+`dot session` (`/data/code/fleet/apps/dot/src/commands/session/`), with the pieces in
+`/data/code/fleet/apps/dot/src/lib/session.ts` (capture and restore planning),
+`agents.ts`, `session-select.ts`, `session-slots.ts` and
+`sway-layout.ts` (all under `/data/code/fleet/apps/dot/src/lib/`).
 
 ## Why it is called `session`
 
@@ -126,7 +125,7 @@ Edge rules worth knowing:
 
 ## How agents are found
 
-Two mechanisms, one adapter table ([`agents.ts`](../src/lib/agents.ts)), so adding an
+Two mechanisms, one adapter table (`/data/code/fleet/apps/dot/src/lib/agents.ts`), so adding an
 agent is a data change:
 
 | agent    | live session id                                                                                       | resume                                 |

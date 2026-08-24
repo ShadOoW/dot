@@ -261,7 +261,7 @@ Add `/etc/sv/agentmemory/log/run`.
 
 ### H11 · `dot sweep` was broken on Void — after emitting a false all-clear ✅ FIXED
 
-`src/commands/sweep.ts` was fully pacman-hardcoded with no `commandExists()` guard:
+`/data/code/fleet/apps/dot/src/commands/sweep.ts` was fully pacman-hardcoded with no `commandExists()` guard:
 
 - It searched for `*.pacnew`, a marker **Void never writes** (Void uses
   `<file>.new-<version>`), so it printed `No config drift found in /etc.` as a confident
@@ -486,7 +486,7 @@ absent; `packages/prettierd` is arch-only (no `void` key — prettier actually c
 `~/.bun/bin`); `packages/iwmenu` has `"packages": {}` while a 5.9 MB unmanaged binary sits
 in `/usr/local/bin`. All six link config for software that is not there.
 
-Root cause: `src/lib/schema.ts:11` — `PACKAGE_MANAGERS = ["brew","xbps","cargo","pacman","yay"]`
+Root cause: `/data/code/fleet/apps/dot/src/lib/schema.ts:11` — `PACKAGE_MANAGERS = ["brew","xbps","cargo","pacman","yay"]`
 cannot express `uv`, `bun`, `nix`, `npm` or `go`, which is why the 7 uv tools and the bun
 globals are invisible to `dot`. Fix: extend the enum, then add a `dot doctor` check that
 resolves each declaration against `xbps-query`/`command -v`.

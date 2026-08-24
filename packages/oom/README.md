@@ -56,7 +56,7 @@ sum PSS =  5086 MiB      <- what a kill actually gives back
 
 earlyoom killed a "326 MiB" renderer, recovered ~160 MiB, stayed under the threshold, and
 killed again — 177 times, with no swap gate left to stop it. This is the same PSS-vs-RSS
-effect `src/lib/memory.ts` documents for `dot sgc`.
+effect `/data/code/fleet/apps/dot/src/lib/memory.ts` documents for `dot sgc`.
 
 `-S 6291456,3145728` restores the brake: 6 GiB free swap means zram is full **and** ~10 GiB
 of the NVMe swapfile is gone. Combined with <2.5 GiB available RAM that is a real emergency.

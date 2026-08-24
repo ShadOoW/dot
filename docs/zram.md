@@ -149,7 +149,7 @@ is the cgroup memory floor, which runit has nowhere to put.
 
 They live under **`etc-real-systemd/`** (and the shared sysctl under `etc-real/`, the Void
 zramen conf under `etc-real-runit/`) rather than `system/` on purpose: dot's linker only
-walks `home/` and `system/` (`collectFiles` in `src/lib/pkg.ts`), so `dot link zram`
+walks `home/` and `system/` (`collectFiles` in `/data/code/fleet/apps/dot/src/lib/pkg.ts`), so `dot link zram`
 **physically cannot** recreate the symlink. `configure.sh` installs real copies instead.
 
 `dot link` creates symlinks into `/data/config/dot/`, and `/data` is a btrfs-pool subvolume

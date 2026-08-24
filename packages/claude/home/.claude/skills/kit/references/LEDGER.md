@@ -13,10 +13,16 @@ the only artifact that preserves it [`/data/ops/NORTH-STAR.md:22-26`].
 
 ## The contract
 
-`status.json` is written by the collect orchestrator and read by the ops health responder,
-`/data/ops/lib/status-server.py`. **The field set is a cross-repo contract: do not change a
-field without changing the responder in the same commit**
-[`packages/harness/src/ledger.ts:1-5`, `/data/ops/lib/status-server.py:87-101`].
+`status.json` is written by the collect orchestrator and read by the ops health responder.
+As of 2026-08-25 that responder has **two** live implementations, because the retirement of
+the Python one is half-applied: `/data/code/fleet/apps/ops-status` serves the lake's ledger
+on the desktop, and `/data/ops/lib/status-server.py` still serves `ops/backup` on barzakh
+until that host cuts over. **The field set is a cross-repo contract: do not change a field
+without changing every reader in the same commit**
+[`packages/harness/src/ledger.ts:1-8`, `apps/ops-status/lib/normalize.ts`,
+`/data/ops/lib/status-server.py:87-101`]. Note what the gate does and does not cover:
+`tooling/probes/ledger-fields/` compares this writer against the **Python** reader only
+(`run.ts:51`), so `apps/ops-status` is in the contract but not yet in the compared set.
 
 The fields are declared once, as an interface with a comment per field
 [`packages/harness/src/ledger.ts:37-62`]; the "Contracts that must not drift" section of
