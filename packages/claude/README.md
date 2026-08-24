@@ -71,7 +71,7 @@ read `~/.omp/profiles/<name>/agent/commands`. Add one symlink per profile under
 
 ```sh
 $EDITOR /data/config/dot/packages/claude/home/.claude/commands/my-command.md
-cd /data/config/dot && bun dot.ts pkg claude link   # links the new file into ~/.claude/commands
+dot pkg claude link   # links the new file into ~/.claude/commands
 ```
 
 `omp` picks it up with no re-link. Verify both harnesses:
@@ -84,7 +84,7 @@ claude -p '/my-command'
 ## Verify the wiring
 
 ```sh
-cd /data/config/dot && bun dot.ts doctor claude   # expect: no broken symlinks or drift
+dot doctor claude   # expect: no broken symlinks or drift
 readlink ~/.omp/agent/commands                    # -> packages/claude/home/.omp/agent/commands
 ls ~/.omp/agent/commands/                         # -> the same 15 .md files as ~/.claude/commands
 ```

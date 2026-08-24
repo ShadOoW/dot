@@ -24,7 +24,7 @@
 # service `dot doctor` reports as failed, instead of a silent hot loop.
 
 BUN=/home/shad/.bun/bin/bun
-DOT=/data/config/dot/dot.ts
+DOT=/data/code/fleet/apps/dot/dot.ts
 INTERVAL=10
 
 # /data is a separate btrfs subvolume. runit stage 1 mounts it before stage 2 starts

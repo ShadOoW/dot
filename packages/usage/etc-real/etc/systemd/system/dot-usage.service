@@ -7,7 +7,7 @@ RequiresMountsFor=/data /var/lib
 
 [Service]
 Type=simple
-ExecStart=/home/shad/.bun/bin/bun /data/config/dot/dot.ts usage daemon --interval 10
+ExecStart=/home/shad/.bun/bin/bun /data/code/fleet/apps/dot/dot.ts usage daemon --interval 10
 Restart=on-failure
 RestartSec=30
 

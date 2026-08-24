@@ -38,8 +38,8 @@ mv ~/.omo/omo.jsonc /data/config/dot/packages/oh-my-openagent/home/.omo/omo.json
 
 # 3. Re-link + configure
 cd /data/config/dot
-bun dot.ts link oh-my-openagent
-bun dot.ts configure oh-my-openagent   # idempotent plugin-array merge
+dot pkg oh-my-openagent link
+dot pkg oh-my-openagent configure   # idempotent plugin-array merge
 
 # 4. Verify
 bunx oh-my-openagent doctor

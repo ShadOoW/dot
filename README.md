@@ -28,7 +28,7 @@ Personal dotfiles for **Arch Linux**, **Void Linux**, and **macOS** — Sway/Way
 All management goes through the `dot` CLI (TypeScript/Bun):
 
 ```sh
-bun dot.ts <command>
+dot <command>
 ```
 
 ### Commands
