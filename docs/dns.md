@@ -52,8 +52,12 @@ what broke.
 
 `/etc/dhcpcd.conf` contains **`nohook resolv.conf`** → dhcpcd never manages DNS.
 
-It also contains **`clientid ""`** instead of the stock **`duid`**, and that line is
-load-bearing for DNS even though it looks like pure DHCP trivia.
+It also contains an explicit **`clientid 00:73:61:79:6b:75:6b`** instead of the stock
+**`duid`**, and that line is load-bearing for DNS even though it looks like pure DHCP
+trivia. It is `0x00` + `"saykuk"`: a type-0 (not-a-hardware-address) client identifier
+naming the **host**, not a NIC and not a boot.
+
+Two identities it replaces, both of which cost this box its `.10`:
 
 `duid` generates a DUID-LLT — link-layer address **plus a creation timestamp** — and
 persists it in `/var/db/dhcpcd/duid`, which lives on the root filesystem. This desktop
@@ -68,23 +72,61 @@ create the lease falls through to a dynamic address:
      client-id="ff:…:31:76:b8:6e:2c:33:58:12:20:b4"  ← Void
 ```
 
+`clientid ""` (what this file said until 2026-08-24) was believed to send `01:<mac>`
+(dhcpcd.conf(5): "a default clientid of the hardware family and the hardware address").
+**It does not** — measured on the router, an empty string sends a single `0x00` byte, shown
+as `client-id="0"` for _both_ NICs. That accident was host-wide, which is the only reason
+the wired NIC could be rescued at all, but it was a parser artifact rather than a decision:
+a dhcpcd release that "fixed" it to `01:<mac>` would silently drop the desktop off `.10`.
+
 `192.168.88.10` is not just an address here. It is where AdGuard answers, what the router
 hands every LAN client as `dns-server=192.168.88.10`, and what every
 `*.home.shadhq.com` rewrite resolves to. So on a Void boot the desktop did **not** hold
 it: LAN-wide DNS silently fell back to the router (losing blocking and every `.home`
 name), and `.home` names failed from this box too — resolving fine, to an address nothing
-answered on. `clientid ""` sends `01:<mac>` (dhcpcd.conf(5): "a default clientid of the
-hardware family and the hardware address"), which is byte-identical under both inits.
+answered on. The same failure appears the moment the desktop is **cabled** instead of on
+Wi-Fi if the router's lease is pinned to a MAC: `enp3s0` (`04:7C:16:59:58:77`) is a
+different NIC from `wlan0` (`2C:33:58:12:20:B4`), RouterOS allows only one static lease per
+address, and a lease matches one MAC — so the cabled desktop lands on the dynamic pool
+(observed: `192.168.88.14`). A host client-id is what makes `.10` link-agnostic.
 
-Changing the file is not enough on its own: RouterOS has already recorded the old
-client-id **on** the static lease, so clear it once and drop the stray dynamic lease —
+Changing the file is not enough on its own: RouterOS has already recorded the old identity
+**on** the static lease, so repin it once and drop the stray dynamic lease — the router
+renews an address the client already holds, so it must be removed before the client will
+ask for `.10` (config-as-code lives in `/data/config/network/mikrotik/10-baseline-dns-dhcp.rsc`):
 
 ```sh
 ssh admin@192.168.88.1 \
-  '/ip/dhcp-server/lease/set [find where address="192.168.88.10"] client-id="";
-   /ip/dhcp-server/lease/remove [find where address="192.168.88.16" and dynamic=yes]'
-sudo dhcpcd -n            # re-request; both boots now ask as 01:<mac>
+  '/ip/dhcp-server/lease/remove [find where address="192.168.88.14"];
+   /ip/dhcp-server/lease/remove [find where address="192.168.88.10"];
+   /ip/dhcp-server/lease/add address=192.168.88.10 client-id="0:73:61:79:6b:75:6b" server=defconf'
+sudo dhcpcd -n            # re-request; every NIC and both boots now ask as 0:73:61:79:6b:75:6b
 ```
+
+⚠ **One LAN link at a time.** Both NICs present this identity, so cable + Wi-Fi up together
+gets `.10` offered to both and puts one address on two interfaces in one subnet.
+
+`/etc/dhcpcd.conf` also carries **`denyinterfaces tailscale0 wg* docker* br-* veth* tap*
+podman* cni* virbr*`**, and that line exists because of a real outage, not tidiness. dhcpcd
+manages every interface it finds unless told not to, so it took over `tailscale0` — an
+interface whose addresses belong to `tailscaled`:
+
+```
+Aug 23 13:54:41 dhcpcd: tailscale0: using static address 100.64.0.1/32
+Aug 23 13:56:27 dhcpcd: tailscale0: waiting for 3rd party to configure IP address
+```
+
+After the second line the daemon and the kernel disagree: `tailscale status` still reports
+`100.64.0.1`, a listening socket is still bound to it, and `ip addr show tailscale0` carries
+only the IPv6 `/128`. Headscale hands every tailnet client `A 100.64.0.1` for
+`*.home.shadhq.com` (`/data/ops/headscale/extra-records.json`), so those names resolved to an
+address that answered nothing — and **disconnecting** the tailnet "fixed" them, because the
+phone then fell back to the AdGuard rewrite → `192.168.88.10`. A confusing shape: the LAN path
+worked throughout and only tailnet clients broke.
+
+Order matters when applying it: restart **dhcpcd first** so it releases the interface, then
+`tailscaled`, which re-adds its addresses. And it must be `systemctl restart dhcpcd`, not
+`dhcpcd -n` — a reload does not make dhcpcd give up an interface it already holds.
 
 ### Arch (systemd) — systemd-resolved is mandatory here
 
