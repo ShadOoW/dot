@@ -1,0 +1,10 @@
+{
+  "description": "cliphist clipboard history config — pins db-path and max-items so a forgotten flag cannot truncate the permanent clipboard database",
+  "packages": {
+    "arch": { "pacman": ["cliphist", "wl-clipboard"] },
+    "void": { "xbps": ["cliphist", "wl-clipboard"] }
+  },
+  "tags": ["wayland", "clipboard"],
+  "cleanSteps": [],
+  "os": ["linux"]
+}

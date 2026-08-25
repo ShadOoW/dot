@@ -1,0 +1,22 @@
+# cliphist config — one `<flag> <value>` per line (same names as the CLI flags).
+#
+# WHY THIS FILE EXISTS: `cliphist store` TRIMS the database to -max-items on EVERY store,
+# and the CLI default is 750. This db is meant to be kept forever (~8.5k entries as of
+# 2026-08-25), so a single invocation that passed -db-path but forgot -max-items would
+# silently destroy everything past the newest 750 entries. Pinning both values here makes
+# the safe behaviour the DEFAULT, so no caller has to remember it.
+#
+# db-path is pinned to the real store too, so `cliphist list` / `decode` from any shell
+# read the same database the Wayland watcher writes, instead of the empty per-user default
+# at ~/.cache/cliphist/db.
+#
+# Explicit flags still override this file. The two callers that pass their own must stay
+# >= max-items below:
+#   - the watcher: packages/sway/home/.config/sway/exec  (wl-paste --watch … -max-items 1000000)
+#   - the picker:  packages/fuzzel/home/.config/fuzzel-scripts/clipboard.sh (-db-path only)
+# The lake also ingests this db read-only via CLIPHIST_DB (/data/ops/lake).
+#
+# Headroom: ~8.5k entries accumulated since 2026-05-25, so 1000000 is decades away. To
+# raise the ceiling, change BOTH this file and the watcher's flag in the sway package.
+db-path /data/stash/clipboard/cliphist
+max-items 1000000

@@ -1,0 +1,9 @@
+{
+  "description": "Hammerspoon on the MacBook — automatic Mac→Linux clipboard sync into the desktop's cliphist history, plus a manual promote-to-live-selection hotkey",
+  "packages": {
+    "macos": { "brew": ["hammerspoon"] }
+  },
+  "tags": ["clipboard", "macos"],
+  "cleanSteps": [],
+  "os": ["macos"]
+}
