@@ -20,9 +20,7 @@ on the desktop, and `/data/ops/lib/status-server.py` still serves `ops/backup` o
 until that host cuts over. **The field set is a cross-repo contract: do not change a field
 without changing every reader in the same commit**
 [`packages/harness/src/ledger.ts:1-8`, `apps/ops-status/lib/normalize.ts`,
-`/data/ops/lib/status-server.py:87-101`]. Note what the gate does and does not cover:
-`tooling/probes/ledger-fields/` compares this writer against the **Python** reader only
-(`run.ts:51`), so `apps/ops-status` is in the contract but not yet in the compared set.
+`/data/ops/lib/status-server.py:87-101`]. Note what the gate does and does not cover: `tooling/probes/ledger-fields/` compares this writer against **both** readers — its `READERS` registry declares `apps/ops-status` as required (absence is exit 2) and `status-server.py` as optional (absence is the planned cutover: a skip with a notice) — and runs three failing fixtures first, so the comparison cannot pass contentlessly.
 
 The fields are declared once, as an interface with a comment per field
 [`packages/harness/src/ledger.ts:37-62`]; the "Contracts that must not drift" section of
