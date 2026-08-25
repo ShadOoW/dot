@@ -1,0 +1,67 @@
+#!/usr/bin/env sh
+# The launcher. Two facts have to be true before `dot` can run, and neither of them is the
+# same on every host, so neither is written down here.
+#
+# ## Where the payload is
+#
+# This file is inside it. `~/.local/bin/dot` is a symlink into
+# `<payload>/packages/dot/home/.local/bin/dot`, so following the chain and walking five
+# directories up names the checkout on any host, with no path spelled out. That answer is
+# exported as DOT_ROOT and `src/lib/config.ts` reads it.
+#
+# Every previous revision of this shim named an absolute path instead, and each was wrong on
+# the MacBook, which keeps the payload under its own $HOME:
+#
+#   2026-05-15  $HOME/.config/dotfiles/dot.ts
+#   2026-05-25  $HOME/.config/dotfiles/dot.ts, with --cwd
+#   2026-07-10  /data/config/dot/dot.ts
+#   2026-08-24  /data/code/fleet/apps/dot/dot.ts
+#
+# The last of those is the one that made it visible: after the TypeScript moved to the kit,
+# a host could no longer fix itself by cloning this repo, because the code is not in it.
+#
+# ## Where the CLI is
+#
+# That one genuinely cannot be derived — the kit is a different repository in a different
+# place per host (/data/code/fleet on the desktop, under $HOME on the laptop). So it is
+# recorded once per host by bootstrap.sh, and read here. A list of candidate paths guessed in
+# this file would be the same mistake as the table above, only quieter.
+#
+# DOT_CLI overrides the record, for running a branch of the kit without touching it.
+set -eu
+
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+
+# .../packages/dot/home/.local/bin -> the payload root, five levels up.
+root=$(cd "$(dirname "$self")/../../../../.." && pwd -P)
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
+record="$state/cli-path"
+
+cli="${DOT_CLI:-}"
+if [ -z "$cli" ] && [ -f "$record" ]; then
+  cli=$(cat "$record")
+fi
+
+if [ -z "$cli" ]; then
+  echo "dot: this host has no kit recorded at $record." >&2
+  echo "     run $root/packages/dot/bootstrap.sh /path/to/fleet" >&2
+  exit 2
+fi
+
+if [ ! -f "$cli" ]; then
+  echo "dot: $record names $cli, which is not there." >&2
+  echo "     re-run $root/packages/dot/bootstrap.sh /path/to/fleet" >&2
+  exit 2
+fi
+
+# An inherited DOT_ROOT wins: pointing dot at another machine's checkout over a mount is a
+# real use, and a shim that overwrote the caller's value would make the variable a lie.
+DOT_ROOT="${DOT_ROOT:-$root}" exec bun "$cli" "$@"

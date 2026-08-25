@@ -1,9 +1,0 @@
-#!/usr/bin/env sh
-# dot's TypeScript lives in the kit (`/data/code/fleet/apps/dot`); its payload — packages/,
-# pkgbuilds/, docs/ — stays here in /data/config/dot, because those paths are the targets of
-# live symlinks on this machine.
-#
-# No `--cwd`: the old shim passed `--cwd /data/config/dot` because `src/lib/config.ts` derived
-# the payload's location from `import.meta.path`, so dot had to be run from the checkout. It
-# now states that root as a literal, which is what makes this shim a plain exec.
-exec bun "/data/code/fleet/apps/dot/dot.ts" "$@"

@@ -1,0 +1,10 @@
+{
+  "description": "The dot launcher itself: resolves the payload from its own symlink, execs the kit's CLI",
+  "packages": {
+    "arch": { "pacman": ["bun"] },
+    "void": { "xbps": ["bun"] },
+    "macos": { "brew": ["oven-sh/bun/bun"] }
+  },
+  "tags": ["core"],
+  "os": ["linux", "macos"]
+}
