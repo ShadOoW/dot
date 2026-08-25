@@ -60,7 +60,7 @@ together — edit one and the other does not follow. Recorded with evidence in
   `packages/lake/src/raw-writer.ts:6-7`].
 - Both failure routes — unparseable JSON and a stale shape that no longer decodes — collapse
   into **one named condition**, and the recovery is a typed catch on that one name. Reaching
-  for something that discards _which_ failure happened would discard the taxonomy
+  for something that discards *which* failure happened would discard the taxonomy
   [`packages/lake/src/cursor.ts:40-57`].
 - Cursor writes are atomic and schema-encoded, so a half-written cursor is not a state the
   next run can observe [`packages/lake/src/cursor.ts:59-68`].

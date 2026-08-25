@@ -65,7 +65,7 @@ again, and those are different actions [`packages/harness/src/collect.ts:126-128
 ## Writing it
 
 - **The ledger is written before the process decides its own fate.** A non-zero exit is
-  what the service reports as failed, and the whole point of the ledger is to say _which_
+  what the service reports as failed, and the whole point of the ledger is to say *which*
   source caused it, so it must survive the failing run
   [`packages/harness/src/collect.ts:113-120`].
 - **A failed ledger write is logged, not fatal** — the run's own verdict still stands
@@ -77,7 +77,7 @@ again, and those are different actions [`packages/harness/src/collect.ts:126-128
   leave the ledger too, or it sits there permanently stale and reds the dashboard forever
   over something that no longer exists [`packages/harness/src/ledger.ts:122-128`].
 - **A corrupt or half-written previous ledger reads as empty rather than failing.** The
-  ledger is a report _about_ the run; failing to parse the previous report must not fail
+  ledger is a report *about* the run; failing to parse the previous report must not fail
   the current one [`packages/harness/src/ledger.ts:98-120`].
 - **A source's self-report is trusted on everything except the two things only the parent
   can observe**: the exit code, and the wall-clock duration that includes process startup

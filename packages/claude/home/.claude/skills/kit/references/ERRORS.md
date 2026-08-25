@@ -19,7 +19,7 @@ exception for four months and quietly drops 3% of the data
 The taxonomy is four classes and three outcomes [`packages/core/src/errors.ts:1-12`]:
 
 - **A config error is the user's to fix.** Printed as the message alone with no stack —
-  the message names the file and the key, so it _is_ the diagnosis, and a stack pointing
+  the message names the file and the key, so it *is* the diagnosis, and a stack pointing
   into the kit says nothing about the JSON that needs editing. Exit 2, and never
   fast-retried, because waiting does not fix a bad config file
   [`packages/core/src/errors.ts:3-4,15-17`, `packages/harness/src/run.ts:150-155`].
@@ -32,7 +32,7 @@ The taxonomy is four classes and three outcomes [`packages/core/src/errors.ts:1-
   another, and both carry the underlying defect rather than a string
   [`packages/core/src/errors.ts:8-9,23-35`].
 
-Choose the class by _who has to act_, not by what threw. A missing user config file is a
+Choose the class by *who has to act*, not by what threw. A missing user config file is a
 config error; a missing directory we were supposed to create is I/O.
 
 ## Exit codes
@@ -81,7 +81,7 @@ anywhere** — that is precisely how it went stale last time.
   the failure but destroys its tag, so the runner can no longer map it to the right exit
   code; a config error reported as a crash costs the same evening as a swallowed one
   [`tooling/lint/erasers.json:9,13`].
-- **Typed recovery is always allowed.** Selecting _which_ failures you handle — by tag, by
+- **Typed recovery is always allowed.** Selecting *which* failures you handle — by tag, by
   predicate, by filter — is a handler, not an eraser, and so is anything that preserves the
   failure somewhere observable [`tooling/lint/erasers.json:14`, `eslint.config.js:7-9`].
 - **Passing the gate is not proof a failure survives.** The enumeration is prefix-based and
@@ -110,6 +110,6 @@ named tag** and reports:
   to mask the failure that caused it [`packages/lake/src/ducklake.ts:75-88`].
 
 The pattern to copy when two different things mean the same recovery: collapse both routes
-into one named condition and catch _that_, rather than reaching for something that
+into one named condition and catch *that*, rather than reaching for something that
 discards which failure happened — which failure happened is the taxonomy
 [`packages/lake/src/cursor.ts:40-57`].

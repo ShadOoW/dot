@@ -1,4 +1,5 @@
 backup/
 packages/prettierd/
+packages/claude/home/.claude/skills/
 justfile
 .pre-commit-config.yaml
