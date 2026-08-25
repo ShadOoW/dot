@@ -4,7 +4,7 @@
 #
 # Why this is a script, not a symlink:
 #   ~/.config/opencode/opencode.json and tui.json are app-owned runtime state.
-#   dot link symlinks files at install time, but the OMO installer also rewrites
+#   dot's linker symlinks files at install time, but the OMO installer also rewrites
 #   the `plugin` array at runtime. We need an idempotent merge that preserves
 #   existing `permission` and `mcp` blocks (agentmemory, augment-context-engine).
 set -euo pipefail

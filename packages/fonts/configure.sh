@@ -6,7 +6,7 @@ SUDO=""
 
 fc-cache -fv
 
-# /etc/vconsole.conf must be a REAL FILE, never a `dot link` symlink into /data.
+# /etc/vconsole.conf must be a REAL FILE, never a dot symlink into /data.
 # systemd-vconsole-setup runs at sysinit, ~1s before data.mount, so a symlink is
 # unreadable at that point and FONT is silently never applied — the console just
 # keeps the default font and the only clue is
@@ -15,7 +15,7 @@ fc-cache -fv
 # section of /data/ops/CLAUDE.md.
 #
 # It lives under etc-real/ rather than system/ ON PURPOSE: dot's linker only walks home/
-# and system/ (/data/code/fleet/apps/dot/src/lib/pkg.ts collectFiles), so `dot link fonts` cannot recreate the
+# and system/ (/data/code/fleet/apps/dot/src/lib/pkg.ts collectFiles), so `dot pkg fonts link` cannot recreate the
 # symlink that made FONT silently never apply.
 src="$DIR/etc-real/etc/vconsole.conf"
 dst=/etc/vconsole.conf

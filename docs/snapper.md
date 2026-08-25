@@ -11,17 +11,11 @@ pacman -S snapper       # Arch Linux
 
 ## Configuration
 
-Config and hooks are managed by dotfiles packages:
+The config is installed from this repo by the package's setup script (the package
+ships no `home/`/`system/` tree, so there is nothing to link):
 
 ```
-dot link snapper-config   # /etc/snapper/configs/root
-dot link snapper-hooks    # pacman hooks for auto-snapshots (Arch only)
-```
-
-Then run the setup script:
-
-```
-sudo packages/snapper-config/setup.sh
+sudo packages/snapper-config/setup.sh   # installs /etc/snapper/configs/root
 ```
 
 ## Note

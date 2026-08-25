@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Own ~/.config/secrets, the directory the zsh login loader reads.
 #
-# The templates live in templates/ rather than home/.config/secrets/ on purpose. `dot link`
+# The templates live in templates/ rather than home/.config/secrets/ on purpose. dot's linker
 # walks only home/ and system/ (collectFiles, /data/code/fleet/apps/dot/src/lib/pkg.ts), so
 # nothing under templates/ can be symlinked into the live credential store even by accident —
 # the same structural guarantee etc-real/ relies on. Earlier versions of this package did ship

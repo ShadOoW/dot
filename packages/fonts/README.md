@@ -15,9 +15,8 @@ Font configuration for Void Linux with Inter (Latin), Noto (CJK/Arabic/Emoji), a
 
 ## Operations
 
-- `dot link-home fonts` - Link fontconfig to ~/.config/fontconfig/
-- `dot link-system fonts` - Link vconsole.conf to /etc/vconsole.conf
-- `dot configure fonts` - Run fc-cache to refresh font cache
+- `dot pkg fonts link` - Link fontconfig to ~/.config/fontconfig/
+- `dot pkg fonts configure` - Install /etc/vconsole.conf as a real file and refresh the font cache
 
 ## Required Packages
 
@@ -28,4 +27,4 @@ sudo xbps-install -S font-inter noto-fonts-cjk-sans noto-fonts-emoji noto-fonts-
 ## Files
 
 - `home/.config/fontconfig/fonts.conf` - System-wide font preferences
-- `system/base/etc/vconsole.conf` - Console TTY font (FONT=ter-v16n)
+- `etc-real/etc/vconsole.conf` - Console TTY font (FONT=ter-v16n)

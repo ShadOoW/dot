@@ -140,7 +140,7 @@ Two Void-specific traps, both handled in that conf:
 (`/etc/sv/earlyoom`, see `packages/oom/README.md` → "Void / runit"); the leg Void still lacks
 is the cgroup memory floor, which runit has nowhere to put.
 
-## ⚠️ These two files must be REAL FILES in /etc — never `dot link`ed
+## ⚠️ These two files must be REAL FILES in /etc — never linked by dot
 
 ```
 /etc/systemd/zram-generator.conf
@@ -149,10 +149,10 @@ is the cgroup memory floor, which runit has nowhere to put.
 
 They live under **`etc-real-systemd/`** (and the shared sysctl under `etc-real/`, the Void
 zramen conf under `etc-real-runit/`) rather than `system/` on purpose: dot's linker only
-walks `home/` and `system/` (`collectFiles` in `/data/code/fleet/apps/dot/src/lib/pkg.ts`), so `dot link zram`
+walks `home/` and `system/` (`collectFiles` in `/data/code/fleet/apps/dot/src/lib/pkg.ts`), so `dot pkg zram link`
 **physically cannot** recreate the symlink. `configure.sh` installs real copies instead.
 
-`dot link` creates symlinks into `/data/config/dot/`, and `/data` is a btrfs-pool subvolume
+dot's linker creates symlinks into `/data/config/dot/`, and `/data` is a btrfs-pool subvolume
 that **is not mounted yet** when zram is set up:
 
 - `zram-generator` is a _systemd generator_ — it runs before any unit, earliest in boot.

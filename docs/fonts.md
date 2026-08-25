@@ -26,7 +26,7 @@ pacman -S inter-font       # Arch Linux
 Fontconfig preferences are managed by the `fonts` package:
 
 ```
-dot link fonts
+dot pkg fonts link
 ```
 
 This sets up:
@@ -37,4 +37,4 @@ This sets up:
 
 ## TTY Font
 
-Terminus is configured for the TTY via `vconsole.conf` (linked by the `fonts` package).
+Terminus is configured for the TTY via `vconsole.conf` (installed by the `fonts` package).

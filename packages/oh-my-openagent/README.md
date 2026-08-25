@@ -59,7 +59,7 @@ defaults from ~/.omo/omo.jsonc
 
 For per-machine tweaks (different `disabled_agents`, custom agent model
 overrides, etc.), put them in `~/.config/opencode/oh-my-openagent.jsonc` — it is
-**not** managed by this package and survives `dot link` because it is a separate
+**not** managed by this package and survives `dot pkg oh-my-openagent link` because it is a separate
 file OMO will pick up alongside the symlinked one.
 
 ## Telemetry
@@ -79,7 +79,7 @@ actually checks (`shouldDisableTelemetry` in `telemetry-core/src/env.ts`).
 
 ## Verified OAuth flows
 
-After `dot configure oh-my-openagent`, run `opencode auth login` and complete:
+After `dot pkg oh-my-openagent configure`, run `opencode auth login` and complete:
 
 - **Anthropic → Claude Pro/Max** (browser OAuth)
 - **Google → OAuth with Google (Antigravity)** (browser OAuth; required for the

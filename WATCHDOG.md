@@ -20,7 +20,7 @@ signature** and the second-order coupling that file does not list.
 ## 1. Early boot — `/data` is unmounted until `local-fs.target`
 
 Anything systemd, the kernel, or udev reads before the mount must be a **real file**
-installed from `etc-real*/`. A `dot link` symlink there resolves to nothing. Cost of record:
+installed from `etc-real*/`. A dot symlink there resolves to nothing. Cost of record:
 a 9-day silent swap outage.
 
 | Signature in a diff                                                                                                                                                                                          | Verdict                |
@@ -173,7 +173,7 @@ therefore must:
 - **Extensionless shell is outside `just check`** (`find -name "*.sh"`), but pre-commit's
   shfmt hook _rewrites_ it by shebang — so runit `run` scripts get reformatted by a gate that
   never validates them. `.zsh` is covered by neither.
-- **Nothing verifies that a file `dot link` would install is tracked by git.** `.gitignore`
+- **Nothing verifies that a file dot's linker would install is tracked by git.** `.gitignore`
   uses unanchored directory patterns, so a package payload can be invisible while every gate
   is green. Any new `.gitignore` line without a leading `/`, and any package path containing a
   segment `backup`, `node_modules`, `.cursor`, or `__pycache__`, deserves a note.

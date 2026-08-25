@@ -8,10 +8,10 @@ package at all, and Arch's would fight the build (see below).
 Order on a fresh machine:
 
 ```sh
-dot install ly     # pam + libxcb
-dot link ly        # /etc/ly/login.sh, /etc/environment
-dot update source  # builds and installs ly itself
-dot configure ly   # points login_cmd at /etc/ly/login.sh
+dot install ly       # pam + libxcb
+dot pkg ly link      # /etc/ly/login.sh, /etc/environment
+dot update source    # builds and installs ly itself
+dot pkg ly configure # points login_cmd at /etc/ly/login.sh
 ```
 
 `dot update source` seeds `/etc/ly/config.ini` only when it is missing, so `configure.sh` has

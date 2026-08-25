@@ -4,7 +4,7 @@ Minimal setup so **the system itself never runs out of RAM**, and so an OOM kill
 silent.
 
 ```sh
-dot link oom            # user unit + ~/.local/bin/oom-notify
+dot pkg oom link           # user unit + ~/.local/bin/oom-notify
 dot pkg oom configure   # earlyoom, /etc drop-ins, sysctl, enable everything
 ```
 

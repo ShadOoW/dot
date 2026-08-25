@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cap journald's disk usage.
 #
-# Files live under etc-real/ (real copies, not `dot link` symlinks) because systemd-journald
+# Files live under etc-real/ (real copies, not dot symlinks) because systemd-journald
 # starts very early — well before /data is mounted — so a symlinked drop-in would be
 # unreadable exactly when it is needed. Same hazard as packages/zram; dot's linker only walks
 # home/ and system/, so etc-real/ cannot be symlinked by accident.

@@ -1,6 +1,6 @@
 # dot — Agent Context
 
-Stow-style dotfiles manager. `dot link <pkg>` walks `packages/<pkg>/` and creates
+Stow-style dotfiles manager. `dot pkg <pkg> link` walks `packages/<pkg>/` and creates
 **symlinks** — `home/…` → `$HOME/…`, `system/{base,systemd,runit}/…` → `/…`
 (`src/lib/pkg.ts` maps the paths, `src/commands/link.ts` links). The CLI itself lives at
 **`/data/code/fleet/apps/dot`** since commit 02c065c — every `src/…` path below is relative
@@ -13,7 +13,7 @@ the authoritative host-conventions file) and `/data/config/network` (router).
 
 ## The one hazard that has actually bitten: `/data` is not mounted at early boot
 
-`dot link` only ever makes symlinks, and this repo is on the btrfs pool. Anything under
+dot's linker only ever makes symlinks, and this repo is on the btrfs pool. Anything under
 `/data` is **unavailable** until `local-fs.target`. Measured boot ordering:
 
 ```
@@ -38,12 +38,12 @@ something later ran `systemctl daemon-reload`, which re-runs generators after th
 it looked like it worked), and `FONT=ter-v16` from `vconsole.conf` never being applied.
 
 **Rule:** if systemd or the kernel reads it before `local-fs.target`, it is a **real file** in
-`/etc` — not a `dot link`.
+`/etc` — not a `dot symlink`.
 
 The convention that enforces this: such files live in a package's **`etc-real/`** directory,
 which mirrors `/` (`etc-real/etc/foo.conf` → `/etc/foo.conf`), and the package's
 `configure.sh` installs real copies from it. Because `collectFiles` only walks `home/` and
-`system/`, anything under `etc-real/` is **structurally impossible to symlink** — `dot link`
+`system/`, anything under `etc-real/` is **structurally impossible to symlink** — dot's linker
 cannot reintroduce the bug even by accident. The dot copy is the reference, `/etc` is
 authoritative, change both together.
 
@@ -185,7 +185,7 @@ process _shape and size_, not names, so they keep working as the toolchain chang
 
 - **Never commit secrets.** `~/.npmrc`, `~/.config/secrets/*` and similar stay out of packages.
   Credential _templates_ go in `packages/secrets/templates/`, never under a package's `home/`:
-  `collectFiles` cannot reach `templates/`, so `dot link` cannot plant a template inside the live
+  `collectFiles` cannot reach `templates/`, so dot's linker cannot plant a template inside the live
   credential store. It did, for three of them — `~/.config/secrets` held `.minimax.example`,
   `.deepseek.example` and `.agent-web.example` as symlinks into this repo, and the only thing
   stopping the login loader from sourcing them was the leading dot. `packages/*/home/.config/secrets/`

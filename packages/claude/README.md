@@ -50,7 +50,7 @@ graph LR
 ```
 
 `home/.omp/agent/commands` is a **relative symlink inside the repo**
-(`../../.claude/commands`). `dot link` walks `home/` with `readdir` +
+(`../../.claude/commands`). dot's linker walks `home/` with `readdir` +
 `Dirent.isDirectory()`, so a symlinked directory is emitted as a _single_ link
 entry rather than being traversed — `~/.omp/agent/commands` becomes one symlink
 that chains through the repo to the real command directory.

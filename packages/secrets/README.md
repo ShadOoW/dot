@@ -16,11 +16,11 @@ direct call above is the one to use.
 
 ## Why the templates are not under `home/`
 
-`dot link` walks only `home/` and `system/` (`collectFiles`), so a template under
+dot's linker walks only `home/` and `system/` (`collectFiles`), so a template under
 `home/.config/secrets/` becomes a **symlink into this repo, sitting inside the live credential
 store**. That is what `~/.config/secrets` looked like until this package moved its templates to
-`templates/`, which `dot link` structurally cannot reach — the same guarantee `etc-real/` uses,
-for the opposite reason. `dot link secrets` now links nothing, by design.
+`templates/`, which dot's linker structurally cannot reach — the same guarantee `etc-real/` uses,
+for the opposite reason. `dot pkg secrets link` now links nothing, by design.
 
 The loader's glob is `*(N.)`, without the `-` qualifier, so it stats the link itself rather than
 its target and skips symlinks entirely. Both halves have to hold: the templates cannot get in,
@@ -48,8 +48,9 @@ as `packages/agentmemory` does for minimax.
 
 ## Templates
 
-| Template    | Real file                     | Consumer                                    |
-| ----------- | ----------------------------- | ------------------------------------------- |
-| `minimax`   | `~/.config/secrets/minimax`   | agentmemory's LLM provider                  |
-| `agent-web` | `~/.config/secrets/agent-web` | the web-verify skill's per-site logins      |
-| `deepseek`  | `~/.config/secrets/deepseek`  | `DEEPSEEK_API_KEY` in the login environment |
+| Template     | Real file                      | Consumer                                                       |
+| ------------ | ------------------------------ | -------------------------------------------------------------- |
+| `minimax`    | `~/.config/secrets/minimax`    | agentmemory's LLM provider                                     |
+| `agent-web`  | `~/.config/secrets/agent-web`  | the web-verify skill's per-site logins                         |
+| `deepseek`   | `~/.config/secrets/deepseek`   | omp's `deepseek` provider (`task`/`worker`/`smol`/`commit`)    |
+| `openrouter` | `~/.config/secrets/openrouter` | omp's free-model fallback tier — see `~/.omp/agent/plan-b.yml` |

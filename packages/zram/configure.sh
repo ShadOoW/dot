@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install zram config into /etc as REAL FILES — deliberately NOT `dot link`ed.
+# Install zram config into /etc as REAL FILES — deliberately NOT linked by dot.
 #
 # Why: /data is a btrfs-pool subvolume that is NOT mounted yet when zram is set up.
 #   * zram-generator is a systemd *generator* — it runs before any unit, earliest in boot
@@ -14,7 +14,7 @@
 # would appear hours into a boot from some unrelated reload.
 #
 # These files live under etc-real*/ rather than system/ ON PURPOSE: dot's linker only walks
-# home/ and system/ (/data/code/fleet/apps/dot/src/lib/pkg.ts collectFiles), so `dot link zram` physically cannot
+# home/ and system/ (/data/code/fleet/apps/dot/src/lib/pkg.ts collectFiles), so `dot pkg zram link` physically cannot
 # recreate the symlink. The dot copy is the reference; /etc is authoritative. Change both.
 # See docs/zram.md and the "Early boot" section of /data/ops/CLAUDE.md.
 #

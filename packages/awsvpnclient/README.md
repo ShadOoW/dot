@@ -25,7 +25,7 @@ The **app itself** is installed per-distro:
 ## Setup
 
 ```sh
-dot pkg link awsvpnclient      # links ~/.local/bin/awsvpnclient (+ runit svc on Void)
+dot pkg awsvpnclient link      # links ~/.local/bin/awsvpnclient (+ runit svc on Void)
 ```
 
 Void — install/update the app and enable the daemon:
@@ -112,7 +112,7 @@ same `ExecStart` line (e.g. `~mongodb.net ~eu-west-3.compute.amazonaws.com ~inte
 for a cluster in another region add that region's `~<region>.compute.amazonaws.com`.
 
 ```sh
-dot pkg link awsvpnclient                # links the unit into /etc/systemd/system
+dot pkg awsvpnclient link                # links the unit into /etc/systemd/system
 sudo ./enable-systemd.sh                 # daemon-reload + enable (+ start if tun0 is up)
 ```
 

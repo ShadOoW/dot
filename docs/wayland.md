@@ -46,8 +46,8 @@ exec sway
 Config is managed by the `sway` package:
 
 ```
-dot link sway
-dot link waybar
-dot link mako
-dot link fuzzel
+dot pkg sway link
+dot pkg waybar link
+dot pkg mako link
+dot pkg fuzzel link
 ```

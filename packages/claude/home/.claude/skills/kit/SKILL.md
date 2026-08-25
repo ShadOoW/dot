@@ -8,7 +8,7 @@ description: |
   traces-over-metrics-over-logs signal order, the one-collector-door rule for telemetry
   export, and the no-backward-compatibility rule.
   Use when writing or reviewing anything under @kit/core, @kit/telemetry,
-  @kit/harness, @kit/trace, @kit/testing, or @kit/lake; when adding or
+  @kit/harness, @kit/trace, or @kit/lake; when adding or
   changing an ingest source, a build step, or a collect run; when touching exit codes,
   error classes, status.json, freshness budgets, span or metric names, counters,
   collector or exporter configuration, envelopes, dedupe keys, cursors, blob storage, raw

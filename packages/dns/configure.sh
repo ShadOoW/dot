@@ -1,6 +1,6 @@
 #!/bin/bash
 # packages/dns — make /etc/resolv.conf always valid and restore-proof, cross-distro.
-# Run: dot pkg dns configure   (or: dot configure dns). Needs sudo (primed by dot).
+# Run: dot pkg dns configure. Needs sudo (primed by dot).
 # See docs/dns.md for the full rationale.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

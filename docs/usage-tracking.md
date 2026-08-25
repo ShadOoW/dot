@@ -196,7 +196,7 @@ candidates.
 Reports work immediately from `atime` + `history`. Live exec tracking needs the service.
 
 ```sh
-dot link usage                # symlink the service definition (runit or systemd)
+dot pkg usage link             # symlink the service definition (runit or systemd)
 packages/usage/configure.sh   # create /var/lib/dot, log dir, rotation; asks for a password
 dot pkg usage enable          # register with the init system
 dot usage acct on             # complete short-lived-command coverage; asks for a password

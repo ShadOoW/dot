@@ -111,9 +111,9 @@ else
 fi
 
 # ------------------------------------------------------ 4. the notifier
-# `dot link oom` must have run first so ~/.local/bin/oom-notify exists.
+# `dot pkg oom link` must have run first so ~/.local/bin/oom-notify exists.
 if [ ! -x "$HOME/.local/bin/oom-notify" ]; then
-  echo "NOTE: ~/.local/bin/oom-notify missing — run 'dot link oom' then re-run configure" >&2
+  echo "NOTE: ~/.local/bin/oom-notify missing — run 'dot pkg oom link' then re-run configure" >&2
 elif [ "$INIT" = systemd ]; then
   systemctl --user daemon-reload
   systemctl --user enable --now oom-notify.service

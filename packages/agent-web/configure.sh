@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy the parts of agent-web that `dot link` cannot mirror on its own:
+# Deploy the parts of agent-web that dot's linker cannot mirror on its own:
 #   - the vendor playwright-cli skill (regenerated from the CLI, not tracked here)
 #   - copies of WEB-VERIFY.md for omp and opencode, which read fixed paths
 #   - the extra Claude config dirs (.claude-work, .claude-personal)
@@ -9,7 +9,7 @@ set -euo pipefail
 
 RULES="$HOME/.claude/WEB-VERIFY.md"
 [ -f "$RULES" ] || {
-  echo "run 'dot link agent-web' first (missing $RULES)" >&2
+  echo "run 'dot pkg agent-web link' first (missing $RULES)" >&2
   exit 1
 }
 

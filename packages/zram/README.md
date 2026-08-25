@@ -10,7 +10,7 @@ dot pkg zram enable --init runit     # Void only: symlink /etc/sv/zramen -> /var
 systemd on Void, installed the wrong tree, skipped `/etc/sv/zramen/conf` entirely and then
 died on `systemctl: command not found`. Void consequently ran on zramen's built-in defaults
 (lz4, priority 32767, no size ceiling) while looking configured. Read the script header before
-changing anything — these files **must be real files in `/etc`, never `dot link`ed**, because
+changing anything — these files **must be real files in `/etc`, never linked by dot**, because
 they are consumed before `/data` is mounted.
 
 ## Layout

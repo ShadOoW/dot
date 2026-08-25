@@ -157,7 +157,7 @@ documents the Void path — but snapper is not among the 827 installed packages.
 upside there is no snapshot bloat; the risk here is purely the _absence_ of rollback on a
 rolling-release box.
 
-Fix: `xbps-install snapper && dot link snapper-config && sudo packages/snapper-config/setup.sh`
+Fix: `xbps-install snapper && sudo packages/snapper-config/setup.sh`
 
 ### H6 · SMART is unknown and unmonitored on the only disk
 

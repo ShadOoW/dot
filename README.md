@@ -33,33 +33,33 @@ dot <command>
 
 ### Commands
 
-| Command               | Description                                               |
-| --------------------- | --------------------------------------------------------- |
-| `dot link <pkg>`      | Symlink a package's files into place                      |
-| `dot unlink <pkg>`    | Remove those symlinks                                     |
-| `dot info <pkg>`      | Show metadata, files, and per-distro packages             |
-| `dot configure <pkg>` | Run `configure.sh` for a package                          |
-| `dot enable <pkg>`    | Run the enable script (init-system-aware)                 |
-| `dot disable <pkg>`   | Run the disable script                                    |
-| `dot update system`   | Update xbps/pacman, flatpak, bun, deno, rustup            |
-| `dot update global`   | Update npm/bun/pipx/cargo global packages                 |
-| `dot update source`   | Build/update pkgbuilds, fnm, anyzig, ly, zinit            |
-| `dot update --info`   | Show installed versions                                   |
-| `dot update --ai`     | Run update then analyse output with an AI provider        |
-| `dot assets sync`     | Sync fonts, icons, themes from GitHub releases (parallel) |
-| `dot doctor`          | Health-check all packages: broken symlinks, drift         |
-| `dot doctor --fix`    | Auto-repair broken symlinks and re-link partial packages  |
-| `dot completions zsh` | Print zsh completion script (pipe to `_dot` in `$fpath`)  |
-| `dot docs`            | Browse setup documentation                                |
+| Command                   | Description                                               |
+| ------------------------- | --------------------------------------------------------- |
+| `dot pkg <pkg> link`      | Symlink a package's files into place                      |
+| `dot pkg <pkg> unlink`    | Remove those symlinks                                     |
+| `dot pkg <pkg> info`      | Show metadata, files, and per-distro packages             |
+| `dot pkg <pkg> configure` | Run `configure.sh` for a package                          |
+| `dot pkg <pkg> enable`    | Run the enable script (init-system-aware)                 |
+| `dot pkg <pkg> disable`   | Run the disable script                                    |
+| `dot update system`       | Update xbps/pacman, flatpak, bun, deno, rustup            |
+| `dot update global`       | Update npm/bun/pipx/cargo global packages                 |
+| `dot update source`       | Build/update pkgbuilds, fnm, anyzig, ly, zinit            |
+| `dot update --info`       | Show installed versions                                   |
+| `dot update --ai`         | Run update then analyse output with an AI provider        |
+| `dot assets sync`         | Sync fonts, icons, themes from GitHub releases (parallel) |
+| `dot doctor`              | Health-check all packages: broken symlinks, drift         |
+| `dot doctor --fix`        | Auto-repair broken symlinks and re-link partial packages  |
+| `dot completions zsh`     | Print zsh completion script (pipe to `_dot` in `$fpath`)  |
+| `dot docs`                | Browse setup documentation                                |
 
 ### Linking flags
 
 ```sh
-dot link zsh                     # home files only
-dot link zram                    # auto-detects runit or systemd
-dot link ly --init runit         # explicit init override
-dot link --tag wayland           # link all wayland-tagged packages
-dot link nvim --dry-run          # preview without changes
+dot pkg zsh link                 # home files only
+dot pkg zram link                # auto-detects runit or systemd
+dot pkg ly link --init runit     # explicit init override
+dot pkg --tag wayland link       # link all wayland-tagged packages
+dot pkg nvim link --dry-run      # preview without changes
 ```
 
 Init system (runit vs systemd) is auto-detected from the running PID 1. Pass `--init` to override.
@@ -78,9 +78,9 @@ packages/<name>/
 │   ├── base/          # symlinked to / (always)
 │   ├── runit/         # symlinked to / (when --init runit)
 │   └── systemd/       # symlinked to / (when --init systemd)
-├── configure.sh       # run with `dot configure`
-├── enable-runit.sh    # run with `dot enable --init runit`
-├── enable-systemd.sh  # run with `dot enable --init systemd`
+├── configure.sh       # run with `dot pkg <pkg> configure`
+├── enable-runit.sh    # run with `dot pkg <pkg> enable --init runit`
+├── enable-systemd.sh  # run with `dot pkg <pkg> enable --init systemd`
 └── disable-*.sh
 ```
 
@@ -107,7 +107,7 @@ Packages can declare metadata in `meta.json`:
 }
 ```
 
-`dot info <pkg>` shows packages filtered to the current distro. `dot link --tag <tag>` links all matching packages at once.
+`dot pkg <pkg> info` shows packages filtered to the current distro. `dot pkg --tag <tag> link` links all matching packages at once.
 
 ## Custom packages (pkgbuilds)
 
@@ -145,7 +145,7 @@ The shell config auto-detects the distro at startup and exports `$_DISTRO` (`arc
 
 ## Clipboard
 
-All clipboard operations go through `~/.local/bin/clipboard-copy` (linked via `dot link zsh`). It auto-selects `pbcopy` on macOS, `wl-copy` on Wayland, `xclip`/`xsel` on X11. Nothing is hardcoded.
+All clipboard operations go through `~/.local/bin/clipboard-copy` (linked via `dot pkg zsh link`). It auto-selects `pbcopy` on macOS, `wl-copy` on Wayland, `xclip`/`xsel` on X11. Nothing is hardcoded.
 
 ## Node / fnm
 

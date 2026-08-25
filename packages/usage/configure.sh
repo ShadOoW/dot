@@ -33,7 +33,7 @@ fi
 # local-fs.target and therefore before /data is mounted. A symlink into /data resolves
 # to nothing in that window and systemd treats the unit as simply absent — the silent
 # failure mode AGENTS.md documents. So this package keeps its unit in etc-real/ and
-# installs a copy; `dot link` structurally cannot symlink it, because collectFiles only
+# installs a copy; dot's linker structurally cannot symlink it, because collectFiles only
 # walks home/ and system/.
 #
 # rm -f before install: install(1) onto a symlink path follows the link, which would

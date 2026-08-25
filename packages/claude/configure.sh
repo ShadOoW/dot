@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # packages/claude — deploy the canonical settings.json SEED.
-# Run: dot pkg claude configure   (or: dot configure claude)
+# Run: dot pkg claude configure
 #
 # Why this is a copy, not a symlink: Claude Code rewrites ~/.claude/settings.json
 # with atomic writes (temp file + rename) whenever a setting changes (/model,
