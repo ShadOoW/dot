@@ -1,13 +1,19 @@
 #!/bin/bash
-# Usage: toggle-scratchpad.sh <mark_name> <selector_type> <selector_value> [command]
+# Usage: toggle-scratchpad.sh [show|hide|toggle] <mark_name> <selector_type> <selector_value> [command]
 #
-#   mark_name       sway mark to toggle (terminal, music, explorer, btw)
-#   selector_type   app_id | class | instance
-#   selector_value  value of that selector (e.g. terminal-mark)
-#   command         how to launch the app if no window exists yet
+#   show|hide|toggle  optional leading verb; defaults to toggle, so the four existing
+#                     $sp_* bindings keep working unchanged
+#   mark_name         sway mark to toggle (terminal, music, explorer, btw, scribe)
+#   selector_type     app_id | class | instance
+#   selector_value    value of that selector (e.g. terminal-mark)
+#   command           how to launch the app if no window exists yet
 #
-# Hides the window when it is visible; shows it and re-applies geometry when it is hidden;
-# launches it when it does not exist at all.
+# toggle: hides the window when it is visible; shows it and re-applies geometry when it
+#         is hidden; launches it when it does not exist at all.
+# show:   summons a hidden window (launching it when absent); a visible window is a no-op.
+# hide:   stashes a visible window; nothing to hide is a successful no-op. show/hide exist
+#         for the wake service, which must be able to open and close the scribe surface
+#         without knowing whether it has ever been opened before.
 #
 # Three failure modes this script exists to avoid. All three were live bugs on Void, and all
 # three were invisible because every one of them fails as a *silent no-op*:
@@ -36,6 +42,17 @@
 #    the same breath as the launch. This is why a half-applied chain left the music window at
 #    full width: the resize errored and only the move survived.
 set -u
+
+ACTION=${1:-toggle}
+case "$ACTION" in
+  show | hide | toggle)
+    shift
+    ;;
+  *)
+    # No verb: a legacy 4-argument invocation, the arguments are already in place.
+    ACTION=toggle
+    ;;
+esac
 
 MARK_NAME=${1:-unknown}
 SELECTOR_TYPE=${2:-app_id}
@@ -96,6 +113,10 @@ apply_geometry() {
     btw)
       swaymsg "[con_mark=\"$MARK_NAME\"] resize set width 60ppt height 45ppt, move position center"
       ;;
+    scribe)
+      # Dictation buffer — tall enough for a couple of paragraphs without scrolling.
+      swaymsg "[con_mark=\"$MARK_NAME\"] resize set width 70ppt height 60ppt, move position center"
+      ;;
   esac
 }
 
@@ -104,14 +125,30 @@ show_and_place() {
   apply_geometry >/dev/null
 }
 
-# --- already marked: plain toggle -------------------------------------------------------
+# --- already marked: per-action ---------------------------------------------------------
 if [ "$(count_marked)" -gt 0 ]; then
-  if [ "$(count_marked_visible)" -gt 0 ]; then
-    # Visible -> `scratchpad show` stashes it again. No geometry: it is going away.
-    swaymsg "[con_mark=\"$MARK_NAME\"] scratchpad show" >/dev/null
-  else
-    show_and_place
-  fi
+  case "$ACTION" in
+    hide)
+      # Only a visible window needs stashing; a hidden scratchpad is already hidden.
+      if [ "$(count_marked_visible)" -gt 0 ]; then
+        swaymsg "[con_mark=\"$MARK_NAME\"] scratchpad show" >/dev/null
+      fi
+      ;;
+    show)
+      # Only a hidden window needs summoning; a visible one is already shown.
+      if [ "$(count_marked_visible)" -eq 0 ]; then
+        show_and_place
+      fi
+      ;;
+    toggle)
+      if [ "$(count_marked_visible)" -gt 0 ]; then
+        # Visible -> `scratchpad show` stashes it again. No geometry: it is going away.
+        swaymsg "[con_mark=\"$MARK_NAME\"] scratchpad show" >/dev/null
+      else
+        show_and_place
+      fi
+      ;;
+  esac
   exit 0
 fi
 
@@ -119,6 +156,11 @@ fi
 id=$(matching_id)
 
 if [ -z "$id" ]; then
+  if [ "$ACTION" = "hide" ]; then
+    # Nothing exists to hide — a successful no-op, not an error.
+    exit 0
+  fi
+
   if [ -z "$COMMAND" ]; then
     echo "toggle-scratchpad: no window for mark '$MARK_NAME' and no command to launch" >&2
     exit 1
@@ -146,4 +188,9 @@ if [ "$(count_marked)" -eq 0 ]; then
   swaymsg "[con_id=$id] mark \"$MARK_NAME\"" >/dev/null
 fi
 swaymsg "[con_id=$id] move scratchpad" >/dev/null
+if [ "$ACTION" = "hide" ]; then
+  # Adopting an unmarked window already stashed it — `move scratchpad` hides it, which
+  # is exactly what hide asked for.
+  exit 0
+fi
 show_and_place

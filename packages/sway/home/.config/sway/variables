@@ -31,6 +31,7 @@ set {
     $sp_btw "~/.config/sway/scripts/toggle-scratchpad.sh btw app_id btw-scratch 'kitty --single-instance --app-id btw-scratch'"
     $sp_music "~/.config/sway/scripts/toggle-scratchpad.sh music app_id music-mark 'kitty --single-instance --app-id music-mark ncmpcpp'"
     $sp_explorer "~/.config/sway/scripts/toggle-scratchpad.sh explorer app_id yazi-explorer 'kitty --single-instance --app-id yazi-explorer yazi'"
+    $sp_scribe "~/.config/sway/scripts/scribe-surface.sh toggle"
 }
 # Removed $sp_chatgpt / $sp_whatsapp: both keyed the scratchpad on the same app_id
 # (org.qutebrowser.qutebrowser), so they could only ever have toggled the same window as each

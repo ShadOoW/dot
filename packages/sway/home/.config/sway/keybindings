@@ -20,6 +20,10 @@ bindsym {
     $mod+m exec $sp_music
     $mod+z exec $sp_terminal
     $mod+t exec $sp_btw
+    # Scribe dictation scratchpad (voice mode surface). Wake also shows/hides it via
+    # scribe-surface.sh from a service context that has no WAYLAND env, which is what
+    # the wrapper script is for — this binding is the interactive mirror of that hook.
+    $mod+Shift+t exec $sp_scribe
     $mod+w exec pkill waybar || waybar
     # Pin window in foreground of every workspace
     $mod+Shift+i sticky toggle

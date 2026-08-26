@@ -39,6 +39,11 @@ for_window {
   # btw stash terminal ($mod+t) — floating, centered, purple-bordered. Marked +
   # stashed like the other scratchpads; toggle-scratchpad.sh handles show/hide + sizing.
   [app_id="btw-scratch"] floating enable, mark btw, move scratchpad, border pixel 4, border color #bb9af7
+
+  # scribe dictation buffer ($mod+Shift+t) — floating, centered, green-bordered. Marked +
+  # stashed like the other scratchpads; scribe-surface.sh show/hide drives it, called by
+  # both the keybinding and the wake service (WAKE_SCRIBE_HOOK).
+  [app_id="scribe-scratch"] floating enable, mark scribe, move scratchpad, border pixel 4, border color #9ece6a
 }
 
 # Workspace assignments
