@@ -39,6 +39,13 @@ been unreachable.
   clip is queued, not lost; it lands on the next flush. Only a confirmed store deletes a
   spool file, and the loop stops at the first failure so ordering survives.
 
+- **Hammerspoon reads its config once, at launch, and never re-resolves the symlinks.**
+  Relinking this package — or moving the payload out from under it — does not reload a
+  running instance; the poll keeps firing against the paths it captured at startup and the
+  sync goes silently stale (measured 2026-08-26 after the payload moved from `~/code/dotfiles`
+  to `~/code/dot`). After `dot pkg hammerspoon link` or any payload move, restart it:
+  `osascript -e 'tell application "Hammerspoon" to quit' && open -a Hammerspoon`.
+
 ## What is deliberately not synced
 
 - **Images and other non-text flavours.** `pbpaste` renders no text for them, and an
