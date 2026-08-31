@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+# omp with every model role on Claude.
+#
+# Same auth, same sessions, same skills, same agent.db as bare `omp` — the only
+# difference is one config overlay that masks the DeepSeek roles and disables the
+# provider. That is deliberately NOT `omp --profile`: a named profile relocates
+# the whole user base (credentials, sessions, blobs, RULES.md, skills), so it
+# would mean a second Anthropic login and a split history for a four-line
+# difference in model roles.
+#
+# `omp` itself is untouched and remains the mixed Claude + DeepSeek profile.
+set -eu
+
+overlay="$HOME/.omp/agent/claude-only.yml"
+if [ ! -e "$overlay" ]; then
+  echo "omp-claude: missing $overlay — run: dot pkg omp link" >&2
+  exit 1
+fi
+
+exec omp --config "$overlay" "$@"

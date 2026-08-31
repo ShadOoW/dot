@@ -1,0 +1,10 @@
+{
+  "description": "oh-my-pi (omp) — model-role profiles: claude-only overlay next to the mixed Claude+DeepSeek default",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] },
+    "macos": { "brew": [] }
+  },
+  "tags": ["ai", "agent"],
+  "os": ["linux", "macos"]
+}

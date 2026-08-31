@@ -1,0 +1,94 @@
+# Claude-only profile. Loaded as a config overlay, never as the base config.
+#
+# ~/.omp/agent/config.yml is the MIXED profile — Claude for the thinking roles,
+# deepseek-v4-flash for the cheap ones — and stays the default, so bare `omp` is
+# unchanged. This file masks every DeepSeek role with Claude and hides the
+# provider outright, so nothing can route there: not a role, not the /model
+# picker, not Ctrl+P cycling, not a subagent, not a retry fallback.
+#
+#   one run      : omp-claude [args...]
+#   whole shell  : export PI_CONFIG_FILES=$HOME/.omp/agent/claude-only.yml
+#   back to mixed: omp   (or `unset PI_CONFIG_FILES`)
+#
+# Use it when DeepSeek's balance is empty, or when the work is too delicate to
+# hand to a cheap model. An empty balance still recovers on its own via
+# retry.fallbackChains, but it costs one failing 402 request per role-model per
+# session: DeepSeek's key comes from models.yml (config layer), so it has no
+# auth_credentials row and no persisted usage-limit block to suppress the
+# re-probe. This overlay skips the probe entirely.
+#
+# Two caveats worth knowing:
+#  - Overlays are a read-only layer. Changing a role from inside a claude-only
+#    session (/model) writes to the GLOBAL config.yml, i.e. it edits the mixed
+#    profile, and this overlay keeps masking it until you edit this file.
+#  - `omp config get <key>` ignores --config, so it always prints the mixed
+#    values. To read effective claude-only settings, use the env form:
+#    `PI_CONFIG_FILES=$HOME/.omp/agent/claude-only.yml omp config get modelRoles`.
+
+modelRoles:
+  task: anthropic/claude-sonnet-5:high
+  worker: anthropic/claude-sonnet-5:high
+  smol: anthropic/claude-sonnet-5:low
+  commit: anthropic/claude-haiku-4-5:minimal
+
+# The roles above are the whole switch; this makes it enforced rather than a
+# default. config.yml keeps its retry.fallbackChains `deepseek/*` entry — it is
+# simply unreachable while no role names a DeepSeek model.
+disabledProviders:
+  - deepseek
+
+# ---------------------------------------------------------------------------
+# Measured capacity on this machine (2026-08-25, `omp usage`)
+# ---------------------------------------------------------------------------
+# Anthropic  : 2 accounts, 5h 59%/30%, 7d 42%/72%. omp rotates credentials
+#              between them before it ever switches models. Real capacity.
+# Antigravity: THREE independent weekly buckets under one account —
+#                Google    100% used (blocked until Aug 30 19:00)
+#                Anthropic   3.4% used   <- claude-sonnet-4-6, claude-opus-4-6
+#                OpenAI      3.4% used   <- gpt-oss-120b
+#              Both non-Google buckets moved 0% -> 3.4% on ONE trivial
+#              tool-using request each, i.e. roughly 30 requests per week per
+#              bucket. Spillover only, never a workhorse tier.
+#              The Google bucket is what the advisor was eating on every turn;
+#              advisor now runs on anthropic/claude-haiku-4-5:medium.
+# MiniMax    : out of credit (429 "Token Plan usage limit reached ... (2056)").
+# DeepSeek   : pay-per-token, no usage endpoint, so retry.usageAwareFallback
+#              cannot pre-empt it — the 402 is the only signal.
+#
+# ---------------------------------------------------------------------------
+# OpenRouter free tier — WIRED as the first entry of the deepseek/* chain as
+#   `openrouter/deepseek/deepseek-v4-flash:free` (the same model DeepSeek bills
+#   for). It is skipped at zero cost until ~/.config/secrets/openrouter holds
+#   OPENROUTER_API_KEY: a candidate whose credentials do not resolve is dropped
+#   before any network call (measured: 4.9s end-to-end with the tier present).
+#   To activate: buy >= $10 of credits ONCE (openrouter.ai/settings/credits;
+#   Stripe adds 5.5%, $0.80 min, so ~$10.55), then
+#     install -m 600 /data/config/dot/packages/secrets/templates/openrouter \
+#       ~/.config/secrets/openrouter && $EDITOR ~/.config/secrets/openrouter
+#   Limits, from OpenRouter's own docs constants:
+#     FREE_MODEL_RATE_LIMIT_RPM = 20     <- the binding constraint, always
+#     FREE_MODEL_NO_CREDITS_RPD = 50
+#     FREE_MODEL_HAS_CREDITS_RPD = 1000  <- after >= $10 lifetime purchased
+#   Why it is a fallback and not the primary: measured DeepSeek load here is
+#   ~1500 requests/day with a peak of 71 requests in one minute (stats.db),
+#   i.e. 1.5x the daily cap and 3.5x the per-minute cap. Parallel subagent
+#   fan-out would 429-storm. Free variants are also documented as "usually not
+#   suitable for production", and providers that log require the privacy
+#   training toggle, else the request 503s with no matching provider.
+# ---------------------------------------------------------------------------
+# Optional extra tiers, none wired (each needs a decision, not just config)
+# ---------------------------------------------------------------------------
+# Gemini API free tier (provider id `google`, env GEMINI_API_KEY from
+#   aistudio.google.com): free, 5-15 RPM, model-specific daily cap, 429
+#   RESOURCE_EXHAUSTED when spent -> classified as a usage limit, so it chains
+#   onward exactly like DeepSeek's 402. Wiring is one line appended to the
+#   deepseek/* chain: `- google/gemini-3-flash`. It no-ops until the key
+#   exists, so it can be pre-staged safely.
+#   NOT enabled because Google trains on free-tier input. Fine for dotfiles,
+#   not for the Bruce work repos.
+# Antigravity CLI: Gemini CLI / Code Assist for individual accounts was
+#   discontinued 2026-06-18, so there is no separate free Google coding quota
+#   to recover — Antigravity is the replacement and its buckets are above.
+# Codex (provider id `openai-codex`, OAuth via `/login openai-codex`): only
+#   worth it if a ChatGPT plan is already paid. Plus is a rolling 5h window
+#   (same lockout shape as the Google plan); Pro is 5-20x that.
