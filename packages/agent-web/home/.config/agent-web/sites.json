@@ -8,6 +8,15 @@
       "passVar": "BRUCE_LOCAL_PASS",
       "loggedInMarker": "Recrutements",
       "notes": "Bruce web client (/data/code/work/bruce/app/client/web/code). Dev server: npm run debug (vite --port 8080). Backend: development-client.api.bruce.work. App routes are prefixed /app/."
+    },
+    {
+      "match": "grafana.home.shadhq.com",
+      "session": "ops",
+      "loginUrl": "https://grafana.home.shadhq.com/login",
+      "userVar": "GRAFANA_HOME_USER",
+      "passVar": "GRAFANA_HOME_PASS",
+      "loggedInMarker": "Dashboards",
+      "notes": "Observability stack on the desktop (ops/observability), reached through hajib. Dashboards are provisioned from git at /data/ops/observability/grafana/dashboards — edit the JSON there, never in the UI, or the next reload discards it."
     }
   ]
 }
