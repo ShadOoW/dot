@@ -61,6 +61,24 @@ Expect: 4 commits pushed, nothing else changes.
 - If it can fail, say what failure looks like and what to do next.
 - If they must choose, give a recommendation and a default, not a menu.
 
+**Probe before you write it.** Any instruction naming something that lives outside your own
+reasoning — a binary, a button, a branch, a remote, a secret, an endpoint, a file on another
+host — gets one cheap check first. `command -v foo`. `git ls-remote origin`. `curl -sI`.
+`ls`. Reading the tool's own `--help` or manifest rather than recalling its flags.
+
+An unprobed instruction fails in the worst way available: it looks complete, so it is
+followed, and it breaks in the reader's hands instead of yours. Three real examples from one
+session — a step using `npx wrangler` when wrangler was already on `PATH` and npm was banned
+in that workspace; a step saying "press Run workflow" when the workflow had never been pushed
+to the remote, so the button could not exist; and a redesign around a blocked credential when
+the action's own `action.yml` listed two other auth inputs. Each was one command away from
+being right.
+
+The corollary for procedures: **never restate one from memory.** Repeat it whole or point at
+where it lives. A procedure summarised twice is a broken procedure that still reads like a
+working one. If it will be run later rather than now, put it in a file in the relevant repo —
+scrollback is not an interface.
+
 ## Volume
 
 - Report the conclusion and the single fact that proves it. Protocol constants, byte offsets
@@ -89,6 +107,9 @@ matters. Caveats sprinkled through the text read as hedging and are easy to miss
 - Is the first line the answer?
 - Can they act without re-reading anything?
 - Is every command labelled with its host?
+- Did I probe every remote thing a command names, or am I recalling that it exists?
+- Is any procedure here a summary of one I gave earlier? If so, it is broken — repeat it
+  whole or link it.
 - Did I explain something a senior engineer already knows, or use a word from a field that is
   not theirs?
 - Is anything here for my benefit rather than theirs?
