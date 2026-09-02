@@ -14,6 +14,13 @@
 # Serena MCP scratch dirs (see ~/nuke-serena.sh to remove Serena entirely)
 .serena/
 
+# nosy query-performance watcher scratch dirs
+.nosy/
+
+# playwright-cli screenshot/snapshot/console artifacts. Written into the cwd of
+# whatever repo it is driven from, so it is machine-wide noise, not one repo's.
+.playwright-cli/
+
 # OS noise
 .DS_Store
 Thumbs.db
