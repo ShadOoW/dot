@@ -8,7 +8,9 @@
 #
 #   -r 3600              report memory levels hourly, not every minute
 #   -M 2621440,1310720   SIGTERM at 2.5 GiB available RAM, SIGKILL at 1.25 GiB   (absolute KiB)
-#   -S 6291456,3145728   SIGTERM at 6 GiB free swap,       SIGKILL at 3 GiB      (absolute KiB)
+#   -S 23068672,19922944 SIGTERM at 22 GiB free swap,      SIGKILL at 19 GiB     (absolute KiB)
+#                        (rescaled 2026-09-03 with the zram 0.375 + 32 GiB swapfile resize —
+#                        derivation in the systemd twin; both files change together)
 #
 # Absolute (-M/-S) rather than percentage (-m/-s) because the percentages are taken against
 # earlyoom's "user mem total", which drifts with unreclaimable kernel memory — it was observed
@@ -50,6 +52,6 @@ exec 2>&1
 exec earlyoom \
   -r 3600 \
   -M 2621440,1310720 \
-  -S 6291456,3145728 \
+  -S 23068672,19922944 \
   --avoid '^(runit|runsvdir|runsv|svlogd|vlogger|sway|swayidle|kitty|ly|ly-dm|Xwayland|mako|dbus-daemon|dbus-run-sessio|elogind|polkitd|pipewire|pipewire-pulse|wireplumber|sshd|udevd|iwd|dhcpcd|agetty|sudo|login)$' \
   --prefer '^(node|node-MainThread|bun|claude|electron|insomnia|iii)$'

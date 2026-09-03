@@ -17,7 +17,7 @@ SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 
 SWAPFILE=/mnt/engine/swapfile
-SIZE_GIB=16
+SIZE_GIB=32 # 16 until 2026-09-03; grown with the zram 0.375 resize (see packages/zram)
 PRIORITY=10
 FSTAB_LINE="$SWAPFILE  none  swap  defaults,pri=$PRIORITY  0 0"
 
@@ -26,19 +26,42 @@ mountpoint -q /mnt/engine || {
   exit 1
 }
 
+cur_gib=0
+[ -f "$SWAPFILE" ] && cur_gib=$(($(stat -c %s "$SWAPFILE") / 1073741824))
+
 avail_gib=$(df --output=avail -BG /mnt/engine | tail -1 | tr -dc '0-9')
-if [ "$avail_gib" -lt $((SIZE_GIB + 10)) ]; then
-  echo "only ${avail_gib}G free on /mnt/engine, need $((SIZE_GIB + 10))G — aborting" >&2
+if [ "$avail_gib" -lt $((SIZE_GIB - cur_gib + 10)) ]; then
+  echo "only ${avail_gib}G free on /mnt/engine, need $((SIZE_GIB - cur_gib + 10))G — aborting" >&2
   exit 1
 fi
 
-# ---------------------------------------------------------------- create the file
-if [ -f "$SWAPFILE" ]; then
-  echo "ok: $SWAPFILE already exists ($(du -h "$SWAPFILE" | cut -f1))"
+# ------------------------------------------------------- create or grow the file
+if [ "$cur_gib" -ge "$SIZE_GIB" ]; then
+  echo "ok: $SWAPFILE already ${cur_gib}GiB"
 else
-  echo "creating ${SIZE_GIB}GiB $SWAPFILE (dd, not fallocate — swapon rejects the"
-  echo "unwritten extents fallocate leaves behind on XFS)"
-  $SUDO dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((SIZE_GIB * 1024)) status=progress
+  if [ "$cur_gib" -eq 0 ]; then
+    echo "creating ${SIZE_GIB}GiB $SWAPFILE (dd, not fallocate — swapon rejects the"
+    echo "unwritten extents fallocate leaves behind on XFS)"
+  else
+    # Growing in place (2026-09-03: 16 -> 32 GiB). swapoff first: the file's contents move
+    # back into RAM/zram, so refuse when they would not fit — failing mid-grow would leave
+    # the box with no disk tier at all. mkswap below re-signs the whole file; fstab
+    # references the PATH on both OSes, so the UUID churn is harmless.
+    if swapon --show=NAME --noheadings 2>/dev/null | grep -qx "$SWAPFILE"; then
+      used_kib=$(awk -v f="$SWAPFILE" '$1 == f { print $4 }' /proc/swaps)
+      avail_kib=$(awk '/^MemAvailable:/ { print $2 }' /proc/meminfo)
+      if [ "${used_kib:-0}" -gt $((avail_kib * 8 / 10)) ]; then
+        echo "swapfile holds $((used_kib / 1024))MiB, only $((avail_kib / 1024))MiB RAM available —" >&2
+        echo "free memory first (dot sgc clean), then re-run" >&2
+        exit 1
+      fi
+      echo "swapoff $SWAPFILE (moving $((${used_kib:-0} / 1024))MiB back to RAM/zram — takes a minute)"
+      $SUDO swapoff "$SWAPFILE"
+    fi
+    echo "growing $SWAPFILE ${cur_gib}GiB -> ${SIZE_GIB}GiB (dd append, same no-holes property)"
+  fi
+  $SUDO dd if=/dev/zero bs=1M count=$(((SIZE_GIB - cur_gib) * 1024)) \
+    oflag=append conv=notrunc of="$SWAPFILE" status=progress
   $SUDO chown root:root "$SWAPFILE"
   $SUDO chmod 600 "$SWAPFILE"
   $SUDO mkswap "$SWAPFILE"

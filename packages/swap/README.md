@@ -2,11 +2,11 @@
 
 Real swap capacity behind zram. `dot pkg swap configure`.
 
-|          |                                                            |
-| -------- | ---------------------------------------------------------- |
-| File     | `/mnt/engine/swapfile` (XFS, `nvme0n1p9`)                  |
-| Size     | 16 GiB                                                     |
-| Priority | `10` — below zram's `100`, so compressed RAM is used first |
+|          |                                                                |
+| -------- | -------------------------------------------------------------- |
+| File     | `/mnt/engine/swapfile` (XFS, `nvme0n1p9`)                      |
+| Size     | 32 GiB (16 until 2026-09-03; grown with the zram 0.375 resize) |
+| Priority | `10` — below zram's `100`, so compressed RAM is used first     |
 
 ## Why, when zram already exists
 
@@ -26,6 +26,14 @@ kernel only spills to NVMe under real pressure.
 
 Permissions are load-bearing too: `swapon` refuses anything world-readable, hence
 `chmod 600` + `root:root`.
+
+## Growing it
+
+`configure.sh` grows an existing smaller file in place: `swapoff` (refused when the file's
+contents would not fit back into available RAM — free memory first), `dd` append, `mkswap`,
+`swapon`. `mkswap` re-signs the file and churns the UUID; both OSes reference the **path**
+in fstab, so nothing else changes. The earlyoom `-S` thresholds in `packages/oom` are
+derived from this size — rescale them in the same commit whenever this number moves.
 
 ## Dual boot — Void needs a manual fstab line
 

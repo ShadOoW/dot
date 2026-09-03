@@ -26,14 +26,15 @@ Current settings (`packages/zram/etc-real-systemd/etc/systemd/zram-generator.con
 
 ```ini
 [zram0]
-zram-size = ram * 0.25          # 31 GiB host -> ~7.8 GiB device
+zram-size = ram * 0.375         # 31 GiB host -> ~11.7 GiB device (0.25 until 2026-09-03)
 compression-algorithm = zstd
 swap-priority = 100
 fs-type = swap
 ```
 
-`0.25`, not `0.75` — see the next section for why. The prio-10 NVMe swapfile behind it
-(`packages/swap`) is what actually adds capacity.
+`0.375`, not `0.75` — see the next section for why the size is load-bearing, and
+"The 2026-09-03 resize" for why 0.25 was raised. The prio-10 NVMe swapfile behind it
+(`packages/swap`, 32 GiB) is what actually adds capacity.
 
 ## The 0.75 freeze (2026-07-28 → 08-01)
 
@@ -80,12 +81,12 @@ machine had no escape hatch and simply stopped.
 
 ### The fix is four-legged; zram sizing is only one leg
 
-| leg                                             | where                                                                           | Void? |
-| ----------------------------------------------- | ------------------------------------------------------------------------------- | ----- |
-| `zram-size = ram * 0.25`                        | `packages/zram` — caps the zspages ceiling at ~3 GiB                            | yes   |
-| `vm.min_free_kbytes` / `watermark_scale_factor` | `packages/zram/etc-real/etc/sysctl.d/30-reclaim.conf` — headroom for `zsmalloc` | yes   |
-| **zswap off**                                   | `packages/zram/etc-real-systemd/etc/tmpfiles.d/zswap.conf` — see below          | yes¹  |
-| `earlyoom` thresholds                           | `packages/oom` — backstop only, not a leg of the fix                            | no    |
+| leg                                             | where                                                                               | Void? |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------- | ----- |
+| `zram-size = ram * 0.375`                       | `packages/zram` — caps the zspages ceiling at ~4.5 GiB (0.25/~3 GiB, 08-01 → 09-03) | yes   |
+| `vm.min_free_kbytes` / `watermark_scale_factor` | `packages/zram/etc-real/etc/sysctl.d/30-reclaim.conf` — headroom for `zsmalloc`     | yes   |
+| **zswap off**                                   | `packages/zram/etc-real-systemd/etc/tmpfiles.d/zswap.conf` — see below              | yes¹  |
+| `earlyoom` thresholds                           | `packages/oom` — backstop only, not a leg of the fix                                | no    |
 
 ¹ the sysfs write in `configure.sh` runs on both inits; only the tmpfiles.d declaration is
 systemd-only.
@@ -123,10 +124,30 @@ swap device is touched. GRUB is not managed by this repo (`docs/grub.md`), so th
 entry is the repo-managed enforcement against a `grub-mkconfig` run that drops the parameter.
 Belt and braces on purpose.
 
+## The 2026-09-03 resize (0.25 → 0.375)
+
+With all four legs in place, the 7.8 GiB device ran at 81% full in normal agent-heavy use
+and pushed 6 GiB onto the NVMe swapfile. Raised to `ram * 0.375` (~11.7 GiB):
+
+- The zspages ceiling moves ~3 → ~4.5 GiB at the 2.6:1 planning ratio; the measured zstd
+  ratio on this workload is 3.7:1, so the realistic ceiling is ~3.2 GiB. The freeze-era
+  dumps show livelock at 3.8 GiB zspages — but against `min:64308kB` watermarks and with
+  zswap stacked in front. Today `min_free_kbytes=512M` / `watermark_scale_factor=200` keep
+  reclaim headroom above min, and zswap is off.
+- The swapfile grew 16 → 32 GiB in the same change (`packages/swap`), and earlyoom's `-S`
+  was rescaled (`packages/oom`) so the backstop still fires at "zram full + ~10 GiB of NVMe
+  consumed" instead of going blind against the larger total — the freeze-era failure mode
+  was exactly "swap looks 68% free, nothing kills anything".
+- Void follows field for field: `ZRAM_SIZE=37`, `ZRAM_MAX_SIZE=12288`.
+
+Anything above ~0.4 re-enters untested territory: at the worst-case 2:1 ratio a 0.5 device
+has a ~7.8 GiB zspages ceiling, double the level that participated in the freeze. Do not
+raise this further without re-deriving all four legs.
+
 ## Dual boot: Void gets the same treatment
 
 Void runs `zramen` rather than `zram-generator`, so the same intent is expressed twice.
-`packages/zram/etc-real-runit/etc/sv/zramen/conf` pins `ZRAM_SIZE=25`, `ZRAM_MAX_SIZE=8192`,
+`packages/zram/etc-real-runit/etc/sv/zramen/conf` pins `ZRAM_SIZE=37`, `ZRAM_MAX_SIZE=12288`,
 `zstd`, priority 100 — matching the Arch side field for field. The watermark sysctl is
 shared: Void reads `/etc/sysctl.d/*.conf` from `/etc/runit/core-services/08-sysctl.sh`.
 

@@ -6,20 +6,21 @@
 # pinned explicitly. Keep in sync with ../../../../etc-real-systemd/etc/systemd/zram-generator.conf
 # and with docs/zram.md.
 
-# 25% of RAM (31 GiB host -> ~7.8 GiB), matching `zram-size = ram * 0.25` on Arch.
+# 37% of RAM (31 GiB host -> ~11.5 GiB), matching `zram-size = ram * 0.375` on Arch
+# (zramen only takes integer percentages, hence 37 vs 37.5 — the ~150 MiB delta is noise).
 #
-# This is the same number zramen defaults to, and it is pinned anyway ON PURPOSE: the Arch
-# side sat at 75% and hard-locked the machine once or twice a day between 2026-07-28 and
-# 08-01 (zram reclaim livelock — zsmalloc cannot allocate the page it needs to store a
-# compressed page, so swap-out fails and kswapd stops making progress; see docs/zram.md,
-# "The 0.75 freeze"). A value this load-bearing does not get to be an upstream default that
-# a package update can quietly change.
-export ZRAM_SIZE=25
+# History: pinned at 25 from 2026-08-01 (after `ram * 0.75` hard-locked the Arch side once
+# or twice a day between 2026-07-28 and 08-01 — zram reclaim livelock, see docs/zram.md,
+# "The 0.75 freeze"), raised to 37 on 2026-09-03 together with the Arch side, the swapfile
+# growth (packages/swap, 16 -> 32 GiB) and the earlyoom -S rescale (packages/oom). A value
+# this load-bearing does not get to be an upstream default that a package update can
+# quietly change, so it stays pinned even when it matches one.
+export ZRAM_SIZE=37
 
 # Hard ceiling in MiB, independent of the percentage. zramen only applies a cap when one is
 # set explicitly — ZRAM_MAX_SIZE unset means NO cap, not the 4096 shown in the stock conf's
-# commented example. 8192 keeps the device bounded if this box is ever given more RAM.
-export ZRAM_MAX_SIZE=8192
+# commented example. 12288 keeps the device bounded if this box is ever given more RAM.
+export ZRAM_MAX_SIZE=12288
 
 # zstd, not zramen's lz4 default — better ratio for the same reason Arch uses it, and it
 # keeps the two boots comparable when reading `zramctl` output.

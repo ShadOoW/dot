@@ -28,8 +28,8 @@ the tmpfiles.d declaration is only the systemd-side persistence of the same thin
 
 |             | Arch (`zram-generator`)        | Void (`zramen`)               |
 | ----------- | ------------------------------ | ----------------------------- |
-| size        | `zram-size = ram * 0.25`       | `ZRAM_SIZE=25`                |
-| ceiling     | n/a (percentage only)          | `ZRAM_MAX_SIZE=8192`          |
+| size        | `zram-size = ram * 0.375`      | `ZRAM_SIZE=37`                |
+| ceiling     | n/a (percentage only)          | `ZRAM_MAX_SIZE=12288`         |
 | algorithm   | `zstd`                         | `ZRAM_COMP_ALGORITHM=zstd`    |
 | priority    | `swap-priority = 100`          | `ZRAM_PRIORITY=100`           |
 | zram module | `etc/modules-load.d/zram.conf` | zramen `modprobe`s it itself  |
@@ -38,17 +38,22 @@ the tmpfiles.d declaration is only the systemd-side persistence of the same thin
 Both sit above the NVMe swapfile (`/mnt/engine/swapfile … pri=10`, see `packages/swap`),
 which is the only thing that adds real capacity.
 
-Everything on the Void side is pinned even where it matches a zramen default. `ZRAM_SIZE=25`
-_is_ the default — pinning it stops a package update silently changing a value that hard-
-locked this machine at 75%. And `ZRAM_MAX_SIZE` unset means **no cap at all**, not the 4096
-that the stock commented conf implies: zramen only applies a ceiling when one is set
-explicitly (`/usr/bin/zramen` line 218).
+Everything on the Void side is pinned even where it once matched a zramen default: pinning
+stops a package update silently changing a value that hard-locked this machine at 75%. And
+`ZRAM_MAX_SIZE` unset means **no cap at all**, not the 4096 that the stock commented conf
+implies: zramen only applies a ceiling when one is set explicitly (`/usr/bin/zramen` line
+218).
 
-## Sizing is load-bearing — do not raise it
+## Sizing is load-bearing — do not raise it without re-deriving the legs
 
 `ram * 0.75` froze the Arch side once or twice a day between 2026-07-28 and 2026-08-01. Not
 an OOM — a reclaim livelock, because storing a compressed page requires allocating a page.
-Full kernel evidence in **`docs/zram.md`, "The 0.75 freeze"**.
+It ran at `0.25` from 2026-08-01 to 2026-09-03, then was raised to `0.375` (~11.7 GiB) once
+the watermark and zswap legs were proven: the smaller device sat at 81% full and spilled
+6 GiB to NVMe in normal agent-heavy use. The swapfile (16 → 32 GiB, `packages/swap`) and
+earlyoom's `-S` (`packages/oom`) moved in the same commit — resizing any one of the three
+alone desynchronizes the backstop. Full kernel evidence and the resize derivation in
+**`docs/zram.md`** ("The 0.75 freeze", "The 2026-09-03 resize").
 
 ## zswap must stay off
 
@@ -71,7 +76,7 @@ The complete fix is three legs, and shrinking the device is only one of them:
 
 | leg                                                           | where                                   | Arch | Void |
 | ------------------------------------------------------------- | --------------------------------------- | ---- | ---- |
-| device 0.75 → 0.25                                            | this package                            | yes  | yes  |
+| device 0.75 → 0.25 → 0.375 (09-03)                            | this package                            | yes  | yes  |
 | `min_free_kbytes` 64→512 MiB, `watermark_scale_factor` 10→200 | `etc-real/etc/sysctl.d/30-reclaim.conf` | yes  | yes  |
 | `earlyoom` thresholds                                         | `packages/oom`                          | yes  | yes  |
 

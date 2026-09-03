@@ -62,6 +62,22 @@ effect `/data/code/fleet/apps/dot/src/lib/memory.ts` documents for `dot sgc`.
 of the NVMe swapfile is gone. Combined with <2.5 GiB available RAM that is a real emergency.
 Against the Aug 04 event, this configuration would not have fired at all.
 
+## 2026-09-03: the swap tier grew, so `-S` moved with it
+
+zram was raised 0.25 → 0.375 (~11.7 GiB) and the NVMe swapfile 16 → 32 GiB, advertising
+~43.7 GiB of swap. Keeping `-S 6291456,3145728` against that total would have re-created
+the freeze-era blindness above — the AND gate false until 37.7 GiB were swapped out. The
+new values preserve the NVMe-depth semantics, not a percentage: SIGTERM when zram is full
+and the swapfile is ~10 GiB deep, SIGKILL at ~13 GiB deep:
+
+```
+free-at-SIGTERM = 32 - 10 = 22 GiB = 23068672 KiB
+free-at-SIGKILL = 32 - 13 = 19 GiB = 19922944 KiB
+```
+
+Recompute both whenever either swap tier is resized (`packages/zram`, `packages/swap`), and
+change the runit twin (`etc-real-runit/etc/sv/earlyoom/run`) in the same commit.
+
 ## Absolute thresholds, because the percentages moved
 
 `-m`/`-s` are percentages of earlyoom's **"user mem total"**, not `MemTotal`:
@@ -89,7 +105,7 @@ for when they fail, not the defense itself:
 
 | leg                                                           | package                                                    |
 | ------------------------------------------------------------- | ---------------------------------------------------------- |
-| zram device 0.75 → 0.25                                       | `packages/zram`                                            |
+| zram device 0.75 → 0.25 → 0.375 (2026-09-03)                  | `packages/zram`                                            |
 | `min_free_kbytes` 64→512 MiB, `watermark_scale_factor` 10→200 | `packages/zram/etc-real/etc/sysctl.d/30-reclaim.conf`      |
 | zswap off (it was on by default, stacked in front of zram)    | `packages/zram/etc-real-systemd/etc/tmpfiles.d/zswap.conf` |
 | `earlyoom` thresholds                                         | **this one** — backstop only                               |
@@ -156,8 +172,8 @@ should be revisited.
 ## Thresholds
 
 ```
--M 2621440,1310720    SIGTERM at 2.5 GiB available RAM, SIGKILL at 1.25 GiB
--S 6291456,3145728    SIGTERM at 6 GiB free swap,       SIGKILL at 3 GiB
+-M 2621440,1310720     SIGTERM at 2.5 GiB available RAM, SIGKILL at 1.25 GiB
+-S 23068672,19922944   SIGTERM at 22 GiB free swap,      SIGKILL at 19 GiB
 ```
 
 **Both** conditions must hold, which is the point — see the two sections above. It fires only
