@@ -1,6 +1,13 @@
 [Unit]
 Description=Kanata Keyboard Remapping Daemon
 After=graphical.target
+# Give up instead of looping: /usr/bin/kanata was removed by a package sweep on 2026-08-08
+# and Restart=on-failure + RestartSec=3 with no start limit re-spawned it every 3s for 26
+# days (765k journal lines) — RestartSec=3 never trips systemd's default 5-in-10s limit.
+# With these, three failures inside a minute leave a visibly FAILED unit that `dot doctor`
+# flags, instead of a silent loop. Same lesson as agentmemory.service (AGENTS.md).
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 ExecStart=/usr/bin/kanata --cfg /home/shad/.config/kanata/config.kbd

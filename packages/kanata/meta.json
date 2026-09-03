@@ -1,0 +1,11 @@
+{
+  "description": "Kanata keyboard remapping daemon — config + user service; the binary comes from chaotic-aur",
+  "packages": {
+    "arch": { "pacman": ["kanata"] }
+  },
+  "services": {
+    "systemd": [{ "name": "kanata", "scope": "user" }]
+  },
+  "os": ["linux"],
+  "hosts": ["saykuk"]
+}
