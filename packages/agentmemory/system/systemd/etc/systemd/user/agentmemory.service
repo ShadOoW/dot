@@ -2,6 +2,12 @@
 Description=agentmemory persistent memory daemon
 After=network-online.target
 Wants=network-online.target
+# Give up instead of looping: this unit already restart-looped at ~590 restarts/boot on
+# status=203/EXEC when fnm's default alias moved (see AGENTS.md) — RestartSec=5 never
+# trips systemd's default 5-in-10s limit. Three failures in a minute now leave a FAILED
+# unit that `dot doctor` flags.
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=simple
