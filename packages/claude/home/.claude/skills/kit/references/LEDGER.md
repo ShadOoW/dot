@@ -13,14 +13,15 @@ the only artifact that preserves it [`/data/ops/NORTH-STAR.md:22-26`].
 
 ## The contract
 
-`status.json` is written by the collect orchestrator and read by the ops health responder.
-As of 2026-08-25 that responder has **two** live implementations, because the retirement of
-the Python one is half-applied: `/data/code/fleet/apps/ops-status` serves the lake's ledger
-on the desktop, and `/data/ops/lib/status-server.py` still serves `ops/backup` on barzakh
-until that host cuts over. **The field set is a cross-repo contract: do not change a field
-without changing every reader in the same commit**
-[`packages/harness/src/ledger.ts:1-8`, `apps/ops-status/lib/normalize.ts`,
-`/data/ops/lib/status-server.py:87-101`]. Note what the gate does and does not cover: `tooling/probes/ledger-fields/` compares this writer against **both** readers — its `READERS` registry declares `apps/ops-status` as required (absence is exit 2) and `status-server.py` as optional (absence is the planned cutover: a skip with a notice) — and runs three failing fixtures first, so the comparison cannot pass contentlessly.
+`status.json` is written by the collect orchestrator and read by the ops health responder,
+`/data/code/fleet/apps/ops-status` — the only reader since the 2026-09-04 cutover retired
+the Python responder (`/data/ops/lib/status-server.py`) on both hosts. **The field set is a
+cross-package contract: do not change a field without changing the reader in the same
+commit** [`packages/harness/src/ledger.ts:1-10`, `apps/ops-status/lib/normalize.ts:92-126`].
+Note what the gate does and does not cover: `tooling/probes/ledger-fields/` compares the
+writer's declared fields against the responder's actual reads, refuses the reader's absence
+with exit 2, and runs two failing fixtures first, so the comparison cannot pass
+contentlessly.
 
 The fields are declared once, as an interface with a comment per field
 [`packages/harness/src/ledger.ts:37-62`]; the "Contracts that must not drift" section of
@@ -36,7 +37,7 @@ entirely**, because a source that never runs cannot go stale. `config_error` is 
 in a config file: it will not self-heal, so it alerts immediately and is never fast-retried.
 `failed` is transient or unknown — network, auth, a crash — and is worth retrying sooner
 than the normal cadence [`packages/harness/src/ledger.ts:24-35`,
-`/data/ops/lib/status-server.py:124-127`].
+`apps/ops-status/lib/normalize.ts:106`].
 
 The distinction is load-bearing at both ends. The orchestrator names the status, not just
 the source, when it reports a bad run: one says the file needs editing, the other says try
@@ -47,12 +48,12 @@ again, and those are different actions [`packages/harness/src/collect.ts:126-128
 - **`last_success` advances only on `ok`.** Every other status carries the previous value
   forward. It is derived by the writer and never passed in by a source — that is what makes
   the file a freshness signal instead of a record of the last attempt
-  [`packages/harness/src/ledger.ts:64-65,140`, `/data/ops/lib/status-server.py:96-97`].
+  [`packages/harness/src/ledger.ts:64-65,140`, `apps/ops-status/lib/normalize.ts:107-110`].
 - **The producer declares its own staleness budget once**, in the source descriptor, and
   the responder enforces whatever the file says. Restating a cadence in the ops health
   check would let the two drift, so the ops side treats its own configured budget as a
   fallback only [`packages/harness/src/source.ts:33-38`,
-  `packages/harness/src/ledger.ts:42-43`, `/data/ops/lib/status-server.py:88,98,125`].
+  `packages/harness/src/ledger.ts:42-43`, `apps/ops-status/lib/normalize.ts:111-113`].
 - A default budget exists for sources that declare none
   [`packages/harness/src/source.ts:18`]. Do not restate its value; read it.
 - **Zero counts are signal, not noise.** "Ran fine, ingested nothing" is the early symptom
@@ -80,6 +81,14 @@ again, and those are different actions [`packages/harness/src/collect.ts:126-128
 - **A source's self-report is trusted on everything except the two things only the parent
   can observe**: the exit code, and the wall-clock duration that includes process startup
   [`packages/harness/src/collect.ts:83-87`].
+- **A long-lived daemon writes through `heartbeat`, never `writeLedger` directly.**
+  `writeLedger` is batch-shaped — one invocation is one attempt — so a daemon feeding it
+  once per beat with its frozen launch instant pins `last_success` at process launch and a
+  healthy service pages as stale one budget after boot (found twice in one day,
+  2026-08-31: wake and voice-intent). `heartbeat` stamps each beat's own instant; the one
+  decision a daemon keeps is what advances its beat — wake counts audio frames,
+  voice-intent counts completed polls [`packages/harness/src/ledger.ts:180-197`,
+  `packages/harness/test/ledger.test.ts:163-165`].
 
 ## Identity
 
