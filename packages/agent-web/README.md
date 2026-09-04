@@ -15,12 +15,12 @@ $EDITOR ~/.config/secrets/agent-web
 
 ## What lives where
 
-| File                                      | Purpose                                                      |
-| ----------------------------------------- | ------------------------------------------------------------ |
-| `home/.claude/WEB-VERIFY.md`              | the rules. Single source of truth                            |
-| `home/.claude/skills/web-verify/SKILL.md` | the step-by-step recipe agents follow                        |
-| `home/.config/agent-web/sites.json`       | per-site login map (URL, session name, credential var names) |
-| `home/.config/agent-web/cli.config.json`  | pins the bundled Chrome-for-Testing build                    |
+| File                                      | Purpose                                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `home/.claude/WEB-VERIFY.md`              | the rules. Single source of truth                                                                |
+| `home/.claude/skills/web-verify/SKILL.md` | the step-by-step recipe agents follow                                                            |
+| `home/.config/agent-web/sites.json`       | per-site login map (URL, session name, credential var names)                                     |
+| `home/.playwright/cli.config.json`        | global CLI config: pins the bundled Chromium, routes output to `~/.local/state/agent-web/output` |
 
 The credential template is not here: it is `packages/secrets/templates/agent-web`, because a
 template under `home/.config/secrets/` gets symlinked into the live credential store. See

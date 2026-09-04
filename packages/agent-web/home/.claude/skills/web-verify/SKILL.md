@@ -12,12 +12,17 @@ Command reference lives in the `playwright-cli` skill — read it for syntax bey
 ## Invariants
 
 - `playwright-cli` is installed globally (`~/.bun/bin/playwright-cli`), bundled Chrome-for-Testing.
+- `~/.playwright/cli.config.json` (dot package `agent-web`) is the global config the CLI reads on
+  every invocation: it pins the bundled `chromium` channel and routes all snapshot/console output to
+  `~/.local/state/agent-web/output`. No `--config` flag is needed anywhere.
 - Session name is the project directory name. One persistent browser profile per project.
-- Credentials live in `~/.config/secrets/agent-web` (mode 600). Site map in
+- Credentials live in `~/.config/secrets/agent-web` (mode 600, dotenv `VAR=value` lines). Site map in
   `~/.config/agent-web/sites.json`.
 - Profiles live in `~/.local/state/agent-web/profiles/<session>`.
 - Never create `.claude/`, `.playwright/`, or any agent config inside a project.
-  A project-local `.playwright/cli.config.json` silently overrides the browser choice — delete it.
+  A project-local `.playwright/cli.config.json` silently overrides the global one — delete it.
+  A stray `.playwright-cli/` output dir in a project means a config override hid `outputDir` — fix
+  the override, delete the litter.
 
 ## 1. Set up the session
 
@@ -39,16 +44,14 @@ typical names are `dev`, `debug`, `start`. Never edit the repo to make verificat
 ## 3. Open the page
 
 ```bash
-playwright-cli -s=$S open "http://localhost:8080/app/some-route" \
-  --persistent --profile="$P" --config="$HOME/.config/agent-web/cli.config.json"
+PLAYWRIGHT_MCP_SECRETS_FILE="$HOME/.config/secrets/agent-web" \
+  playwright-cli -s=$S open "http://localhost:8080/app/some-route" --persistent --profile="$P"
 ```
 
-`--config` is REQUIRED on `open`: without it the browser channel defaults to system `chrome`, which is
-not installed on this machine, and the daemon dies with
-`Chromium distribution 'chrome' is not found`. The config pins the bundled Chrome-for-Testing build.
-`--browser` only accepts `chrome|firefox|webkit|msedge` (verified via `playwright-cli open --help`) —
-there is no `--browser=chromium`, so the config file is the only way to select the bundled build.
-Never satisfy this by dropping a `.playwright/cli.config.json` into a project.
+The env var loads the credential file into the daemon for this session (see step 4); set it on
+`open` — later commands inherit it from the daemon. The browser channel and output dir come from
+the global config; `--browser` only accepts `chrome|firefox|webkit|msedge`, so never pass it —
+there is no `--browser=chromium`, the global config is what selects the bundled build.
 
 Subsequent navigation in the same session:
 
@@ -69,26 +72,25 @@ Detect the wall:
 playwright-cli -s=$S find --regex "/sign in|se connecter|mot de passe|password/i"
 ```
 
-If matched, resolve credentials and fill. Values come from the environment, never inline:
+If matched, resolve the credential variable NAMES from `sites.json` and fill with the name — the
+daemon substitutes the value from the secrets file loaded at `open` and redacts it everywhere:
 
 ```bash
-set -a; . ~/.config/secrets/agent-web; set +a
 playwright-cli -s=$S --raw snapshot --depth=14      # refs for the email/password fields
-playwright-cli -s=$S --raw fill e21 "$BRUCE_LOCAL_USER" >/dev/null
-playwright-cli -s=$S --raw fill e26 "$BRUCE_LOCAL_PASS" --submit >/dev/null
+playwright-cli -s=$S fill e21 BRUCE_LOCAL_USER
+playwright-cli -s=$S fill e26 BRUCE_LOCAL_PASS --submit
 playwright-cli -s=$S find "<something only visible when authenticated>"
 ```
 
-`--raw` on the credential fills is MANDATORY: normal output echoes the generated Playwright code,
-which contains the literal value (`...fill('<the actual password>')`) and would leak the secret into
-the transcript. `--raw` strips the code/snapshot sections; `>/dev/null` discards the rest.
+The echoed code shows `process.env['BRUCE_LOCAL_PASS']`, never the value (verified 2026-09-04).
+The plaintext never enters argv, the transcript, or the output files. If the session was opened
+WITHOUT `PLAYWRIGHT_MCP_SECRETS_FILE`, the literal variable name gets typed into the field —
+a login that fails with exactly the var name in the field means reopen the session with the env var.
 
 Rules:
 
-- `"$VAR"` only. Never echo, cat, print, or paste a password into a command line, a file, or a report.
-- `fill <target> <text>` takes a plain positional string. The CLI has NO secrets file, placeholder or
-  token syntax (`PLAYWRIGHT_MCP_SECRETS_FILE` is a Playwright-MCP-server feature, not a CLI one), so
-  shell expansion of `"$VAR"` plus `--raw` is the correct and only mechanism. Verified working.
+- Never echo, cat, print, or paste a password into a command line, a file, or a report. Do not
+  source the secrets file into the shell; the daemon-side substitution above is the mechanism.
 - When a login fails, read the server's own verdict before guessing: `--raw requests`, then
   `--raw response-body <n>`. A backend rejection (e.g. Parse `{"code":101}`) means wrong credentials
   or wrong environment — report it and ask; it is never fixed by retrying or by a different selector.

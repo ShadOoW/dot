@@ -4,14 +4,17 @@ A change to a web UI is NOT done until it has been seen in a real browser. Verif
 `playwright-cli` (installed globally). Full recipe: skill `web-verify`. Command syntax: skill `playwright-cli`.
 
 1. **One browser per project.** `S=$(basename "$PWD")`; pass `-s=$S` on every call; open with
-   `--persistent --profile=$HOME/.local/state/agent-web/profiles/$S` so the login survives across
+   `PLAYWRIGHT_MCP_SECRETS_FILE=$HOME/.config/secrets/agent-web playwright-cli -s=$S open <url>
+--persistent --profile=$HOME/.local/state/agent-web/profiles/$S` so the login survives across
    sessions, harnesses and reboots. Never `delete-data` without asking.
 2. **App unreachable?** Start the project's own dev script (`package.json` `dev`/`debug`/`start`, or
    the documented command) as a background/supervised process and wait for the port.
    NEVER modify a repository to make verification possible.
-3. **Login wall?** Look the origin up in `~/.config/agent-web/sites.json`, source
-   `~/.config/secrets/agent-web`, and fill with `"$VAR"` so the value never enters the transcript.
-   No entry: ask the user once, then add it. NEVER fabricate, inject or bypass a session.
+3. **Login wall?** Look the origin up in `~/.config/agent-web/sites.json` and fill with the
+   credential variable NAME (`fill e26 BRUCE_LOCAL_PASS`) — the daemon substitutes the value from
+   the secrets file loaded at `open` and redacts it from all output; the plaintext never enters
+   the transcript. No entry: ask the user once, then add it. NEVER fabricate, inject or bypass a
+   session.
 4. **Never touch the operator's own browser data** — no Chrome/Chromium profile, no
    `Local Storage/leveldb`, no cookie DB, no keychain, no session-token extraction. The agent profile
    in rule 1 is the only session store.
