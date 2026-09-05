@@ -1,0 +1,32 @@
+# Display modes. Included before ./exec so no client maps against a mode that is about to
+# change under it.
+#
+# The G24-20 is a 165 Hz panel and advertises 1920x1080 at 50/60/100/120/144/165 Hz, but
+# wlroots settles on 60 and sway reported `1920x1080@60.0` for it on this host
+# [2026-08-28, `swaymsg -t get_outputs`]. 60 Hz is not merely fewer frames, it is no
+# headroom: a 60 fps game vsynced to a 60 Hz scanout drops a whole frame for every hitch,
+# which is what "it is dropping frames" looks like from the chair.
+#
+# Identified by make/model/serial rather than by connector name, because the connector is
+# not stable for this monitor. Plugged into the motherboard it is DP-4 on the Intel iGPU
+# (pci-0000:00:02.0); plugged into the RTX 3060 it becomes one of that card's own
+# DP-1/DP-2/DP-3 (pci-0000:01:00.0). The identifier string survives the move, a connector
+# name silently stops matching.
+#
+# The refresh value is sway's own, to the digit it reports. `165Hz` is not what the mode
+# list contains and sway matches modes, it does not round to them.
+#
+# 165 Hz is verified on the iGPU port, not hoped for: this exact line loaded and applied on
+# a fresh sway start, and the identifier was separately confirmed to match the live output
+# [2026-08-28, both in packages/sway/README.md §Never run `sway` to check a config — the
+# first of those two was an accident, and that section exists so it is not repeated]. The
+# 60 Hz was purely mode selection; nothing about the link or the iGPU requires it.
+output "Lenovo Group Limited G24-20 U533A88N" mode 1920x1080@164.997Hz
+
+# Not enabled here: `adaptive_sync on`. The panel supports it and VRR is the real answer to
+# an occasional missed frame — the scanout waits for the frame instead of showing the
+# previous one twice. It is left off because sway only engages VRR when one surface is
+# driving the output, and this desktop always has mpvpaper drawing a looping video
+# wallpaper behind everything, so the win is conditional while the flicker risk on a
+# budget panel is not. Turn it on deliberately, watch for brightness pumping on dark
+# scenes, not as part of a mode change.
