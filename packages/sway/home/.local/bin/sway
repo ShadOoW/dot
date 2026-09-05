@@ -2,6 +2,32 @@
 # Sway wrapper to capture logs to ~/.local/state/sway/logs/
 # Force Intel iGPU for Wayland
 
+# Flags that genuinely print and exit. They must not create a session log file, and must
+# not reach the nesting guard below.
+#
+# `--validate`/`-C` is deliberately NOT here. It does not lint and exit: sway 1.12 falls
+# through to the DRM backend, takes the card and fights the running session for DRM master
+# (see ../../../README.md §Never run `sway` to check a config). Letting the guard reject it
+# is the correct outcome — ask the running compositor with `swaymsg` instead.
+case " $* " in
+  *" --version "* | *" -v "* | *" --help "* | *" -h "* | \
+    *" --get-socketpath "* | *" -p "*)
+    exec /usr/bin/sway "$@"
+    ;;
+esac
+
+# Refuse to boot a nested compositor from inside a running session. This wrapper used to
+# drop "$@", so any `sway <arg>` typed in a terminal — `sway --version` included — silently
+# started a second compositor that replayed the whole autostart against the live session:
+# a duplicate mpvpaper, a lost fight over the notification-daemon name, and another
+# `vivaldi-stable` whose singleton handoff SIGTRAPped the running browser (469 MB core,
+# 2026-09-05). Nesting is still reachable through /usr/bin/sway when actually wanted.
+if [ -n "$WAYLAND_DISPLAY" ] || [ -n "$SWAYSOCK" ]; then
+  echo "sway: already inside a Wayland session; refusing to start a nested compositor." >&2
+  echo "sway: run /usr/bin/sway directly if that is really what you want." >&2
+  exit 1
+fi
+
 LOGDIR="$HOME/.local/state/sway/logs"
 LOGFILE="$LOGDIR/sway-$(date +%Y%m%d-%H%M%S).log"
 
@@ -16,4 +42,4 @@ INTEL_DEV=$(readlink -f "$INTEL_PATH" 2>/dev/null)
 export WLR_DRM_DEVICES="$INTEL_DEV"
 echo "Using Intel GPU: $INTEL_DEV (from $INTEL_PATH)" >>"$LOGFILE"
 
-exec /usr/bin/sway 2>>"$LOGFILE"
+exec /usr/bin/sway "$@" 2>>"$LOGFILE"
