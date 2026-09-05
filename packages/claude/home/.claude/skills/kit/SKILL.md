@@ -107,9 +107,9 @@ If a task spans several branches, read all matching files before editing.
 ## The status.json Ledger
 
 - **The field set is a contract read by the ops health responder**
-  (`/data/ops/lib/status-server.py`). Do not change a field without changing the
-  responder in the same commit [`packages/harness/src/ledger.ts:1-5`,
-  `CLAUDE.md:50`].
+  (`apps/ops-status` — the only reader since the 2026-09-04 cutover retired the Python
+  responder). Do not change a field without changing the responder in the same commit
+  [`packages/harness/src/ledger.ts:1-10`, `CLAUDE.md:50`].
 - **Four statuses because they need four different responses**: `ok`, `skipped`
   (normal, excluded from staleness), `config_error` (will not self-heal — alert now,
   never fast-retry), `failed` (transient or unknown — retry sooner)
