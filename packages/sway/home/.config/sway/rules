@@ -57,5 +57,14 @@ for_window {
 # ./styling). That must stay `focus`: with `smart`, handing a link from a PWA on ws10 to the
 # main window on ws2 left Vivaldi driving UI against a window sway kept unfocused and
 # off-screen, and the main window went unresponsive as if a popup were stuck open.
-assign [app_id="vivaldi-stable"] workspace number 2
-assign [app_id="^vivaldi-[a-zA-Z0-9]+-Default$"] workspace number 10
+#
+# `move container to workspace`, not `assign`, for the same reason one layer down. `assign`
+# maps a window straight onto its target workspace, so a window bound for a hidden one is
+# never focused and never receives wl_keyboard.enter at all. Chromium then drives its UI
+# against a surface it holds no focus for, and anything grab-like it opens — menu and bubble
+# popups are child surfaces, not sway containers, so they never appear in the tree — wedges
+# the window: it takes no clicks and no keyboard shortcuts while still repainting normally.
+# `move` maps the window on the visible workspace first, so Chromium gets a clean
+# enter/leave pair, then relocates it. Costs a brief flash on the current workspace.
+for_window [app_id="vivaldi-stable"] move container to workspace number 2
+for_window [app_id="^vivaldi-[a-zA-Z0-9]+-Default$"] move container to workspace number 10
