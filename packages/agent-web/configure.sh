@@ -21,10 +21,11 @@ else
   echo "WARNING: playwright-cli not installed (bun install -g @playwright/cli@latest)" >&2
 fi
 
-# 2. omp reads a sticky rule file here; opencode reads a user AGENTS.md here.
-#    Copies, not symlinks — re-run this script after editing the source.
-mkdir -p "$HOME/.omp/agent" "$HOME/.config/opencode"
-cp "$RULES" "$HOME/.omp/agent/RULES.md"
+# 2. opencode reads a user AGENTS.md here (fixed path, no @imports). omp reads
+#    ~/.claude/CLAUDE.md directly (with @imports resolved), so no separate omp
+#    copy is needed — the old sticky-rule-file copy is removed as a legacy artifact.
+mkdir -p "$HOME/.config/opencode"
+rm -f "$HOME/.omp/agent/RULES.md"
 cp "$RULES" "$HOME/.config/opencode/AGENTS.md"
 
 # 3. the other Claude config dirs share ~/.claude's skills and rules

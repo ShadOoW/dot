@@ -34,3 +34,11 @@ echo "• $DEST exists and differs from the seed (this is normal — Claude Code
 echo "  Review with:  diff \"$SEED\" \"$DEST\""
 echo "  To re-seed from scratch (loses live runtime prefs):"
 echo "      cp \"$SEED\" \"$DEST\""
+
+# bruce skill — source of truth is the fleet tree; link, never copy. Guarded so hosts
+# without /data/code/fleet (laptop) simply skip it.
+if [ -d /data/code/fleet/skills/bruce ]; then
+  rm -rf "$HOME/.claude/skills/bruce"
+  ln -sfn /data/code/fleet/skills/bruce "$HOME/.claude/skills/bruce"
+  echo "✓ linked bruce skill -> /data/code/fleet/skills/bruce"
+fi

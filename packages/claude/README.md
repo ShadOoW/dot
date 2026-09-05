@@ -5,35 +5,25 @@ Manages Claude Code's user-level config and the slash-command library that is
 
 ## What this package manages
 
-| Path                            | Form              | Why                                                                                       |
-| ------------------------------- | ----------------- | ----------------------------------------------------------------------------------------- |
-| `~/.claude/commands/*.md`       | per-file symlinks | Claude Code user commands. Per-file so unmanaged local commands can live alongside them   |
-| `~/.omp/agent/commands`         | directory symlink | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here      |
-| `~/.local/bin/claude-turn-*`    | symlinks          | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                      |
-| `~/.claude/skills/{kit,effect}` | per-file symlinks | Skill payloads, shipped so a fresh machine's `~/.claude` works from dot alone (see below) |
+| Path                         | Form                         | Why                                                                                     |
+| ---------------------------- | ---------------------------- | --------------------------------------------------------------------------------------- |
+| `~/.claude/commands/*.md`    | per-file symlinks            | Claude Code user commands. Per-file so unmanaged local commands can live alongside them |
+| `~/.omp/agent/commands`      | directory symlink            | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here    |
+| `~/.local/bin/claude-turn-*` | symlinks                     | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                    |
+| `~/.claude/skills/bruce`     | symlink (via `configure.sh`) | Points straight at `/data/code/fleet/skills/bruce`; no copy, no drift possible          |
 
 ## Skills payload
 
-`home/.claude/skills/` carries two skills as real files so a fresh machine gets a
-working `~/.claude` from dot alone, without any other checkout: `kit` (this machine's
-house rules, authoritative at `/data/code/fleet/skills/kit`) and `effect` (vendored
-material, authoritative at `/data/code/fleet/vendor/kit-skills/`).
+`home/.claude/skills/` no longer carries `kit` or `effect` copies. Both are fleet-owned
+(`/data/code/fleet/skills/kit` and `/data/code/fleet/vendor/kit-skills/`); per-project
+materialization (`ops <project> agent-context`) is the only distribution path for `kit`,
+and `effect` is read at the vendored ref rather than mirrored here. Keeping a copy meant
+hand-syncing it forever — the `effect` copy had already drifted 8 files out of sync with
+its authority before this package stopped carrying it.
 
-The kit copy is **generated, not edited**. After changing any file under
-`/data/code/fleet/skills/kit/`, regenerate it:
-
-```sh
-cd /data/code/fleet && bun run sync:skills   # copies the seven kit files here
-```
-
-Parity between the copy and its authority is gated by `bun run probe:skill-parity` in
-fleet's `check` chain — the probe fails when the two disagree, and the gate has been
-seen fail (2026-08-25: three files drifted after a prettier run).
-
-`.prettierignore` excludes `packages/claude/home/.claude/skills/` because both prettier
-paths here — `just format` and the pre-commit hook — rewrite markdown emphasis
-(`*word*` → `_word_`) and reformat embedded code fences, so without the exclusion a
-sync from the authority is reverted by the next format or commit.
+`bruce` is no longer a copy either: `configure.sh` creates
+`~/.claude/skills/bruce` as a symlink straight to `/data/code/fleet/skills/bruce`, so
+there is nothing here to regenerate or drift.
 
 ## Sharing one command library across both harnesses
 
