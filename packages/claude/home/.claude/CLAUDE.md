@@ -1,3 +1,3 @@
-@WEB-VERIFY.md
+@~/.claude/WEB-VERIFY.md
 @DOTFILES.md
 @COMMUNICATION.md

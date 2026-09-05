@@ -20,24 +20,20 @@ mkdir -p "$HOME/.claude"
 if [ ! -e "$DEST" ]; then
   install -m 600 "$SEED" "$DEST"
   echo "✓ installed canonical settings seed -> $DEST"
-  exit 0
-fi
-
-if diff -q "$SEED" "$DEST" >/dev/null 2>&1; then
+elif diff -q "$SEED" "$DEST" >/dev/null 2>&1; then
   echo "✓ $DEST already matches the seed."
-  exit 0
+else
+  # App-owned file already exists and differs (expected: Claude Code writes runtime
+  # state like \"model\" here). Never clobber it — just surface the delta.
+  echo "• $DEST exists and differs from the seed (this is normal — Claude Code owns it)."
+  echo "  Review with:  diff \"$SEED\" \"$DEST\""
+  echo "  To re-seed from scratch (loses live runtime prefs):"
+  echo "      cp \"$SEED\" \"$DEST\""
 fi
-
-# App-owned file already exists and differs (expected: Claude Code writes runtime
-# state like \"model\" here). Never clobber it — just surface the delta.
-echo "• $DEST exists and differs from the seed (this is normal — Claude Code owns it)."
-echo "  Review with:  diff \"$SEED\" \"$DEST\""
-echo "  To re-seed from scratch (loses live runtime prefs):"
-echo "      cp \"$SEED\" \"$DEST\""
-
 # bruce skill — source of truth is the fleet tree; link, never copy. Guarded so hosts
 # without /data/code/fleet (laptop) simply skip it.
 if [ -d /data/code/fleet/skills/bruce ]; then
+  mkdir -p "$HOME/.claude/skills"
   rm -rf "$HOME/.claude/skills/bruce"
   ln -sfn /data/code/fleet/skills/bruce "$HOME/.claude/skills/bruce"
   echo "✓ linked bruce skill -> /data/code/fleet/skills/bruce"

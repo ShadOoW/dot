@@ -21,11 +21,15 @@ else
   echo "WARNING: playwright-cli not installed (bun install -g @playwright/cli@latest)" >&2
 fi
 
-# 2. opencode reads a user AGENTS.md here (fixed path, no @imports). omp reads
-#    ~/.claude/CLAUDE.md directly (with @imports resolved), so no separate omp
-#    copy is needed — the old sticky-rule-file copy is removed as a legacy artifact.
-mkdir -p "$HOME/.config/opencode"
-rm -f "$HOME/.omp/agent/RULES.md"
+# 2. omp reads a user-level sticky rule from a fixed path and opencode reads a user
+#    AGENTS.md from another (no @imports in either). omp's ~/.omp/agent/RULES.md is a
+#    separate pipeline from context files: it is forced always-apply and injected whole
+#    (omp://context-files.md:26,182-189; omp://rulebook-matching-pipeline.md:75,86). omp
+#    does NOT read ~/.claude/CLAUDE.md on this host (skills.enableClaudeUser=false), so
+#    this file is its only path to these clauses — deleting it once already removed them
+#    from every omp session. A link, not a copy: one source, no refresh step to forget.
+mkdir -p "$HOME/.omp/agent" "$HOME/.config/opencode"
+ln -sfn "$RULES" "$HOME/.omp/agent/RULES.md"
 cp "$RULES" "$HOME/.config/opencode/AGENTS.md"
 
 # 3. the other Claude config dirs share ~/.claude's skills and rules
@@ -33,9 +37,16 @@ for d in "$HOME/.claude-work" "$HOME/.claude-personal"; do
   [ -d "$d" ] || continue
   [ -e "$d/skills" ] || ln -s "$HOME/.claude/skills" "$d/skills"
   cp "$RULES" "$d/WEB-VERIFY.md"
-  grep -q '@WEB-VERIFY.md' "$d/CLAUDE.md" 2>/dev/null || echo '@WEB-VERIFY.md' >>"$d/CLAUDE.md"
+  # $d/CLAUDE.md is itself a symlink to $HOME/.claude/CLAUDE.md (same tracked file the
+  # guard below protects) — match the same broadened substring so this loop can't
+  # double-append into the dot repo through this second symlink hop.
+  grep -q 'WEB-VERIFY.md' "$d/CLAUDE.md" 2>/dev/null || echo '@~/.claude/WEB-VERIFY.md' >>"$d/CLAUDE.md"
 done
-grep -q '@WEB-VERIFY.md' "$HOME/.claude/CLAUDE.md" 2>/dev/null || echo '@WEB-VERIFY.md' >>"$HOME/.claude/CLAUDE.md"
+# Hazard: $HOME/.claude/CLAUDE.md is a symlink into the tracked packages/claude tree —
+# a guard that misses the current import form silently appends into the dot repo itself.
+# Match the WEB-VERIFY.md substring (not the exact old bare-@ literal) so a cross-package
+# import form like @~/.claude/WEB-VERIFY.md still counts as present.
+grep -q 'WEB-VERIFY.md' "$HOME/.claude/CLAUDE.md" 2>/dev/null || echo '@~/.claude/WEB-VERIFY.md' >>"$HOME/.claude/CLAUDE.md"
 
 # 4. opencode must scan the same skills root
 if command -v jq >/dev/null 2>&1 && [ -f "$HOME/.config/opencode/opencode.json" ]; then

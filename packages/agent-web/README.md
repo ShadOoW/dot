@@ -32,19 +32,26 @@ profiles), `~/.local/state/agent-web/output` (snapshots, console logs),
 
 ## Maintenance
 
-- Change a rule: edit `home/.claude/WEB-VERIFY.md`, then re-run `configure.sh` to refresh the omp
-  and opencode copies. `~/.claude/WEB-VERIFY.md` itself is a dot symlink and needs no refresh.
+- Change a rule: edit `home/.claude/WEB-VERIFY.md`. omp reads it through a symlink
+  (`~/.omp/agent/RULES.md`), so no refresh step is needed for omp. opencode reads a copy
+  (`~/.config/opencode/AGENTS.md`) and needs `configure.sh` re-run to pick up the change.
+  `~/.claude/WEB-VERIFY.md` itself is a dot symlink and needs no refresh either.
 - Change the recipe: edit `home/.claude/skills/web-verify/SKILL.md`. Live immediately, all harnesses.
 - New site to verify: add an entry to `sites.json` and the matching vars to `~/.config/secrets/agent-web`.
 - Upgrade the driver: `bun install -g @playwright/cli@latest && bash packages/agent-web/configure.sh`
   (regenerates the vendor skill, which changes with the CLI).
 - Check nothing drifted: `dot doctor`.
 
-## Why copies for omp/opencode
+## Why a link for omp, a copy for opencode
 
-omp reads `~/.omp/agent/RULES.md` and opencode reads `~/.config/opencode/AGENTS.md` — fixed paths that
-dot's linker cannot map from one source file. `configure.sh` copies the canonical rules there, so the
-refresh step above is required after editing them.
+omp reads a fixed path, `~/.omp/agent/RULES.md`, as a user-level sticky rule — a separate
+discovery pipeline from context files, forced always-apply, with no `@import` support
+(`omp://context-files.md` "Sticky rules vs normal context"). `configure.sh` therefore
+symlinks it straight at the canonical file: one source, no refresh step to forget.
+opencode reads `~/.config/opencode/AGENTS.md`, also a fixed path with no `@import`
+support, but dot's linker cannot map one source file to two different targets across
+packages — so `configure.sh` copies the canonical rules there instead, and editing them
+needs the refresh step above for opencode only.
 
 `dot pkg agent-web configure` asks for a sudo ticket before it starts and then runs the script as
 you, which this script does not need — run it directly instead.
