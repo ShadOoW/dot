@@ -135,6 +135,7 @@ The canonical AGENTS.md may live at a monorepo root ABOVE cwd — a
 subproject `AGENTS.md` is often a scaffold stub without the standards.
 Walk upward from cwd for the nearest `AGENTS.md` containing
 `## Mandatory Coding Standards`:
+
 ```bash
 dir=$PWD
 while [ "$dir" != "/" ]; do
@@ -144,6 +145,7 @@ while [ "$dir" != "/" ]; do
   dir=$(dirname "$dir")
 done
 ```
+
 Read that file in full before proceeding, even if it feels like it may
 already be in context. If no match is found, read every `AGENTS.md`
 between cwd and the git root.

@@ -20,10 +20,11 @@ ls /Users/youneselalami/bruce/sms/server/cli.ts
 Stop if not found: `STOPPED: project root unreachable`.
 
 Fixed paths for this project:
+
 - `ORDER_MODEL` = `/Users/youneselalami/bruce/doc/order/typescript/code/doc/index.json`
-- `EVENT_SRC`   = `/Users/youneselalami/bruce/sms/server/node/code/src/Event`
-- `SMOKE_DIR`   = `/Users/youneselalami/bruce/sms/server/smoke`
-- `SERVER_DIR`  = `/Users/youneselalami/bruce/sms/server`
+- `EVENT_SRC` = `/Users/youneselalami/bruce/sms/server/node/code/src/Event`
+- `SMOKE_DIR` = `/Users/youneselalami/bruce/sms/server/smoke`
+- `SERVER_DIR` = `/Users/youneselalami/bruce/sms/server`
 
 ---
 
@@ -53,7 +54,7 @@ If no orders found: stop with `STOPPED: no orders write to ENTITY`.
 
 For each order, derive its `index.ts` path from the `file` field:
 
-`"Identification / Pool / pNHzIF7WIi creates…"` → segments split by ` / ` → first two are family/entity:
+`"Identification / Pool / pNHzIF7WIi creates…"` → segments split by `/` → first two are family/entity:
 `EVENT_SRC/Identification/Pool/pNHzIF7WIi/index.ts`
 
 Read the file if it exists. Extract the JSON body from the `@- << EOF … EOF` curl example — that block is the canonical payload template.
@@ -63,16 +64,33 @@ If the file does not exist (entity is new), synthesize a minimal payload from th
 **Distinguish CREATE vs UPDATE** using `data.scope`: if the entity itself appears as a required key in `data.scope`, it is an UPDATE (the object must already exist). Otherwise it is a CREATE.
 
 **CREATE input** — use the `new` key:
+
 ```json
-{ "input": { "pool": { "new": { "className": "Pool", "name": "smoke-name-TIMESTAMP" } } } }
+{
+  "input": {
+    "pool": { "new": { "className": "Pool", "name": "smoke-name-TIMESTAMP" } }
+  }
+}
 ```
 
 **UPDATE input** — objectId is the **key** (not a field). This is required by `buildStoreToUpdateScopeWithInput` which does `input[entity][objectId]`:
+
 ```json
-{ "input": { "pool": { "SEED_POOL_ID": { "objectId": "SEED_POOL_ID", "className": "Pool", "managementSettings": {} } } } }
+{
+  "input": {
+    "pool": {
+      "SEED_POOL_ID": {
+        "objectId": "SEED_POOL_ID",
+        "className": "Pool",
+        "managementSettings": {}
+      }
+    }
+  }
+}
 ```
 
 **Field value rules for synthesized payloads:**
+
 - String fields → `"smoke-[fieldName]-TIMESTAMP"`
 - Object/complex fields (has `subfield` in class model at `doc/class/typescript/code/doc/index.json`) → `{}`
 - Array fields → `[]`
@@ -87,6 +105,7 @@ If the file does not exist (entity is new), synthesize a minimal payload from th
 For each `SEED_CLASSNAME_ID` token across all cases, produce a mongosh eval string.
 
 Rules:
+
 - `Unit` → `db.Unit.findOne({root: true}, {_id: 1})`
 - Anything else → `db.ClassName.findOne({}, {_id: 1})`
 
@@ -114,8 +133,16 @@ One case per order found in step 1.
   "void": true,
   "request": {
     "data": {
-      "input": { "pool": { "new": { "className": "Pool", "name": "smoke-pool-TIMESTAMP" } } },
-      "scope": { "unit": { "SEED_UNIT_ID": { "className": "Unit", "objectId": "SEED_UNIT_ID" } } }
+      "input": {
+        "pool": {
+          "new": { "className": "Pool", "name": "smoke-pool-TIMESTAMP" }
+        }
+      },
+      "scope": {
+        "unit": {
+          "SEED_UNIT_ID": { "className": "Unit", "objectId": "SEED_UNIT_ID" }
+        }
+      }
     },
     "meta": { "build": 1 },
     "root": true,
@@ -123,7 +150,20 @@ One case per order found in step 1.
     "void": true
   },
   "seedQueries": { "SEED_UNIT_ID": "db.Unit.findOne({root: true}, {_id: 1})" },
-  "expectedShape": { "pool": { "required": ["ACL", "managementIds", "managers", "name", "ownership", "parentScopes", "teams", "unit"] } },
+  "expectedShape": {
+    "pool": {
+      "required": [
+        "ACL",
+        "managementIds",
+        "managers",
+        "name",
+        "ownership",
+        "parentScopes",
+        "teams",
+        "unit"
+      ]
+    }
+  },
   "status": "PENDING",
   "result": null,
   "durationMs": null,
