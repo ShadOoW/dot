@@ -101,6 +101,10 @@ return {
       -- Docker (prettierd)
       dockerfile = { 'prettierd' },
 
+      -- Nix (nixfmt, the official RFC 166 formatter). Mason has no nixfmt
+      -- package — it comes from `nix profile install nixpkgs#nixfmt`.
+      nix = { 'nixfmt' },
+
       -- Odin (using LSP formatting via OLS with ols.json config)
       -- odin = {'odinfmt'}
 

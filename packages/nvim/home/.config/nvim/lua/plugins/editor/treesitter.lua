@@ -38,6 +38,7 @@ local ensure_installed = { -- Web Development Core
   'bash',
   'fish',
   'dockerfile',
+  'nix',
   'vim',
   'vimdoc',
   'regex',

@@ -22,11 +22,17 @@ M.servers = {
   'biome',
   'basedpyright',
   'ruff',
+  'nixd',
 }
 
+-- Servers installed outside mason; mason-lspconfig must not try to manage them.
+--   dartls – not in mason-lspconfig's registry (Flutter ships its own LSP)
+--   nixd   – `nix profile install github:nix-community/nixd`, so mason would
+--            install a second, unused copy
+local external = { dartls = true, nixd = true }
+
 -- Subset that mason-lspconfig can manage.
--- dartls is not in mason-lspconfig's registry (Flutter ships its own LSP).
-M.mason_servers = vim.tbl_filter(function(s) return s ~= 'dartls' end, M.servers)
+M.mason_servers = vim.tbl_filter(function(s) return not external[s] end, M.servers)
 
 -- Per-filetype rules used by the guard and LspStatus.
 --   expected  – servers that SHOULD attach; warn if absent after buffer opens
@@ -56,6 +62,7 @@ M.filetype_rules = {
   python = { expected = { 'basedpyright', 'ruff' }, forbidden = { 'pylsp', 'pyright', 'jedi_language_server' } },
   odin = { expected = { 'ols' }, forbidden = {} },
   dart = { expected = { 'dartls' }, forbidden = {} },
+  nix = { expected = { 'nixd' }, forbidden = { 'nil_ls', 'rnix' } },
 }
 
 return M
