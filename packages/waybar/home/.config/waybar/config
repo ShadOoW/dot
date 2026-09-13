@@ -54,7 +54,7 @@
         "exec": "echo '{\"text\": \"\", \"class\": \"recording\", \"tooltip\": \"Recording in progress - Click to stop\"}'",
         "tooltip": true,
         "exec-if": "pgrep -x 'wl-screenrec'",
-        "on-click": "$HOME/.config/waybar/recorder.sh",
+        "on-click": "$HOME/.local/bin/recorder.sh",
         "return-type": "json",
         "signal": 4
     },

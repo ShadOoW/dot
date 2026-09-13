@@ -30,11 +30,13 @@ else
   echo "  To re-seed from scratch (loses live runtime prefs):"
   echo "      cp \"$SEED\" \"$DEST\""
 fi
-# bruce skill — source of truth is the fleet tree; link, never copy. Guarded so hosts
-# without /data/code/fleet (laptop) simply skip it.
-if [ -d /data/code/fleet/skills/bruce ]; then
-  mkdir -p "$HOME/.claude/skills"
-  rm -rf "$HOME/.claude/skills/bruce"
-  ln -sfn /data/code/fleet/skills/bruce "$HOME/.claude/skills/bruce"
-  echo "✓ linked bruce skill -> /data/code/fleet/skills/bruce"
-fi
+# bruce skills — source of truth is the fleet tree; link, never copy. Guarded so hosts
+# without /data/code/fleet (laptop) simply skip them.
+for skill in bruce bruce-design; do
+  if [ -d "/data/code/fleet/skills/$skill" ]; then
+    mkdir -p "$HOME/.claude/skills"
+    rm -rf "$HOME/.claude/skills/$skill"
+    ln -sfn "/data/code/fleet/skills/$skill" "$HOME/.claude/skills/$skill"
+    echo "✓ linked $skill skill -> /data/code/fleet/skills/$skill"
+  fi
+done

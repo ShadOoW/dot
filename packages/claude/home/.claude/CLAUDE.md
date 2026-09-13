@@ -1,3 +1,7 @@
 @~/.claude/WEB-VERIFY.md
 @DOTFILES.md
 @COMMUNICATION.md
+
+@RTK.md
+
+@LEARNING-MODE.md

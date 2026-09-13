@@ -1,0 +1,388 @@
+#!/usr/bin/env python3
+"""Decide whether Vivaldi's main window is wedged, and unwedge it.
+
+Run it WHILE the window is unresponsive; with --recover it also repairs it.
+
+Why this exists: four separate fixes (see ../../../README.md) aimed at sway's focus
+handling on the assumption that the window stops *receiving* input. That was never
+measured — a window whose input is dropped and a window whose pixels are frozen look
+identical on screen. What actually separates them:
+
+  context menu    right-click the page; does a menu appear? Menus are child surfaces,
+                  so get_tree can never show them — grim can. This is the verdict.
+  paints          any new frame at all over 3s. Context, not proof: a static page
+                  legitimately produces none.
+  PWA control     the same tests against a PWA toplevel. The main window and every PWA
+                  are ONE process on ONE Wayland connection, so a live PWA next to a
+                  dead main window puts the fault in per-window state inside Chromium,
+                  where no compositor setting can reach it.
+
+Measured on 2026-09-13 during an 11-hour wedge: the main window opened no menu and
+produced no frame (byte-identical captures), while the PWA opened menus normally.
+Focus bounce, floating toggle and a full scratchpad unmap/remap all failed to revive it;
+killing the GPU process did — for a few minutes, after which it wedged again.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+MAIN_APP_ID = "vivaldi-stable"
+PWA_APP_ID = re.compile(r"^vivaldi-[a-zA-Z0-9]+-Default$")
+STATE_DIR = (
+    Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
+    / "vivaldi-freeze"
+)
+
+# Fraction of differing bytes in a raw PPM above which a capture counts as "something
+# happened". Page content animates on its own, so exact equality is not usable; a context
+# menu covers percent of the window, which is orders of magnitude above that noise.
+MENU_THRESHOLD = 0.002
+
+SEAT: str | None = None
+
+
+def run(cmd: list[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+
+def sway(command: str) -> None:
+    run(["swaymsg", "--", command])
+
+
+def sway_json(kind: str):
+    out = run(["swaymsg", "-t", kind, "-r"]).stdout
+    return json.loads(out) if out.strip() else None
+
+
+def seat() -> str:
+    global SEAT
+    if SEAT is None:
+        seats = sway_json("get_seats") or []
+        SEAT = seats[0]["name"] if seats else "seat0"
+    return SEAT
+
+
+def walk(node, workspace=None):
+    if node.get("type") == "workspace":
+        workspace = node
+    yield node, workspace
+    for key in ("nodes", "floating_nodes"):
+        for child in node.get(key, ()):
+            yield from walk(child, workspace)
+
+
+def vivaldi_windows() -> tuple[dict | None, list[dict]]:
+    main, pwas = None, []
+    for node, workspace in walk(sway_json("get_tree")):
+        app_id = node.get("app_id")
+        if not app_id:
+            continue
+        node["_ws"] = (workspace or {}).get("name")
+        if app_id == MAIN_APP_ID and main is None:
+            main = node
+        elif PWA_APP_ID.match(app_id):
+            pwas.append(node)
+    return main, pwas
+
+
+def capture(rect: dict) -> bytes:
+    geom = f"{rect['x']},{rect['y']} {rect['width']}x{rect['height']}"
+    proc = subprocess.run(
+        ["grim", "-t", "ppm", "-g", geom, "-"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return proc.stdout or b""
+
+
+def pixdiff(a: bytes, b: bytes) -> float:
+    if not a or not b or len(a) != len(b):
+        return 1.0
+    return sum(x != y for x, y in zip(a, b)) / len(a)
+
+
+def show(win: dict) -> dict:
+    """Make the window's workspace visible and return its fresh node."""
+    if win.get("_ws"):
+        sway(f"workspace {win['_ws']}")
+        time.sleep(0.9)
+    main, pwas = vivaldi_windows()
+    if win["app_id"] == MAIN_APP_ID:
+        return main or win
+    return next((p for p in pwas if p["id"] == win["id"]), win)
+
+
+# ── measurements ─────────────────────────────────────────────────────────────────────
+
+
+def test_paint(win: dict) -> tuple[bool, str]:
+    """Does the window produce any new frame at all over ~3s?
+
+    Weak on its own — a genuinely static page also produces nothing — so it is reported
+    but never decides the verdict. It is here because a wedged window is byte-identical
+    across captures even with video or spinners on the page.
+
+    (sway's get_tree `geometry` is NOT usable for this: it does not track the client's
+    committed size, so a border nudge looks unacknowledged even on a live window.)
+    """
+    rect = win["rect"]
+    first = capture(rect)
+    time.sleep(3.0)
+    delta = pixdiff(first, capture(rect))
+    return delta > 0.0, f"pixel delta over 3s {delta:.6f}"
+
+
+def test_context_menu(win: dict, other: dict | None) -> tuple[bool, str]:
+    """Right-click the middle of the window; a live Chromium window opens a menu."""
+    rect = win["rect"]
+    x, y = rect["x"] + rect["width"] // 2, rect["y"] + rect["height"] // 2
+    sway(f"seat {seat()} cursor set {x} {y}")
+    time.sleep(0.6)
+    before = capture(rect)
+    sway(f"seat {seat()} cursor press button3")
+    time.sleep(0.1)
+    sway(f"seat {seat()} cursor release button3")
+    time.sleep(1.2)
+    delta = pixdiff(before, capture(rect))
+    opened = delta > MENU_THRESHOLD
+
+    if opened:
+        # Never dismiss by clicking — the pointer sits on the menu. Losing keyboard focus
+        # ends the popup grab, so bounce focus instead.
+        if other is not None:
+            sway(f"[con_id={other['id']}] focus")
+            time.sleep(0.5)
+            sway(f"[con_id={win['id']}] focus")
+            time.sleep(0.5)
+        else:
+            sway(f"[con_id={win['id']}] focus")
+    return opened, f"pixel delta {delta:.4f}"
+
+
+def probe(win: dict, other: dict | None) -> tuple[bool, list[str]]:
+    """Returns (alive, report lines). The context menu decides; paint is context."""
+    win = show(win)
+    painted, paint_note = test_paint(win)
+    menu, menu_note = test_context_menu(win, other)
+    return menu, [
+        f"  context menu  : {'yes' if menu else 'NO':<3}  ({menu_note})",
+        f"  paints        : {'yes' if painted else 'no':<3}  ({paint_note})",
+    ]
+
+
+# ── recovery ─────────────────────────────────────────────────────────────────────────
+
+
+def gpu_process_pids(browser_pid: int) -> list[int]:
+    out = run(["pgrep", "-f", "--", "--type=gpu-process"]).stdout.split()
+    pids = []
+    for pid in out:
+        try:
+            ppid = int(
+                Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[1]
+            )
+        except (OSError, IndexError, ValueError):
+            continue
+        # The GPU process is a child of the zygote, which is a child of the browser.
+        while ppid > 1:
+            if ppid == browser_pid:
+                pids.append(int(pid))
+                break
+            try:
+                ppid = int(
+                    Path(f"/proc/{ppid}/stat").read_text().rsplit(")", 1)[1].split()[1]
+                )
+            except (OSError, IndexError, ValueError):
+                break
+    return pids
+
+
+def recover(win: dict, other: dict | None) -> str | None:
+    con_id, ws = win["id"], win.get("_ws")
+
+    def focus_bounce():
+        if other:
+            sway(f"[con_id={other['id']}] focus")
+            time.sleep(0.6)
+        sway(f"[con_id={con_id}] focus")
+
+    def floating_toggle():
+        sway(f"[con_id={con_id}] floating enable")
+        time.sleep(0.8)
+        sway(f"[con_id={con_id}] floating disable")
+
+    def remap():
+        sway(f"[con_id={con_id}] move scratchpad")
+        time.sleep(1.0)
+        sway(f"[con_id={con_id}] scratchpad show")
+        time.sleep(1.0)
+        if ws:
+            sway(f"[con_id={con_id}] move container to workspace {ws}")
+        sway(f"[con_id={con_id}] floating disable")
+
+    def restart_gpu():
+        pids = gpu_process_pids(win["pid"])
+        for pid in pids:
+            os.kill(pid, signal.SIGKILL)
+        time.sleep(4.0)
+
+    for name, step in (
+        ("focus-bounce", focus_bounce),
+        ("floating-toggle", floating_toggle),
+        ("scratchpad-remap", remap),
+        ("gpu-process-restart", restart_gpu),
+    ):
+        step()
+        time.sleep(1.0)
+        main, pwas = vivaldi_windows()
+        if main is None:
+            return None
+        ok, _ = probe(main, pwas[0] if pwas else None)
+        if ok:
+            return name
+    return None
+
+
+# ── report ───────────────────────────────────────────────────────────────────────────
+
+
+def collect_state(win: dict, pwas: list[dict]) -> list[str]:
+    pid = win.get("pid")
+    lines = [
+        f"main   con_id={win['id']} ws={win['_ws']} pid={pid} "
+        f"focused={win.get('focused')} visible={win.get('visible')}",
+        f"       rect={win['rect']}",
+        f"       committed geometry={win.get('geometry')}",
+        f"       title={win.get('name')!r}",
+    ]
+    lines += [
+        f"pwa    con_id={p['id']} ws={p['_ws']} app_id={p['app_id']}" for p in pwas
+    ]
+
+    if pid:
+        ticks = os.sysconf("SC_CLK_TCK")
+
+        def cpu(target: int) -> int:
+            try:
+                fields = (
+                    Path(f"/proc/{target}/stat").read_text().rsplit(")", 1)[1].split()
+                )
+            except (OSError, IndexError):
+                return -1
+            return int(fields[11]) + int(fields[12])
+
+        gpus = gpu_process_pids(pid)
+        before = {p: cpu(p) for p in [pid, *gpus]}
+        time.sleep(2.0)
+        for target, start in before.items():
+            role = "browser" if target == pid else "gpu"
+            lines.append(
+                f"cpu    {role} pid {target}: {(cpu(target) - start) / ticks / 2 * 100:.1f}% over 2s"
+            )
+
+    logs = sorted(
+        (Path.home() / ".local/state/sway/logs").glob("sway-*.log"),
+        key=lambda p: p.stat().st_mtime,
+    )
+    if logs and pid:
+        tail = [
+            ln
+            for ln in logs[-1].read_text(errors="replace").splitlines()
+            if f"[{pid}:" in ln
+        ]
+        lines.append(f"log    {logs[-1].name}, last 10 browser lines:")
+        lines += [f"       {ln[:180]}" for ln in tail[-10:]]
+    return lines
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--recover",
+        action="store_true",
+        help="run the unwedge ladder if the window is dead",
+    )
+    args = parser.parse_args()
+
+    for tool in ("swaymsg", "grim"):
+        if not shutil.which(tool):
+            print(f"missing required tool: {tool}", file=sys.stderr)
+            return 2
+
+    main_win, pwas = vivaldi_windows()
+    if main_win is None:
+        print(f"no window with app_id={MAIN_APP_ID} in the tree", file=sys.stderr)
+        return 1
+
+    workspaces = sway_json("get_workspaces") or []
+    original_ws = next((w["name"] for w in workspaces if w.get("focused")), None)
+
+    report = [f"vivaldi-freeze-probe {time.strftime('%F %T')}", ""]
+    report += collect_state(main_win, pwas)
+    report += ["", "main window:"]
+
+    control = pwas[0] if pwas else None
+    main_ok, lines = probe(main_win, control)
+    report += lines
+
+    pwa_ok = None
+    if control is not None:
+        report += ["", f"pwa control ({control['app_id']}):"]
+        pwa_ok, lines = probe(control, main_win)
+        report += lines
+
+    report.append("")
+    if main_ok:
+        report.append(
+            "HEALTHY: the main window opens context menus. Not wedged right now."
+        )
+    elif pwa_ok:
+        report.append(
+            "WEDGED, PER-WINDOW: the main window opens no menu and paints nothing, while a "
+            "PWA toplevel on the same process and the same Wayland connection answers "
+            "everything. The fault is Chromium's per-window compositing state — not sway "
+            "focus, not workspace placement. Restarting the GPU process clears it, "
+            "temporarily; see the README."
+        )
+    elif pwa_ok is None:
+        report.append(
+            "WEDGED: no PWA window was open, so the client-wide control could not run."
+        )
+    else:
+        report.append(
+            "WEDGED, CLIENT-WIDE: every Vivaldi toplevel is unresponsive. That is a different "
+            "fault from the per-window wedge — look at the browser process, not the compositor."
+        )
+
+    if args.recover and not main_ok:
+        main_win, pwas = vivaldi_windows()
+        step = recover(main_win, pwas[0] if pwas else None)
+        report += ["", f"recovery: {step or 'nothing in the ladder revived it'}"]
+
+    if original_ws:
+        sway(f"workspace {original_ws}")
+
+    text = "\n".join(report)
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    out = STATE_DIR / f"{time.strftime('%Y%m%d-%H%M%S')}.txt"
+    out.write_text(text + "\n")
+    print(text)
+    print(f"\nwritten to {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

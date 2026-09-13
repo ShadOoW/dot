@@ -66,5 +66,12 @@ for_window {
 # the window: it takes no clicks and no keyboard shortcuts while still repainting normally.
 # `move` maps the window on the visible workspace first, so Chromium gets a clean
 # enter/leave pair, then relocates it. Costs a brief flash on the current workspace.
+#
+# Neither rule fixes the wedge where the main window dies and the PWAs keep working. That
+# one was measured on 2026-09-13 — no context menu, no frames, while a PWA on the same
+# Wayland connection answered everything, and unmap/remap plus every focus trick failed to
+# revive it. It is Chromium per-window compositing state, not focus or placement: see
+# ../../../../browsers/README.md and `vivaldi-freeze-probe` before touching these rules
+# again.
 for_window [app_id="vivaldi-stable"] move container to workspace number 2
 for_window [app_id="^vivaldi-[a-zA-Z0-9]+-Default$"] move container to workspace number 10

@@ -5,12 +5,12 @@ Manages Claude Code's user-level config and the slash-command library that is
 
 ## What this package manages
 
-| Path                         | Form                         | Why                                                                                     |
-| ---------------------------- | ---------------------------- | --------------------------------------------------------------------------------------- |
-| `~/.claude/commands/*.md`    | per-file symlinks            | Claude Code user commands. Per-file so unmanaged local commands can live alongside them |
-| `~/.omp/agent/commands`      | directory symlink            | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here    |
-| `~/.local/bin/claude-turn-*` | symlinks                     | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                    |
-| `~/.claude/skills/bruce`     | symlink (via `configure.sh`) | Points straight at `/data/code/fleet/skills/bruce`; no copy, no drift possible          |
+| Path                                    | Form                          | Why                                                                                     |
+| --------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
+| `~/.claude/commands/*.md`               | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them |
+| `~/.omp/agent/commands`                 | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here    |
+| `~/.local/bin/claude-turn-*`            | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                    |
+| `~/.claude/skills/{bruce,bruce-design}` | symlinks (via `configure.sh`) | Point straight at `/data/code/fleet/skills/<name>`; no copy, no drift possible          |
 
 ## Skills payload
 
@@ -21,9 +21,10 @@ and `effect` is read at the vendored ref rather than mirrored here. Keeping a co
 hand-syncing it forever — the `effect` copy had already drifted 8 files out of sync with
 its authority before this package stopped carrying it.
 
-`bruce` is no longer a copy either: `configure.sh` creates
-`~/.claude/skills/bruce` as a symlink straight to `/data/code/fleet/skills/bruce`, so
-there is nothing here to regenerate or drift.
+The bruce skills are not copies either: `configure.sh` loops over `bruce` and `bruce-design`
+and creates `~/.claude/skills/<name>` as a symlink straight to
+`/data/code/fleet/skills/<name>`, so there is nothing here to regenerate or drift. A new
+fleet-owned skill is one more name in that loop.
 
 ## Sharing one command library across both harnesses
 

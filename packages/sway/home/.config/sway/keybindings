@@ -187,6 +187,13 @@ bindsym --locked {
 bindsym Print exec grim -g "$(slurp)" - | tee /data/stash/clipboard/screens/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy
 bindsym $mod+p exec grim -g "$(swaymsg -t get_tree | jq -r '.. | select(.pid? and .visible?) | .rect | "\(.x),\(.y) \(.width)x\(.height)"' | slurp)" - | tee /data/stash/clipboard/screens/screenshot-$(date +%Y%m%d-%H%M%S).png | wl-copy
 
+# Screen recording → /data/stash/records. Captures system audio (all remote
+# participants in a call); the mic is added only when a clean one is free — see
+# the device policy in ~/.local/bin/recorder.sh. `recorder.sh full mic` forces it.
+# $mod+Shift+r records the whole output; the waybar icon records a dragged region.
+# Either one toggles: press again to stop, finalize the file and tear down the mix.
+bindsym $mod+Shift+r exec ~/.local/bin/recorder.sh full
+
 # Lock screen
 bindsym $mod+l exec swaylock
 

@@ -42,4 +42,23 @@ INTEL_DEV=$(readlink -f "$INTEL_PATH" 2>/dev/null)
 export WLR_DRM_DEVICES="$INTEL_DEV"
 echo "Using Intel GPU: $INTEL_DEV (from $INTEL_PATH)" >>"$LOGFILE"
 
+# Stop advertising wp_linux_drm_syncobj_manager_v1 (Wayland explicit sync).
+#
+# Chromium binds that protocol unconditionally whenever the compositor offers it and the
+# kernel is >= 6.11 (ui/ozone/platform/wayland/host/wayland_connection.cc) — there is no
+# Chromium switch or feature flag to opt out, so the only place to turn it off is here.
+# It then waits for a release-timeline point per surface; if one never gets signalled,
+# that one toplevel stops producing frames and stops taking input forever, while every
+# other toplevel of the same process keeps working. That is exactly the Vivaldi wedge
+# measured on 2026-09-13 (see ../../../browsers/README.md): unmap/remap and every focus
+# trick failed, only restarting the GPU process helped, and only briefly.
+#
+# Cost: implicit sync instead. Display is the Intel iGPU (WLR_DRM_DEVICES above), where
+# implicit sync is the path everything used before wlroots 0.18; explicit sync mainly
+# buys NVIDIA clients tear-free presentation, so watch NVIDIA-offloaded games for
+# flicker. Revert by deleting this export, and verify with:
+#   wayland-info | grep syncobj      # present again = explicit sync back on
+export WLR_RENDER_NO_EXPLICIT_SYNC=1
+echo "Explicit sync disabled (WLR_RENDER_NO_EXPLICIT_SYNC=1)" >>"$LOGFILE"
+
 exec /usr/bin/sway "$@" 2>>"$LOGFILE"
