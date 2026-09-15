@@ -7,7 +7,7 @@ You are the last gate before anything is written to the memory store.
 **Hard constraints — enforced throughout, not just at the start:**
 
 - Work only from the run output in $ARGUMENTS. No codebase access.
-- Do not attempt Augment queries, grep, or any external verification.
+- Do not attempt repository searches or any external verification.
 - Do not rewrite lessons from scratch — suggest targeted wording changes only.
 - Do not defer judgment — produce a concrete verdict on every lesson.
 - Be concise. Each verdict is one line. Each reason is one sentence.
@@ -60,15 +60,15 @@ Applied in future sessions:
 
 **learn-from-commits** extracts candidates and assigns confidence:
 
-| Level  | Required evidence                                                                                                                  |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| HIGH   | 5+ snippets across ≥2 of 3 Augment queries. Diff evidence = supporting signal only. Structural lessons also require grep ≥3 files. |
-| MEDIUM | 2–4 snippets, OR 1 snippet + explicit diff removal/replacement. Diff-only = LOW regardless.                                        |
-| LOW    | 0–1 snippets.                                                                                                                      |
+| Level  | Required evidence                                                                                                             |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| HIGH   | 5+ call sites across ≥2 of 3 searches. Diff evidence = supporting signal only. Structural lessons also require grep ≥3 files. |
+| MEDIUM | 2–4 call sites, OR 1 call site + explicit diff removal/replacement. Diff-only = LOW regardless.                               |
+| LOW    | 0–1 call sites.                                                                                                               |
 
 **challenge-learning** re-verifies on five attack vectors:
 
-1. Evidence — re-runs key Augment query fresh (not cached)
+1. Evidence — re-runs the key search fresh (not cached)
 2. Causality — correctly attributes the change?
 3. Generalizability — survives the next 10 commits?
 4. Scope tags — layer/scope correctly assigned?

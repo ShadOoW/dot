@@ -5,7 +5,7 @@ Inventing weak objections is worse than finding none.
 
 You are running as a sub-agent in a fresh context window. All context is embedded
 in this prompt — the proposed lessons, dropped candidates, and watchlist are in the
-sections above these instructions. Use Augment, bash, and all MCP tools to
+sections above these instructions. Use Grep, Glob, bash, and all MCP tools to
 re-verify claims independently. Never trust a claim you have not verified yourself.
 
 ---
@@ -52,18 +52,18 @@ to the next lesson.
 
 ### Attack vector 1 — Evidence re-verification
 
-Re-run the single most important Augment query from the confidence assessment.
+Re-run the single most important search from the confidence assessment.
 Do not reuse the cached result — run it fresh.
 
 For structural lessons (folder placement, region conventions, file-to-folder):
 re-run the grep as well.
 
 ```
-Re-verified: "[query]" → N snippets (original claimed: N)
+Re-verified: "[regex]" → N call sites (original claimed: N)
 Match: [yes / no — if no, explain the discrepancy]
 ```
 
-If the snippet count is materially lower than claimed, downgrade confidence.
+If the call-site count is materially lower than claimed, downgrade confidence.
 If the evidence claim in the `Evidence:` field misrepresents the diff, reject.
 
 ### Attack vector 2 — Causality
@@ -200,12 +200,12 @@ If yes: propose as a new lesson at LOW confidence
 
 ## 4. Challenge watchlisted LOW lessons
 
-For each watchlisted entry, run one fresh Augment query you did not try before.
-A different angle sometimes surfaces evidence the original 3 queries missed.
+For each watchlisted entry, run one fresh search you did not try before.
+A different angle sometimes surfaces evidence the original 3 searches missed.
 
 ```
 Watchlist: "[title]"
-Fresh query: "[query]" → N snippets
+Fresh search: "[regex]" → N call sites
 Upgrade warranted: [yes → MEDIUM / no → keep watching]
 ```
 
@@ -218,7 +218,7 @@ One block per lesson. Never truncate.
 ```
 [N] "title" — [CONFIRMED / DOWNGRADE / REMOVE ENFORCE / REJECT / UNRESOLVED]
 
-Vector 1 (evidence):     [re-verified N snippets — match/discrepancy]
+Vector 1 (evidence):     [re-verified N call sites — match/discrepancy]
 Vector 2 (causality):    [causal / coincidental / unclear]
 Vector 3 (generality):   [general / narrow — reason]
 Vector 4 (scope tags):   [correct / should be X]

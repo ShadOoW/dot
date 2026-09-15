@@ -13,7 +13,7 @@ Lessons stored in agentmemory follow this format:
 - layer: `frontend` | `backend` | `shared`
 - scope: `react` | `parse` | `ts-universal` | `domain-model`
 - confidence: `high` | `medium` | `low` — how broadly confirmed the pattern is
-  in the codebase via Augment queries and grep
+  in the codebase via repository search and grep
 - intent: `enforce` (optional) — when present, this is a deliberate team
   decision to establish a standard, not an observation of existing practice.
   The codebase may not yet be uniform. Apply as a hard rule in all new code.
@@ -37,17 +37,16 @@ Verify all three prerequisites before doing anything else.
   If the path does not contain `bruce`, stop immediately:
   "STOPPED: wrong working directory. Relaunch Claude Code from the bruce project root."
 - Bash: curl -s http://localhost:3111/agentmemory/health | jq -r '.status'
-- Augment: load the schema via ToolSearch (`select:mcp__augment-context-engine__codebase-retrieval`),
-  then run a trivial natural language query to confirm it responds.
-  The parent never calls Augment inline after this — step 3 sub-agents and the
-  step 6c adversarial agent call it independently in their own context windows.
+- Bash: `rg --version` — confirm ripgrep is available. Step 3's evidence is
+  repository search, and it runs inside sub-agents so raw matches never reach
+  the parent context. Step 6c's adversarial agent searches independently too.
 - Bash: `cat ~/.claude/commands/challenge-learning.md > /dev/null && echo "OK" || echo "MISSING"`
 
 If any check fails, output exactly this and stop:
 
 ```
-STOPPED: [agentmemory / Augment / challenge-learning.md] is not reachable.
-Fix: [run 'agentmemory' in terminal / restart session / run: cd ~/code/dotfiles && stow packages/claude]
+STOPPED: [agentmemory / ripgrep / challenge-learning.md] is not reachable.
+Fix: [run 'agentmemory' in terminal / install ripgrep / run: cd ~/code/dotfiles && stow packages/claude]
 ```
 
 ---
@@ -71,7 +70,7 @@ over creating a duplicate. Then output this block before proceeding:
 Existing lessons cover: [up to 5 themes]
 This diff may add:      [themes not yet covered]
 Session note:           [flag if learn-from-commits already ran this session —
-                         Augment index may not reflect the latest commit yet]
+                         its lessons may already cover this commit]
 ```
 
 **Multiple commits:** count `^commit ` lines in $ARGUMENTS. If more than one,
@@ -116,7 +115,7 @@ A good placement rule explains the whole visible structure, not just the one
 file that changed — if the rule only describes one folder, it is probably still
 an instance of a more general rule waiting to be written.
 
-## ⛔ DROP ACCOUNTING — write this block now, before running any Augment queries
+## ⛔ DROP ACCOUNTING — write this block now, before running any search queries
 
 Every pattern you identified but chose NOT to extract as a candidate must be listed
 here. This is a checkpoint: do not proceed to Step 3 until this block is written.
@@ -131,12 +130,12 @@ If you drop nothing, write `Dropped: none`. A silent discard is a bug in the pro
 
 ## 3. Assess confidence — parallel sub-agents
 
-**Do not run Augment queries inline.** Raw snippet content must never accumulate
+**Do not run searches inline.** Raw match content must never accumulate
 in the parent context. Dispatch ALL candidates in a **single message** as parallel
 Agent calls (`subagent_type: "Explore"`).
 
 Each sub-agent handles exactly one candidate and returns ~300 tokens of structured
-output. The parent never sees raw snippets.
+output. The parent never sees raw matches.
 
 ### Build each sub-agent prompt
 
@@ -152,20 +151,23 @@ Paste only the diff hunks relevant to this candidate. Omit unrelated hunks.
 
 ```
 You are assessing confidence for one lesson candidate from a commit diff.
-You have full access to Augment and bash tools.
+You have full access to Grep, Glob, Read and bash tools.
 
-Step 1 — Load Augment:
-ToolSearch("select:mcp__augment-context-engine__codebase-retrieval"), then run
-a trivial query to confirm it responds.
+Step 1 — Scope the search:
+Name the top-level projects in scope (app/, sms/, doc/). Every search below must
+reach files outside the commit's own diff, or the counts are circular.
 
-Step 2 — Run 3 queries from conceptually different angles:
+Step 2 — Run 3 searches from conceptually different angles, each a distinct
+regex (`rg -n`, or `grep -rnE` with `--include`):
 1. The pattern      — positive form: what you are looking for
 2. The anti-pattern — negative form: what was removed / the old way
 3. Structural/domain consequence — what breaks or appears elsewhere when the
    rule is followed or violated
 
-Snippets must spread across different queries to count. 5 snippets from query 1
-and 0 from queries 2 and 3 does NOT qualify for HIGH — that is one narrow cluster.
+Count DISTINCT call sites in DISTINCT files — never raw line counts, and never
+the same site reached by two searches. Sites must spread across different
+searches to count. 5 sites from search 1 and 0 from searches 2 and 3 does NOT
+qualify for HIGH — that is one narrow cluster.
 
 If a query returns 0 or irrelevant results, rephrase and retry once. Log both:
   Failed: "[original query]" → 0 results
@@ -178,13 +180,13 @@ Step 3 — Structural check (only for folder placement, file naming, region
 conventions, file-to-folder conversions):
   find . -type f \( -name "*.ts" -o -name "*.tsx" \) | \
     xargs grep -l "[key term]" 2>/dev/null | head -20
-  Structural confidence requires Augment signal AND grep ≥ 3 matching files.
+  Structural confidence requires step 2 signal AND grep >= 3 matching files.
 
 Step 4 — Enforce gate (MANDATORY if proposing `{intent: enforce}`):
 A ban-motivated rule cannot claim enforce without a surviving-violation
 grep over the applicable scope. Adoption rate is not violation rate;
-design the grep to exclude legitimate non-violations. Augment's Step 2
-anti-pattern query is fuzzy match, not a count — it does not substitute.
+design the grep to exclude legitimate non-violations. The step 2 anti-pattern
+search is a locator, not a count — it does not substitute.
 
   grep -rnE "[violation regex]" [paths] --include="*.tsx" --include="*.ts" | wc -l
   grep -rnE "[applicable scope]" [paths] --include="*.tsx" --include="*.ts" -l | wc -l
@@ -202,13 +204,14 @@ Multi-file refactor in one commit is intent, not adoption — insufficient
 alone. Otherwise, save as confidence-only.
 
 Confidence levels:
-  HIGH   — 5+ distinct snippets across ≥ 2 queries. Diff evidence = supporting
-            signal only, cannot substitute. Structural: also requires grep ≥ 3 files.
-  MEDIUM — 2–4 snippets, OR 1 snippet AND an explicit removal/replacement in diff.
-            Diff-only with 0 Augment snippets → LOW regardless.
-  LOW    — 0–1 Augment snippets.
+  HIGH   — 5+ distinct call sites across >= 3 files, surfaced by >= 2 of the 3
+            searches. Diff evidence = supporting signal only, cannot substitute.
+            Structural: also requires grep >= 3 files.
+  MEDIUM — 2–4 call sites, OR 1 site AND an explicit removal/replacement in diff.
+            Diff-only with 0 sites outside the diff → LOW regardless.
+  LOW    — 0–1 call sites.
 
-Pre-existing convention: if Augment returns 5+ snippets for a pattern NOT
+Pre-existing convention: if a search returns 5+ call sites for a pattern NOT
 touched by the diff, flag as "pre-existing" in output.
 
 Layer:
@@ -222,24 +225,24 @@ Scope:
   ts-universal — any TypeScript codebase, not domain-specific
   domain-model — depends on Template/Order/Scope/Unit domain meaning
 
-RETURN THIS EXACT FORMAT — NOTHING ELSE. No raw snippets, no narrative sections,
+RETURN THIS EXACT FORMAT — NOTHING ELSE. No raw matches, no narrative sections,
 no "summary" or "recommendation" prose. Hard limit: 400 tokens. If over limit,
 drop prose — keep the table, Lesson block, and any mandatory grep/enforce lines.
 
 Candidate: [title]
-| # | Angle        | Query                          | Snippets | Summary (1 line)      |
+| # | Angle        | Search (regex)                 | Sites    | Summary (1 line)      |
 |---|--------------|--------------------------------|----------|-----------------------|
 | 1 | pattern      | "..."                          | N        | [what it confirmed]   |
 | 2 | anti-pattern | "..."                          | N        | [what it confirmed]   |
 | 3 | consequence  | "..."                          | N        | [what it confirmed]   |
-Total distinct snippets: N  →  [HIGH / MEDIUM / LOW]
+Total distinct call sites: N  →  [HIGH / MEDIUM / LOW]
 [If failed + retried, include:]
-Failed: "[original query]" → 0 results
-Retry:  "[rephrased query]" → N results
+Failed: "[original regex]" → 0 results
+Retry:  "[rephrased regex]" → N results
 [Structural candidates only, include:]
 Grep: [exact command] → N matching files
 [If pre-existing, include:]
-Pre-existing: flagged — 5+ snippets on pattern not touched by this diff
+Pre-existing: flagged — 5+ call sites on pattern not touched by this diff
 [If proposing {intent: enforce}, include — MANDATORY:]
 Anti-pattern grep: [command] → N violations / M applicable usages (X%)
 Enforce justification: [adoption / forward-only / footgun]
@@ -253,7 +256,7 @@ Rule:  [full actionable instruction — reads cold 6 months from now]
 Evidence: [one concrete example from the diff]
 ```
 
-Report exact snippet counts — never "30+" or "many". For large result sets,
+Report exact call-site counts — never "30+" or "many". For large result sets,
 spot-check the top 10 and report `N (X/10 relevant)`.
 
 For `{layer: shared}`, verify the rule appears in both `app/client/web` AND
@@ -262,13 +265,13 @@ spot-check `app/base/web`; if it applies there too, retag as `shared`.
 
 ### After all sub-agents return
 
-Collect the structured outputs. Do not re-run any Augment queries in the parent.
+Collect the structured outputs. Do not re-run any searches in the parent.
 
 Output a compact audit table before proceeding — required for every run:
 
-| Candidate | Confidence | Total snippets | Source type         |
-| --------- | ---------- | -------------- | ------------------- |
-| [title]   | HIGH       | N              | removal/replacement |
+| Candidate | Confidence | Total sites | Source type         |
+| --------- | ---------- | ----------- | ------------------- |
+| [title]   | HIGH       | N           | removal/replacement |
 
 Do not proceed to Step 4 without this table.
 
@@ -369,7 +372,7 @@ Propose a content revision to the existing entry — not a new lesson.
 Mark: ✏️ REVISE mem_xxx — show current and proposed full text
 
 **Contradicts an existing lesson:**
-Show both versions with diff and Augment evidence. Force resolution now:
+Show both versions with diff and search evidence. Force resolution now:
 
 > "Keep existing mem_xxx or replace with new evidence?"
 
@@ -397,7 +400,7 @@ Rule:     #region MODEL is reserved exclusively for bring*/selector calls that l
           or generic setup.
 Evidence: Helder moved generic setup out of MODEL in the requirement controller.
 Format:   [v1] {layer: frontend} {scope: react} {confidence: high} {intent: enforce} {source: BRC-8574}
-Augment:  4 snippets across 3 queries confirming this pattern
+Search:   4 call sites across 3 searches confirming this pattern
 Grep:     [structural lessons only — file count and command used]
 Source:   removal/replacement | repeated | single-instance | pre-existing
 ```
@@ -406,7 +409,7 @@ Source:   removal/replacement | repeated | single-instance | pre-existing
 
 ```
 🔁 mem_xxx — "title"
-   Augment: X snippets confirming still active in codebase
+   Search: X call sites confirming still active in codebase
    Wording revision: none | proposed: "..."
 ```
 
@@ -416,7 +419,7 @@ Source:   removal/replacement | repeated | single-instance | pre-existing
 ✏️ mem_xxx — "title"
    Current:  [full current text]
    Proposed: [full replacement text]
-   Reason:   [what the new commit and Augment revealed]
+   Reason:   [what the new commit and the searches revealed]
 ```
 
 **Contradictions:** already resolved above — show final state only
@@ -465,7 +468,7 @@ cat ~/.claude/commands/challenge-learning.md
 ```
 
 **Step 2 — Assemble per-lesson prompts.** Build one prompt per lesson. Each prompt has
-two parts. Pull query strings and snippet counts from the step 3 sub-agent outputs.
+two parts. Pull the regexes and call-site counts from the step 3 sub-agent outputs.
 
 **Part 1 — Single-lesson context block** (one lesson per sub-agent — do not bundle):
 
@@ -481,10 +484,10 @@ Diff excerpt: [the specific ± diff lines cited in Evidence — not the full dif
 paste only the relevant before/after lines. Hard limit: 40 lines. If the hunk
 is longer, include only the lines the Evidence field directly references.]
 Format:    [format line]
-Queries:
-  Q1 ([angle]): "[query string]" → [N] snippets
-  Q2 ([angle]): "[query string]" → [N] snippets
-  Q3 ([angle]): "[query string]" → [N] snippets
+Searches:
+  S1 ([angle]): "[regex]" → [N] sites
+  S2 ([angle]): "[regex]" → [N] sites
+  S3 ([angle]): "[regex]" → [N] sites
 Grep:      [command and result — structural lessons only]
 Source:    [removal/replacement | repeated | single-instance | pre-existing]
 
@@ -524,8 +527,8 @@ Plus the full challenge-learning.md content.
 
 **Step 3 — Dispatch all reviewers in a single message.** Default: one sub-agent
 per lesson. Exception: if 2–3 lessons share the same source file and have
-non-overlapping concerns, assign them to one sub-agent — it already loads Augment
-once and the shared file context costs nothing extra. Each sub-agent returns one
+non-overlapping concerns, assign them to one sub-agent — the shared file context
+is already loaded and costs nothing extra. Each sub-agent returns one
 verdict block per lesson it handles. The dropped/watchlist sub-agent is separate.
 
 **Step 4 — Aggregate verdicts** in lesson order. Append combined output below:
@@ -622,9 +625,9 @@ Confirm for each save:
 2. If retry fails, output: `MANUAL SAVE NEEDED: memory_save(type='pattern', content='...')`
 
 **Retrievability check** — for any unusually worded lesson:
-Run 3 Augment queries with genuinely different phrasings. Flag if the lesson
-does not surface in the top 5 results — the wording may be too obscure for
-future recall. Suggest a reword.
+Run 3 `memory_smart_search` queries with genuinely different phrasings. Flag if
+the lesson does not surface in the top 5 results — the wording may be too obscure
+for future recall. Suggest a reword.
 
 **Final output:**
 

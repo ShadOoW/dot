@@ -6,7 +6,7 @@
 #   ~/.config/opencode/opencode.json and tui.json are app-owned runtime state.
 #   dot's linker symlinks files at install time, but the OMO installer also rewrites
 #   the `plugin` array at runtime. We need an idempotent merge that preserves
-#   existing `permission` and `mcp` blocks (agentmemory, augment-context-engine).
+#   existing `permission` and `mcp` blocks (agentmemory).
 set -euo pipefail
 
 # ── 1. ast-grep: surface the headroom-ai binary on PATH if not already linked ──

@@ -48,7 +48,7 @@ Apply the rigor of challenge-learning attack vectors. For each suggested
 item:
 
 - Verify checkable claims (violation rates, scope, file existence) with
-  grep or Augment. Do not trust unverified counts.
+  grep or another repository search. Do not trust unverified counts.
 - Distinguish adoption rate from violation rate — they are not the same.
 - Distinguish stylistic from substantive objections. If a reword changes
   wording without changing behavior, accept it; do not relitigate.

@@ -12,7 +12,7 @@ Lessons stored in agentmemory follow this format:
 - layer: `frontend` | `backend` | `shared`
 - scope: `react` | `parse` | `ts-universal` | `domain-model`
 - confidence: `high` | `medium` | `low` — how broadly confirmed the pattern is
-  in the codebase via Augment queries and grep
+  in the codebase via repository search and grep
 - intent: `enforce` (optional) — when present, this is a deliberate team
   decision to establish a standard, not an observation of existing practice.
   The codebase may not yet be uniform. Apply as a hard rule in all new code.
@@ -30,16 +30,16 @@ Applying lessons by combination:
 
 ## 0. Preflight
 
-Verify both MCP servers are reachable before doing anything else.
+Verify both prerequisites are reachable before doing anything else.
 
 - Bash: curl -s http://localhost:3111/agentmemory/health | jq -r '.status'
-- Augment: run a trivial natural language query to confirm it responds
+- Bash: `rg --version` — confirm ripgrep is available
 
 If either fails, output exactly this and stop:
 
 ```
-STOPPED: [agentmemory / Augment] is not reachable.
-Fix: [run 'agentmemory' in terminal / restart session]
+STOPPED: [agentmemory / ripgrep] is not reachable.
+Fix: [run 'agentmemory' in terminal / install ripgrep]
 ```
 
 ---
@@ -57,57 +57,59 @@ Read every lesson fully, noting the saved date of each where available.
 **Watchlist:** check for any entry with `type="watchlist"`. If found, extract
 each description and note whether it carries {intent: enforce}. Add to the
 evaluation queue — entries with {intent: enforce} are promoted regardless of
-Augment results.
+search results.
 
 Output before proceeding:
 
 ```
 Loaded:    N lessons (oldest: [date], newest: [date])
 Watchlist: K entries queued for promotion evaluation
-Note:      [flag if this immediately follows learn-from-commits — Augment
-            index may not reflect the latest commit; weight agentmemory
-            evidence higher than Augment for lessons saved today]
+Note:      [flag if this immediately follows learn-from-commits — a pattern
+            introduced today may still show sparse search matches; weight
+            agentmemory evidence higher than search results for lessons saved today]
 ```
 
 ---
 
-## 2. Ground via Augment
+## 2. Ground via repository search
 
 Identify the top 3 themes across all loaded lessons.
 
-For each theme, run **3 Augment queries with different phrasings** and request
-5 results per query. Collect all snippets before evaluating anything.
+For each theme, run **3 searches from conceptually different angles**, each
+a distinct regex (`rg -n`, or `grep -rnE` with `--include`). Count DISTINCT
+call sites in DISTINCT files — never raw line counts, and never the same site
+reached by two searches. Collect all call sites before evaluating anything.
 
 Example for a theme about type design:
 
-- Query 1: `"TypeScript type alias Recorded wrapper"`
-- Query 2: `"avoid unnecessary type definition"`
-- Query 3: `"base type reuse instead of alias"`
+- Search 1 (pattern): `rg -n "type \w+ = Recorded<"`
+- Search 2 (anti-pattern): `rg -n "type \w+Wrapper\s*="`
+- Search 3 (consequence): `rg -n "\.unwrap\(\)"`
 
-**If a query returns 0 or irrelevant results:**
+**If a search returns 0 or irrelevant results:**
 
 1. Rephrase with different terminology and retry once
-2. If still no results, note the failed query and continue
-3. Never mark a lesson UNVERIFIED without having tried at least 3 distinct queries
+2. If still no results, note the failed search and continue
+3. Never mark a lesson UNVERIFIED without having tried at least 3 distinct searches
 
 **Watchlist promotion:**
 
 - Entry carries {intent: enforce} → promote immediately to type="pattern"
-  with {intent: enforce} in the saved content, regardless of Augment results.
+  with {intent: enforce} in the saved content, regardless of search results.
   Output: ✅ PROMOTE (enforced) — "title" — team directive, saved regardless of evidence
-- Entry has no intent flag → run 3 Augment queries. Promote if found in 2+
-  snippets. Keep watching if still 0 results.
-  Output: ✅ PROMOTE — "title" — found in X snippets
+- Entry has no intent flag → run 3 searches. Promote if found in 2+
+  call sites. Keep watching if still 0 results.
+  Output: ✅ PROMOTE — "title" — found in X call sites
   ⏳ KEEP WATCHING — "title" — still 0 results
 
 Output per theme:
 
 ```
 Theme 1: [name]
-  Query 1 '[query]': X results — [relevant / irrelevant]
-  Query 2 '[query]': X results — [relevant / irrelevant]
-  Query 3 '[query]': X results — [relevant / irrelevant]
-  Usable snippets: X total
+  Search 1 '[query]': X call sites — [relevant / irrelevant]
+  Search 2 '[query]': X call sites — [relevant / irrelevant]
+  Search 3 '[query]': X call sites — [relevant / irrelevant]
+  Usable call sites: X total
 ```
 
 ---
@@ -116,20 +118,20 @@ Theme 1: [name]
 
 Apply these four criteria to every lesson. Combine them into one final verdict.
 
-**Accuracy** — compare against Augment snippets from section 2:
+**Accuracy** — compare against call sites found in section 2:
 
 **`{intent: enforce}` exception:** if a lesson carries `{intent: enforce}`, skip
 accuracy evaluation entirely. It is a team decision, not an observation — always
-verdict ✅ KEEP regardless of Augment evidence, age, or codebase uniformity.
+verdict ✅ KEEP regardless of search evidence, age, or codebase uniformity.
 Never verdict ❌ DELETE or 🔍 UNVERIFIED on accuracy grounds for an enforced lesson.
 
-| Augment evidence                               | Verdict                                      |
-| ---------------------------------------------- | -------------------------------------------- |
-| Pattern confirmed in 3+ snippets               | Accurate                                     |
-| Pattern confirmed in 1–2 snippets              | Probably accurate — note uncertainty         |
-| Pattern contradicted by snippets               | Inaccurate → ❌ DELETE                       |
-| 0 relevant snippets, lesson older than 30 days | Presumed accurate by age → ✅ KEEP with note |
-| 0 relevant snippets, lesson newer than 30 days | → 🔍 UNVERIFIED                              |
+| Search evidence                                  | Verdict                                      |
+| ------------------------------------------------ | -------------------------------------------- |
+| Pattern confirmed in 3+ call sites               | Accurate                                     |
+| Pattern confirmed in 1–2 call sites              | Probably accurate — note uncertainty         |
+| Pattern contradicted by call sites               | Inaccurate → ❌ DELETE                       |
+| 0 relevant call sites, lesson older than 30 days | Presumed accurate by age → ✅ KEEP with note |
+| 0 relevant call sites, lesson newer than 30 days | → 🔍 UNVERIFIED                              |
 
 **Specificity** — is it actionable without additional context?
 
@@ -140,7 +142,7 @@ Never verdict ❌ DELETE or 🔍 UNVERIFIED on accuracy grounds for an enforced 
 **Uniqueness** — compare every lesson against every other:
 
 - Same principle, different wording → merge into the stronger wording, ❌ DELETE weaker
-  (use Augment snippet language to determine which wording is stronger)
+  (use call sites from section 2 to determine which wording is stronger)
 - Same topic, genuinely different rule → ✅ KEEP both, note relationship
 - Subset of another lesson → absorb into parent, ❌ DELETE subset
 
@@ -155,12 +157,12 @@ the same situation as: ⚠️ INTERNAL CONTRADICTION mem_xxx vs mem_yyy
 
 **Final verdicts:**
 
-| Verdict       | Meaning                                                           |
-| ------------- | ----------------------------------------------------------------- |
-| ✅ KEEP       | Accurate, specific, unique, durable                               |
-| ⚠️ REVISE     | Correct principle — needs rewrite                                 |
-| ❌ DELETE     | Inaccurate or fully absorbed by another lesson                    |
-| 🔍 UNVERIFIED | 0 Augment results, lesson under 30 days — kept pending your input |
+| Verdict       | Meaning                                                               |
+| ------------- | --------------------------------------------------------------------- |
+| ✅ KEEP       | Accurate, specific, unique, durable                                   |
+| ⚠️ REVISE     | Correct principle — needs rewrite                                     |
+| ❌ DELETE     | Inaccurate or fully absorbed by another lesson                        |
+| 🔍 UNVERIFIED | 0 relevant call sites, lesson under 30 days — kept pending your input |
 
 ---
 
@@ -173,8 +175,8 @@ Group output by verdict. Show full content for every lesson — never truncate.
 ```
 mem_xxx — "title" [age: X days]
 Content: [full text]
-Augment: X snippets confirming pattern
-Reason:  [confirmed by snippets / presumed accurate by age / relationship to other lessons]
+Search:  X call sites confirming pattern
+Reason:  [confirmed by call sites / presumed accurate by age / relationship to other lessons]
 ```
 
 **⚠️ REVISE:**
@@ -184,7 +186,7 @@ mem_xxx — "title" [age: X days]
 Content:  [full current text]
 Issue:    [vague / fragile / overlaps with mem_yyy / internal contradiction with mem_zzz]
 Proposed: [full replacement text]
-Augment:  [which snippets informed the rewrite]
+Search:   [which call sites informed the rewrite]
 ```
 
 **❌ DELETE:**
@@ -192,7 +194,7 @@ Augment:  [which snippets informed the rewrite]
 ```
 mem_xxx — "title" [age: X days]
 Content: [full text]
-Reason:  [contradicted by X snippets / absorbed into mem_yyy]
+Reason:  [contradicted by X call sites / absorbed into mem_yyy]
 ```
 
 **🔍 UNVERIFIED:**
@@ -200,7 +202,7 @@ Reason:  [contradicted by X snippets / absorbed into mem_yyy]
 ```
 mem_xxx — "title" [age: X days]
 Content: [full text]
-Queries tried: ['query 1', 'query 2', 'query 3'] — all returned 0 relevant results
+Searches tried: ['search 1', 'search 2', 'search 3'] — all returned 0 relevant results
 Kept by default.
 To resolve: "verify mem_xxx against [file]" or "delete mem_xxx"
 ```
@@ -210,21 +212,21 @@ To resolve: "verify mem_xxx against [file]" or "delete mem_xxx"
 ```
 mem_xxx — "title" vs mem_yyy — "title"
 Conflict:        [what they disagree on]
-Recommendation:  [which to keep and why, based on Augment evidence]
+Recommendation:  [which to keep and why, based on search evidence]
 Resolve now: reply "keep mem_xxx" or "keep mem_yyy"
 ```
 
-**💡 Gaps** (patterns visible in Augment snippets with no corresponding lesson):
+**💡 Gaps** (patterns visible in call sites with no corresponding lesson):
 Max 3, only if clearly absent. These are LOW confidence hypotheses with no
 commit evidence — do not format as ready-to-save rules. List as observations:
 
-> "No lesson covers [pattern] — seen in X snippets across [theme] queries."
+> "No lesson covers [pattern] — seen in X call sites across [theme] searches."
 
 **Watchlist promotions:**
 
 ```
-✅ PROMOTE (enforced) — "title" — team directive, no Augment confirmation needed
-✅ PROMOTE — "title" — found in X snippets, ready to save as pattern
+✅ PROMOTE (enforced) — "title" — team directive, no search confirmation needed
+✅ PROMOTE — "title" — found in X call sites, ready to save as pattern
 ⏳ KEEP WATCHING — "title" — still 0 results, not promoted
 ```
 
