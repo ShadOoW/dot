@@ -1,5 +1,5 @@
 {
-  "description": "oh-my-pi (omp) — model-role profiles: claude-only overlay next to the mixed Claude+DeepSeek default",
+  "description": "oh-my-pi (omp) — model-role profiles (claude-only overlay beside the mixed Claude+DeepSeek default) plus the LSP config that runs TypeScript code intelligence on the TS7 Go binary instead of node",
   "packages": {
     "arch": { "pacman": [] },
     "void": { "xbps": [] },

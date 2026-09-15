@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "typescript-native": {
+      "command": "tsgo-lsp",
+      "args": ["--lsp", "--stdio"]
+    }
+  },
+  "idleTimeoutMs": 300000
+}
