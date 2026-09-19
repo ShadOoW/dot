@@ -53,7 +53,7 @@
     ]
   },
   "enabledPlugins": {
-    "agentmemory@agentmemory": true,
+    "agentmemory@agentmemory": false,
     "backend-development@claude-code-workflows": true,
     "comprehensive-review@claude-code-workflows": true,
     "javascript-typescript@claude-code-workflows": true,

@@ -11,10 +11,13 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
-ExecStart=%h/.cache/managed-fnm/aliases/default/bin/agentmemory
+# The daemon reads OPENAI_API_KEY (detection order puts it first); the secrets dir is
+# single-sourced on DEEPSEEK_API_KEY and is sourced wholesale into every login shell by
+# .zprofile.d/05-secrets.zsh, so the rename happens here, in the unit, and nowhere else.
+ExecStart=/bin/sh -c 'exec env OPENAI_API_KEY="$DEEPSEEK_API_KEY" %h/.cache/managed-fnm/aliases/default/bin/agentmemory'
 Restart=on-failure
 RestartSec=5s
-EnvironmentFile=-%h/.config/secrets/minimax
+EnvironmentFile=-%h/.config/secrets/deepseek
 EnvironmentFile=-%h/.agentmemory/.env
 
 [Install]

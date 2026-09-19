@@ -20,8 +20,13 @@
 # which is the failure AGENTS.md records for the systemd copy of this unit, where the alias
 # advanced and the globally-installed package did not follow.
 set -a
-[ -f /home/shad/.config/secrets/minimax ] && . /home/shad/.config/secrets/minimax
+[ -f /home/shad/.config/secrets/deepseek ] && . /home/shad/.config/secrets/deepseek
 [ -f /home/shad/.agentmemory/.env ] && . /home/shad/.agentmemory/.env
+# The daemon reads OPENAI_API_KEY first; the secrets dir is single-sourced on
+# DEEPSEEK_API_KEY and is sourced wholesale into every login shell by
+# .zprofile.d/05-secrets.zsh, so the rename happens here and in the systemd unit,
+# never in the secrets file itself.
+OPENAI_API_KEY="$DEEPSEEK_API_KEY"
 set +a
 
 FNM_BIN=/home/shad/.cache/managed-fnm/aliases/default/bin
