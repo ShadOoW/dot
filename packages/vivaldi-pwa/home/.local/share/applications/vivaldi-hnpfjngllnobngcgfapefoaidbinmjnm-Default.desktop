@@ -1,0 +1,19 @@
+# Restored 2026-09-21 from the Arch backup (@home-2026-09-18). Vivaldi writes these
+# files itself when a PWA is installed and never again, so a profile that is copied
+# onto a new machine keeps its web apps and loses its launchers. The profile here is
+# intact -- `vivaldi-stable --app-id=<id>` opens the app -- so only this file was
+# missing from fuzzel.
+#
+# ONE EDIT against the backup copy: Exec was `/opt/vivaldi/vivaldi`, which is the Arch
+# package layout and does not exist under NixOS. `vivaldi-stable` is the name the flake
+# provides (hosts/desktop/default.nix wraps nixpkgs' `vivaldi`, which installs its
+# binary as `vivaldi`), and is the same name $BROWSER and the sway config already use.
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Type=Application
+Name=WhatsApp Web
+Exec=vivaldi-stable --profile-directory=Default --app-id=hnpfjngllnobngcgfapefoaidbinmjnm
+Icon=vivaldi-hnpfjngllnobngcgfapefoaidbinmjnm-Default
+StartupWMClass=crx_hnpfjngllnobngcgfapefoaidbinmjnm

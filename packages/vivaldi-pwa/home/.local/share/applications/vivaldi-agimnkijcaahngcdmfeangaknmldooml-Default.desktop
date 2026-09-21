@@ -1,0 +1,31 @@
+# Restored 2026-09-21 from the Arch backup (@home-2026-09-18). Vivaldi writes these
+# files itself when a PWA is installed and never again, so a profile that is copied
+# onto a new machine keeps its web apps and loses its launchers. The profile here is
+# intact -- `vivaldi-stable --app-id=<id>` opens the app -- so only this file was
+# missing from fuzzel.
+#
+# ONE EDIT against the backup copy: Exec was `/opt/vivaldi/vivaldi`, which is the Arch
+# package layout and does not exist under NixOS. `vivaldi-stable` is the name the flake
+# provides (hosts/desktop/default.nix wraps nixpkgs' `vivaldi`, which installs its
+# binary as `vivaldi`), and is the same name $BROWSER and the sway config already use.
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Type=Application
+Name=YouTube
+Exec=vivaldi-stable --profile-directory=Default --app-id=agimnkijcaahngcdmfeangaknmldooml
+Icon=vivaldi-agimnkijcaahngcdmfeangaknmldooml-Default
+StartupWMClass=crx_agimnkijcaahngcdmfeangaknmldooml
+Actions=Search;Shorts;Subscriptions
+
+[Desktop Action Search]
+Name=Search
+Exec=vivaldi-stable --profile-directory=Default --app-id=agimnkijcaahngcdmfeangaknmldooml "--app-launch-url-for-shortcuts-menu-item=https://www.youtube.com/results?feature=app_shortcuts"
+
+[Desktop Action Shorts]
+Name=Shorts
+Exec=vivaldi-stable --profile-directory=Default --app-id=agimnkijcaahngcdmfeangaknmldooml "--app-launch-url-for-shortcuts-menu-item=https://www.youtube.com/shorts?feature=app_shortcuts"
+
+[Desktop Action Subscriptions]
+Name=Subscriptions
+Exec=vivaldi-stable --profile-directory=Default --app-id=agimnkijcaahngcdmfeangaknmldooml "--app-launch-url-for-shortcuts-menu-item=https://www.youtube.com/feed/subscriptions?feature=app_shortcuts"

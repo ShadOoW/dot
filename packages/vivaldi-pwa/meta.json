@@ -1,0 +1,11 @@
+{
+  "description": "the eleven Vivaldi PWA launchers and their icons — Vivaldi writes a .desktop only when a web app is installed, so a copied profile keeps the apps and loses the entries fuzzel reads",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] },
+    "nixos": {},
+    "macos": { "brew": [] }
+  },
+  "tags": ["desktop", "gui"],
+  "os": ["linux"]
+}
