@@ -28,6 +28,11 @@ elif grep -q '^ID=void' /etc/os-release 2>/dev/null || [[ -f /etc/void-release ]
   export _DISTRO=void
 elif grep -q '^ID=arch' /etc/os-release 2>/dev/null || [[ -f /etc/arch-release ]]; then
   export _DISTRO=arch
+elif [[ -f /etc/NIXOS ]] || grep -q '^ID=nixos' /etc/os-release 2>/dev/null; then
+  # The desktop container on punk. Probed after arch/void because those two
+  # have the more specific marker files; NixOS is identified by /etc/NIXOS,
+  # which the installer writes and nothing else uses.
+  export _DISTRO=nixos
 else
   export _DISTRO=linux
 fi

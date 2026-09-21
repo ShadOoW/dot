@@ -31,19 +31,30 @@ for_window {
   [window_type="dialog"] floating enable
   [window_role="task_dialog"] floating enable
 
-  # Marks for our scratchpad applications
-  [app_id="terminal-mark"] floating enable, mark terminal, move scratchpad, border pixel 4, border color #7dcfff
-  [app_id="music-mark"] floating enable, mark music, move scratchpad, border pixel 4, border color #7dcfff
-  [app_id="yazi-explorer"] floating enable, mark explorer, move scratchpad, border pixel 4, border color #7dcfff
+  # Marks for our scratchpad applications.
+  #
+  # No `border color #7dcfff` here any more, and it was never doing anything:
+  # sway's `border` command takes none|normal|pixel [px]|csd|toggle and has no
+  # `color` form — per-window colours are not a thing sway implements at all
+  # (only the global client.focused/client.unfocused palettes in ./styling).
+  # Every start logged one line per rule,
+  #   [sway/tree/view.c:586] for_window '[app_id="terminal-mark"]' failed:
+  #   Expected 'border <none|normal|pixel|csd|toggle>' …
+  # and because the list is parsed as a unit, the failure was not free: the
+  # commands are applied left to right and the invalid one ends the list, so
+  # the intended 4-pixel border was the last thing that reliably survived.
+  [app_id="terminal-mark"] floating enable, mark terminal, move scratchpad, border pixel 4
+  [app_id="music-mark"] floating enable, mark music, move scratchpad, border pixel 4
+  [app_id="yazi-explorer"] floating enable, mark explorer, move scratchpad, border pixel 4
 
-  # btw stash terminal ($mod+t) — floating, centered, purple-bordered. Marked +
-  # stashed like the other scratchpads; toggle-scratchpad.sh handles show/hide + sizing.
-  [app_id="btw-scratch"] floating enable, mark btw, move scratchpad, border pixel 4, border color #bb9af7
+  # btw stash terminal ($mod+t) — floating, centered. Marked + stashed like the
+  # other scratchpads; toggle-scratchpad.sh handles show/hide + sizing.
+  [app_id="btw-scratch"] floating enable, mark btw, move scratchpad, border pixel 4
 
-  # scribe dictation buffer ($mod+Shift+t) — floating, centered, green-bordered. Marked +
+  # scribe dictation buffer ($mod+Shift+t) — floating, centered. Marked +
   # stashed like the other scratchpads; scribe-surface.sh show/hide drives it, called by
   # both the keybinding and the wake service (WAKE_SCRIBE_HOOK).
-  [app_id="scribe-scratch"] floating enable, mark scribe, move scratchpad, border pixel 4, border color #9ece6a
+  [app_id="scribe-scratch"] floating enable, mark scribe, move scratchpad, border pixel 4
 }
 
 # Workspace assignments

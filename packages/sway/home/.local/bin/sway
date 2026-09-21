@@ -1,6 +1,21 @@
 #!/bin/sh
 # Sway wrapper to capture logs to ~/.local/state/sway/logs/
-# Force Intel iGPU for Wayland
+# Force Intel iGPU for Wayland, where there is one.
+
+# The real compositor, which is not at a fixed path on every host: Arch and
+# Void install /usr/bin/sway, NixOS puts it in /run/current-system/sw/bin (and
+# nothing at all in /usr/bin). `command -v` cannot be used — this file IS
+# `sway` on PATH, so it would find itself and fork-bomb.
+for _candidate in /usr/bin/sway /usr/local/bin/sway /run/current-system/sw/bin/sway; do
+  if [ -x "$_candidate" ]; then
+    SWAY_REAL=$_candidate
+    break
+  fi
+done
+if [ -z "${SWAY_REAL:-}" ]; then
+  echo "sway: no sway binary found outside this wrapper." >&2
+  exit 127
+fi
 
 # Flags that genuinely print and exit. They must not create a session log file, and must
 # not reach the nesting guard below.
@@ -12,7 +27,7 @@
 case " $* " in
   *" --version "* | *" -v "* | *" --help "* | *" -h "* | \
     *" --get-socketpath "* | *" -p "*)
-    exec /usr/bin/sway "$@"
+    exec "$SWAY_REAL" "$@"
     ;;
 esac
 
@@ -24,7 +39,7 @@ esac
 # 2026-09-05). Nesting is still reachable through /usr/bin/sway when actually wanted.
 if [ -n "$WAYLAND_DISPLAY" ] || [ -n "$SWAYSOCK" ]; then
   echo "sway: already inside a Wayland session; refusing to start a nested compositor." >&2
-  echo "sway: run /usr/bin/sway directly if that is really what you want." >&2
+  echo "sway: run $SWAY_REAL directly if that is really what you want." >&2
   exit 1
 fi
 
@@ -37,10 +52,19 @@ echo "=== Sway wrapper started at $(date) ===" >"$LOGFILE"
 echo "Log file: $LOGFILE" >>"$LOGFILE"
 echo "PID: $$" >>"$LOGFILE"
 
+# The display GPU. On the Arch/Void box that is the Alder Lake iGPU, named by
+# PCI path so it survives card renumbering. Where that node does not exist —
+# punk's desktop container is given ONE card, the 3060, and no iGPU at all —
+# pinning it would hand wlroots an empty WLR_DRM_DEVICES and the compositor
+# would find no device to render on. So it is applied only when it is there.
 INTEL_PATH="/dev/dri/by-path/pci-0000:00:02.0-card"
 INTEL_DEV=$(readlink -f "$INTEL_PATH" 2>/dev/null)
-export WLR_DRM_DEVICES="$INTEL_DEV"
-echo "Using Intel GPU: $INTEL_DEV (from $INTEL_PATH)" >>"$LOGFILE"
+if [ -n "$INTEL_DEV" ] && [ -e "$INTEL_DEV" ]; then
+  export WLR_DRM_DEVICES="$INTEL_DEV"
+  echo "Using Intel GPU: $INTEL_DEV (from $INTEL_PATH)" >>"$LOGFILE"
+else
+  echo "No iGPU at $INTEL_PATH — leaving device selection to wlroots" >>"$LOGFILE"
+fi
 
 # Stop advertising wp_linux_drm_syncobj_manager_v1 (Wayland explicit sync).
 #
@@ -61,4 +85,4 @@ echo "Using Intel GPU: $INTEL_DEV (from $INTEL_PATH)" >>"$LOGFILE"
 export WLR_RENDER_NO_EXPLICIT_SYNC=1
 echo "Explicit sync disabled (WLR_RENDER_NO_EXPLICIT_SYNC=1)" >>"$LOGFILE"
 
-exec /usr/bin/sway "$@" 2>>"$LOGFILE"
+exec "$SWAY_REAL" "$@" 2>>"$LOGFILE"

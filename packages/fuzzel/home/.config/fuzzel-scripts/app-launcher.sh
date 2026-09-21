@@ -5,6 +5,20 @@ CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/fuzzel-apps"
 CACHE_FILE="$CACHE_DIR/apps.tsv"
 USAGE_FILE="$CACHE_DIR/usage.tsv"
 
+# Where .desktop files are, per the XDG basedir spec: $XDG_DATA_HOME/
+# applications first, then one applications/ per entry in $XDG_DATA_DIRS.
+# Hard-coding /usr/share/applications was true on Arch and Void and is false
+# on NixOS, where the system profile is /run/current-system/sw/share and
+# /usr/share does not exist — the launcher listed nothing at all there, which
+# reads as "fuzzel is broken" rather than "the search path is wrong".
+app_dirs() {
+  local dirs="${XDG_DATA_HOME:-$HOME/.local/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+  local dir
+  while IFS= read -r -d ':' dir || [ -n "$dir" ]; do
+    [ -n "$dir" ] && [ -d "$dir/applications" ] && printf '%s\n' "$dir/applications"
+  done <<<"$dirs:"
+}
+
 # Toggle: close fuzzel if already open
 if pgrep -x fuzzel &>/dev/null; then
   pkill -x fuzzel || true
@@ -16,7 +30,8 @@ build_cache() {
   local tmp
   tmp=$(mktemp)
 
-  find ~/.local/share/applications /usr/share/applications -maxdepth 1 -name '*.desktop' -print0 2>/dev/null |
+  mapfile -t _app_dirs < <(app_dirs)
+  find "${_app_dirs[@]}" -maxdepth 1 -name '*.desktop' -print0 2>/dev/null |
     while IFS= read -r -d '' file; do
       awk '
             BEGIN { in_entry=0 }
@@ -71,7 +86,8 @@ build_cache() {
 
 needs_rebuild() {
   [[ ! -f "$CACHE_FILE" ]] && return 0
-  find ~/.local/share/applications /usr/share/applications \
+  mapfile -t _app_dirs < <(app_dirs)
+  find "${_app_dirs[@]}" \
     -maxdepth 1 -name '*.desktop' -newer "$CACHE_FILE" -print 2>/dev/null |
     grep -q . && return 0
   return 1

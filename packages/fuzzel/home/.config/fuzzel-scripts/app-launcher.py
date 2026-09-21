@@ -9,16 +9,30 @@ import select
 import time
 
 
+def app_dirs():
+    """Every applications/ directory, per the XDG basedir spec.
+
+    Not a hard-coded ["~/.local/share/applications", "/usr/share/applications"]:
+    that list is correct on Arch and Void and empty on NixOS, where the system
+    profile lives in /run/current-system/sw/share and /usr/share does not
+    exist. XDG_DATA_DIRS is the portable answer and every distro sets it.
+    """
+    home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    system = os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
+    seen = []
+    for base in [home, *system.split(":")]:
+        directory = os.path.join(base, "applications")
+        if base and os.path.isdir(directory) and directory not in seen:
+            seen.append(directory)
+    return seen
+
+
 def get_apps():
     apps = []
     pwas = []
 
     # Collect from desktop files
-    for directory in [
-        os.path.expanduser("~/.local/share/applications"),
-        "/usr/share/applications",
-        "/usr/local/share/applications",
-    ]:
+    for directory in app_dirs():
         if not os.path.isdir(directory):
             continue
         for filename in os.listdir(directory):

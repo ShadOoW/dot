@@ -15,6 +15,7 @@ case "$_DISTRO" in
   arch) _distro_icon=$'%F{blue}%f' ;;   # nf-linux-archlinux
   void) _distro_icon=$'%F{green}%f' ;;  # nf-linux-void
   macos) _distro_icon=$'%F{white}%f' ;; # nf-linux-apple
+  nixos) _distro_icon=$'%F{cyan}%f' ;;  # nf-linux-nixos — the desktop container on punk
   *) _distro_icon=$'%F{white}%f' ;;     # nf-fa-linux (tux) fallback
 esac
 

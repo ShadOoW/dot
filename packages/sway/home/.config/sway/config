@@ -15,7 +15,15 @@ include /etc/sway/config.d/*
 # environment from config.d (50-systemd-user.conf) instead of racing it.
 include ./exec
 
-# Session-scoped user services (polkit agent, …) hang off graphical-session.target.
+# Session-scoped user services (polkit agent, mpd, sunshine…) hang off the session target.
 # 50-systemd-user.conf (included above) imports WAYLAND_DISPLAY et al, but sway
 # execs are async — re-import in the same shell so the target's units never race it.
-exec "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP; systemctl --user start graphical-session.target"
+#
+# sway-session.target first, graphical-session.target only as the fallback. Where a distro
+# ships the sway unit files (nixpkgs' sway module, and systemd's own upstream layout),
+# graphical-session.target carries RefuseManualStart=yes — it exists to be pulled in by a
+# session target, never poked directly — so starting it prints
+#   Failed to start graphical-session.target: Operation refused …
+# on every login while the units that matter are already up. Arch and Void have no
+# sway-session.target, so there the `||` branch runs exactly as before.
+exec "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP; systemctl --user start sway-session.target 2>/dev/null || systemctl --user start graphical-session.target"
