@@ -1,0 +1,11 @@
+{
+  "description": "launchers for fleet's own CLIs — brucelee and its TUI, resolved from the per-host fleet-root record rather than an absolute path",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] },
+    "nixos": {},
+    "macos": { "brew": [] }
+  },
+  "tags": ["dev", "cli"],
+  "os": ["linux", "macos"]
+}

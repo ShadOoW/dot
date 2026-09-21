@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Record where this host keeps the kit, so the launcher can find the CLI.
+# Record where this host keeps the kit, so the launchers can find the CLIs.
 #
 # Plain sh and no dependency on `dot`, because on a fresh host `dot` is exactly what does not
 # work yet: this repo is the payload, the TypeScript lives in the kit, and nothing in either
@@ -10,7 +10,8 @@
 #     packages/dot/bootstrap.sh /data/code/fleet     # desktop
 #     packages/dot/bootstrap.sh ~/code/fleet         # laptop
 #
-# Then `dot pkg dot link` puts the launcher on PATH.
+# Then `dot pkg dot link` puts the launcher on PATH, and `dot pkg fleet link` puts the other
+# fleet CLIs there too.
 set -eu
 
 if [ $# -ne 1 ]; then
@@ -42,4 +43,13 @@ state="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
 mkdir -p "$state"
 printf '%s\n' "$cli" >"$state/cli-path"
 
+# The checkout root, as well as the one file inside it. `dot`'s own launcher needs the file
+# and derives nothing; packages/fleet's launchers need the root, because each one names a
+# different entry point under apps/. Deriving one from the other is possible — three
+# dirnames — and is the kind of arithmetic that silently stops being true the moment an
+# entry point moves, which is precisely the mistake the header of dot's launcher records
+# four revisions of. Two lines instead.
+printf '%s\n' "$fleet" >"$state/fleet-root"
+
 echo "dot: kit recorded — $cli"
+echo "dot: fleet root recorded — $fleet"
