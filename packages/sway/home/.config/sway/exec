@@ -1,5 +1,8 @@
 exec_always {
-    ~/.config/sway/scripts/workspace-backgrounds.sh
+    # The NixOS desk supervises the wallpaper (wallpaper.service: memory-capped, restarted
+    # on its own); restarting the unit is what a reload means there. Everywhere else there
+    # is no such unit, systemctl fails or is absent, and sway runs the script as it always did.
+    systemctl --user restart wallpaper.service 2>/dev/null || ~/.config/sway/scripts/workspace-backgrounds.sh
 }
 
 exec {
@@ -14,7 +17,7 @@ exec {
 
     # Workspaces 3/4 are reserved for scripted project layouts
     # (dot session restore) — autotiling would fight the tabbed containers.
-    autotiling-rs 5 6 7 8 9 10 &
+    autotiling-rs --workspace 5 6 7 8 9 10 &
     wl-paste --watch cliphist -db-path /data/stash/clipboard/cliphist -max-items 1000000 store &
 
     # Start MRU focus tracker for Alt-Tab behavior
@@ -26,7 +29,11 @@ exec {
     # ignore this repo's config entirely and could not open shad's PipeWire socket, so it is
     # deliberately not enabled and the session owns mpd instead. ncmpcpp (mod+m) is useless
     # without it — it connects to 127.0.0.1:6600.
-    if [ ! -d /run/systemd/system ] && command -v mpd >/dev/null 2>&1; then mpd; fi &
+    #
+    # `&&`, not `if …; then …; fi`: sway splits a config line on `;` before any shell sees it,
+    # so sh got `if [ … ] && command -v mpd …` alone and failed to parse, and sway was left
+    # with a command named `then` ("Unknown/invalid command 'then'", every login).
+    [ ! -d /run/systemd/system ] && command -v mpd >/dev/null 2>&1 && mpd &
 
     # Pre-warm scratchpad apps — for_window rules handle mark + scratchpad.
     #
@@ -60,5 +67,10 @@ exec {
     # A subshell, not `{ …; }`: sway splits a config line on `;` before any shell sees it, so
     # the brace group was cut into `exec { … && …` and an invalid command `}` — the restore
     # would simply never have run (measured in a headless sway, 2026-09-24). No `;` here.
-    ( dot session restore --if-pending && dot session recover --notify ) 2>&1 | logger -t dot-session &
+    #
+    # The launcher by its home path, as oom-notify above: sway's own PATH is the one its
+    # parent gave it, and on the NixOS desk that is a systemd unit's, without ~/.local/bin.
+    # A bare `dot` there failed with "dot: command not found" (2026-09-24, the first login
+    # restore under the unit), and the armed snapshot sat unrestored.
+    ( ~/.local/bin/dot session restore --if-pending && ~/.local/bin/dot session recover --notify ) 2>&1 | logger -t dot-session &
 }
