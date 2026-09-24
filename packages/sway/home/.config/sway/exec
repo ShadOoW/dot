@@ -50,5 +50,15 @@ exec {
     # distinguishes them is whether those sessions are live again — and restore is what makes
     # them live. Run concurrently, recover finishes in ~0.1s while restore is still waiting on
     # windows, and every planned reboot would announce itself as a crash.
-    dot session restore --if-pending && dot session recover --notify &
+    #
+    # Both write to the log under the tag `dot-session` (`journalctl -t dot-session` on the
+    # systemd hosts, the syslog on Void) rather than to nowhere. sway's exec children have no
+    # stdout worth the name, so the restore of 2026-09-23 that came back two windows short —
+    # session-0 and session-1 never appeared — left nothing to say whether a launch timed out
+    # or was never tried. `logger` rather than `systemd-cat` because this file is also Void's.
+    #
+    # A subshell, not `{ …; }`: sway splits a config line on `;` before any shell sees it, so
+    # the brace group was cut into `exec { … && …` and an invalid command `}` — the restore
+    # would simply never have run (measured in a headless sway, 2026-09-24). No `;` here.
+    ( dot session restore --if-pending && dot session recover --notify ) 2>&1 | logger -t dot-session &
 }
