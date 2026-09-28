@@ -7,7 +7,7 @@
 # ONE EDIT against the backup copy: Exec was `/opt/vivaldi/vivaldi`, which is the Arch
 # package layout and does not exist under NixOS. `vivaldi-stable` is the name the flake
 # provides (hosts/desktop/default.nix wraps nixpkgs' `vivaldi`, which installs its
-# binary as `vivaldi`), and is the same name $BROWSER and the sway config already use.
+# binary as `vivaldi`), and is the same name the sway config already uses.
 [Desktop Entry]
 Version=1.0
 Terminal=false

@@ -7,13 +7,17 @@
 # ONE EDIT against the backup copy: Exec was `/opt/vivaldi/vivaldi`, which is the Arch
 # package layout and does not exist under NixOS. `vivaldi-stable` is the name the flake
 # provides (hosts/desktop/default.nix wraps nixpkgs' `vivaldi`, which installs its
-# binary as `vivaldi`), and is the same name $BROWSER and the sway config already use.
+# binary as `vivaldi`), and is the same name the sway config already uses.
+#
+# 2026-09-23: pinned to the work account, same way and for the same reason as the
+# Google Chat entry (see its header). The personal account is the `-Default-shad.desktop`
+# sibling.
 #!/usr/bin/env xdg-open
 [Desktop Entry]
 Version=1.0
 Terminal=false
 Type=Application
-Name=Gmail
-Exec=vivaldi-stable --profile-directory=Default --app-id=fmgjjmmmlfnkbppncabfkddbjimcfncm
+Name=Gmail Bruce
+Exec=vivaldi-stable --profile-directory=Default --app-id=fmgjjmmmlfnkbppncabfkddbjimcfncm --app-launch-url-for-shortcuts-menu-item=https://mail.google.com/mail/?authuser=younes.el-alami@bruce.work
 Icon=vivaldi-fmgjjmmmlfnkbppncabfkddbjimcfncm-Default
 StartupWMClass=crx_fmgjjmmmlfnkbppncabfkddbjimcfncm

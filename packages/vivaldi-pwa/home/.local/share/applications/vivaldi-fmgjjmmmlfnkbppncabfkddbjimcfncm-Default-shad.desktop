@@ -1,0 +1,15 @@
+# Hand-written 2026-09-23, not a Vivaldi file: same installed web app as
+# `vivaldi-fmgjjmmmlfnkbppncabfkddbjimcfncm-Default.desktop` (which is pinned to the work
+# account), launched into the personal account via `?authuser=<email>`. One app id, two
+# launchers -- Vivaldi only knows the one PWA, so it never writes or rewrites this file.
+#
+# The `-shad` suffix keeps it out of windows.sh's `vivaldi-*-Default.desktop` glob: both
+# windows carry the same app_id, and that script wants exactly one name per app id.
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Type=Application
+Name=Gmail Shad
+Exec=vivaldi-stable --profile-directory=Default --app-id=fmgjjmmmlfnkbppncabfkddbjimcfncm --app-launch-url-for-shortcuts-menu-item=https://mail.google.com/mail/?authuser=shadoow.ma@gmail.com
+Icon=vivaldi-fmgjjmmmlfnkbppncabfkddbjimcfncm-Default
+StartupWMClass=crx_fmgjjmmmlfnkbppncabfkddbjimcfncm

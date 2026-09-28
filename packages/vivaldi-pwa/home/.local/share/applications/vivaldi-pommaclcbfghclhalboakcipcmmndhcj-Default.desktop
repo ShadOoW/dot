@@ -7,12 +7,20 @@
 # ONE EDIT against the backup copy: Exec was `/opt/vivaldi/vivaldi`, which is the Arch
 # package layout and does not exist under NixOS. `vivaldi-stable` is the name the flake
 # provides (hosts/desktop/default.nix wraps nixpkgs' `vivaldi`, which installs its
-# binary as `vivaldi`), and is the same name $BROWSER and the sway config already use.
+# binary as `vivaldi`), and is the same name the sway config already uses.
+#
+# 2026-09-23: pinned to the work account. Two Google accounts share the Default profile
+# and the bare start URL opens whichever one Google currently calls account 0 -- the
+# personal one, lately. `--app-launch-url-for-shortcuts-menu-item` is the flag Vivaldi
+# itself uses for manifest shortcuts (see the YouTube entry); it opens the app window at
+# an in-scope URL instead of start_url. `?authuser=<email>` rather than `/u/1/`: the
+# numeric slot is the sign-in order and flips -- History has mail/u/0 resolving to both
+# accounts. The personal account is the `-Default-shad.desktop` sibling.
 [Desktop Entry]
 Version=1.0
 Terminal=false
 Type=Application
-Name=Google Chat
-Exec=vivaldi-stable --profile-directory=Default --app-id=pommaclcbfghclhalboakcipcmmndhcj
+Name=Google Chat Bruce
+Exec=vivaldi-stable --profile-directory=Default --app-id=pommaclcbfghclhalboakcipcmmndhcj --app-launch-url-for-shortcuts-menu-item=https://chat.google.com/?authuser=younes.el-alami@bruce.work
 Icon=vivaldi-pommaclcbfghclhalboakcipcmmndhcj-Default
 StartupWMClass=crx_pommaclcbfghclhalboakcipcmmndhcj

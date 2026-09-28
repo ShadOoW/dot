@@ -1,5 +1,5 @@
 {
-  "description": "the eleven Vivaldi PWA launchers and their icons — Vivaldi writes a .desktop only when a web app is installed, so a copied profile keeps the apps and loses the entries fuzzel reads",
+  "description": "the eleven Vivaldi PWA launchers (plus a second, personal-account entry for Gmail and Google Chat) and their icons — Vivaldi writes a .desktop only when a web app is installed, so a copied profile keeps the apps and loses the entries fuzzel reads",
   "packages": {
     "arch": { "pacman": [] },
     "void": { "xbps": [] },
