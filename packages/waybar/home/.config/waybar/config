@@ -53,7 +53,7 @@
         "interval": "once",
         "exec": "echo '{\"text\": \"\", \"class\": \"recording\", \"tooltip\": \"Recording in progress - Click to stop\"}'",
         "tooltip": true,
-        "exec-if": "pgrep -x 'wl-screenrec'",
+        "exec-if": "pgrep -x 'wf-recorder'",
         "on-click": "$HOME/.local/bin/recorder.sh",
         "return-type": "json",
         "signal": 4

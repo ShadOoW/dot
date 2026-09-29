@@ -9,7 +9,7 @@ mako                    # notifications
 fuzzel                  # launcher (replaces rofi on Wayland)
 wl-clipboard cliphist   # clipboard
 slurp                   # region selector for screenshots
-wl-screenrec            # screen recording
+wf-recorder             # screen recording (shm capture — no VA-API encoder on this GPU)
 xdg-desktop-portal-wlr  # portal for screen sharing
 wlsunset                # night light
 mpvpaper                # video wallpaper
