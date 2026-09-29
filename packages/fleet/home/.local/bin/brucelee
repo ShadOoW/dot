@@ -58,6 +58,7 @@ set -eu
 case ${0##*/} in
   brucelee) entry=apps/brucelee/cli.ts ;;
   brucelee-tui) entry=apps/brucelee/tui.ts ;;
+  nosy) entry=apps/nosy/nosy.ts ;;
   *)
     echo "fleet: no entry point is registered for '${0##*/}'." >&2
     echo "       this launcher dispatches on the name it is called as; see the case" >&2
