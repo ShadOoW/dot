@@ -21,6 +21,18 @@ The **app itself** is installed per-distro:
   systemd service and runs `openssl fipsinstall` in its install hook.
   `dot update source` intentionally does **not** build awsvpnclient on Arch — the
   `pkgbuilds` updater is gated on `xbps-create`, which is Void-only.
+- **NixOS (punk's desk container)** — not managed by `dot` at all:
+  `punk-records/hosts/desktop/bruce.nix` packages the .deb in a `buildFHSEnv`
+  sandbox, runs the daemon as `awsvpnclient.service`, and re-implements
+  `aws-vpn-dns.service` as an `ip monitor link` watcher (udev announces no
+  network devices inside LXC, so a `tun0.device`-bound unit never fires).
+  Do **not** `dot pkg awsvpnclient link` there: the launcher execs
+  `/opt/awsvpnclient`, which exists only inside the sandbox.
+
+Profiles are per-user state in `~/.config/AWSVPNClient/` (`ConnectionProfiles`
+plus `OpenVpnConfigs/`, whose files embed the client certificate — never commit
+them). On a new machine, copy those two back from the old home rather than
+re-importing.
 
 ## Setup
 
