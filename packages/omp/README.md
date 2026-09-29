@@ -161,13 +161,42 @@ overrides conflicting built-in guidance. Subagents do not receive it (omp looks 
 file only in `main.ts`), and they have no `ask` tool anyway (`hasUI: false`). A
 project-level `.omp/APPEND_SYSTEM.md` replaces it rather than stacking.
 
-It currently holds one rule: context for an `ask` goes in the chat message and the
-picker's `question` stays one sentence. omp's `question` field has no length guidance,
-so the model filled it with whole paragraphs, and the picker shows them as unformatted
-text.
+It holds one rule: explain in reply text, then call `ask`, and keep the picker's
+`question` to one sentence. The first version (2026-09-28) said "write the context in
+normal chat" and made things worse: the model planned the explanation in its reasoning,
+which the user never sees, then sent the picker alone. Counted over every omp session, an
+`ask` with no reply text in its turn went from 31 of 116 calls before that version to 13 of
+27 after it. The rule now says that reasoning is invisible, and the hook below enforces it.
 
 Check that it loaded:
 
 ```sh
 omp -p --model @smol "Quote the system-prompt section about the ask picker, or say NONE."
 ```
+
+## The ask guard — `hooks/pre/ask-needs-text.ts`
+
+Blocks an `ask` call whose assistant message has under 20 characters of reply text, and
+tells the model to write the explanation first and ask again. It fails open: a call it has
+no record of goes through.
+
+Two details it depends on:
+
+- **`tool_call` fires before `message_end`.** The guard records text length from
+  `message_update` snapshots, which already hold the finished tool call when the guard runs.
+  Recording from `message_end` alone lets every call through.
+- **omp's native hook loader skips symlinked files.** It keeps only directory entries that
+  are regular files (`Dirent.isFile()`), and dot links every file as a symlink, so a hook
+  linked the normal way loads nothing and reports nothing. The real file lives in
+  `packages/omp/hooks/`, and `home/.omp/agent/hooks` is a relative directory symlink to it
+  (`../../../hooks`), linked as one entry, like `~/.omp/agent/commands` in the claude
+  package. Add new hooks under `packages/omp/hooks/{pre,post}/`; no re-link needed.
+
+Verify in an interactive session (headless `-p` has no `ask` tool):
+
+```sh
+cd /tmp && omp --model @smol "Call the ask tool now with question 'Test?', options Yes and No, and no reply text before it."
+```
+
+Expected: the picker does not open, and the transcript shows "Blocked: this `ask` was sent
+with no reply text…".
