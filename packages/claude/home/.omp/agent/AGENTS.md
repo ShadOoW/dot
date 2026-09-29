@@ -1,0 +1,1 @@
+@~/.claude/SHARED.md

@@ -1,6 +1,5 @@
 @~/.claude/WEB-VERIFY.md
-@DOTFILES.md
-@COMMUNICATION.md
+@~/.claude/SHARED.md
 
 @RTK.md
 
