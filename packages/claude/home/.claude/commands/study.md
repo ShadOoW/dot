@@ -51,7 +51,7 @@ free.
 
 **D — Propose.** The design, concretely enough to build from. Then draft the five
 answers — what breaks without it, who consumes it, where its state lives, how it is
-restored, what it costs to run — as a *draft for the operator to correct*. These are the
+restored, what it costs to run — as a _draft for the operator to correct_. These are the
 operator's to own; drafting them is a courtesy, not authorship.
 
 **E — Check understanding.** Ask the operator to state the design back with the files
@@ -94,3 +94,26 @@ cannot build from it has found vagueness the operator approved without noticing.
 - **If the plan is wrong, say so.** A step whose premise no longer holds is a finding:
   record it in the step's Findings and propose the plan change rather than designing
   around it.
+
+---
+
+### END EVERY REPLY THAT STOPS THE RUN WITH "NEXT"
+
+The operator should never have to work out which command comes next. Whenever you stop —
+step file written, confirmation pending, split proposed, blocked — the **last section** of
+your reply is `## Next`. It holds exactly:
+
+1. **What the operator does now**, one line, as a command to paste. Read the ledger in
+   `.plans/PLAN.md` again at this moment; do not work it out from memory.
+   - Step written and set to `[>]`: _open a new session in `<repo path>` and run
+     `/execute-study-step NN`_. Say why it has to be a new session: the build must work
+     from the step file alone, without this conversation.
+   - Waiting on confirmation or a correction: _reply here with confirm, or with your
+     correction_. Do not name any other command.
+   - Re-split proposed: which ledger change the operator has to approve, and then _run
+     `/study NN` again in a new session_, using the new number.
+2. **Anything only the operator can do**, if there is any: a ruling asked for in Findings,
+   an affirmation, a decision this run could not make. One line each, naming where it is
+   recorded. If there is none, say "none".
+
+Nothing comes after this section. Do not use it to summarise the run.

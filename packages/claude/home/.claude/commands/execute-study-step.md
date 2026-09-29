@@ -57,13 +57,13 @@ Implement exactly what section 9 says. Nothing adjacent, nothing anticipatory.
 2. **The definition of done, checked yourself.** Countable criteria are countable —
    count them. Spot-check the negative: grep for what was supposed to be eliminated.
 3. **The drill, at the tier the step declares.**
-   - *Tier 1 — paper:* write the two sentences into Findings. What is lost, what brings
+   - _Tier 1 — paper:_ write the two sentences into Findings. What is lost, what brings
      it back. If the honest answer is "nothing", that is a result worth recording: it
      proves the step introduced no state.
-   - *Tier 2 — delete and recover:* actually destroy the state, restart, and assert the
+   - _Tier 2 — delete and recover:_ actually destroy the state, restart, and assert the
      **countable** claim the step names. A drill that cannot fail has tested nothing —
      if recovery would have passed without the destruction, say so and fix the drill.
-   - *Tier 3 — destroy the enclosure:* rebuild from the declaration and prove what
+   - _Tier 3 — destroy the enclosure:_ rebuild from the declaration and prove what
      should have survived did.
 
    Record how long the drill took. A drill run manually twice must become a script on
@@ -99,3 +99,30 @@ Do not partially land. Do not widen scope. Do not design around the gap. Append 
 `Findings`, leave the tree green, set `[!]`, and report the blocker with the evidence
 that established it — including, when the cause is an underspecified design, exactly
 which sentence of section 9 could not be acted on.
+
+---
+
+### END THE REPLY WITH "NEXT"
+
+The operator should never have to work out which command comes next. The **last section**
+of your final reply is `## Next`, written after the commit (or after the blocker has been
+recorded). It holds exactly:
+
+1. **What the operator does now**, one line, as a command to paste. Read the ledger in
+   `.plans/PLAN.md` again at this moment; do not work it out from memory.
+   - This step is `[x]`: find the first step after it that is not `[x]`. If it is `[>]`,
+     the line is _open a new session in `<repo path>` and run `/execute-study-step MM`_.
+     If it is `[ ]`, the line is _open a new session and run `/study MM`_. That goes for a
+     chore too, because `/study` handles chores. If no step remains, say the ladder is
+     finished and point to `PLAN.md` §"What this is" for what happens next.
+   - This step is `[!]` or `[~]`: state what unblocks it, and which command to run once it
+     is unblocked. If the design was too vague to build from, that is usually `/study NN`
+     again, in a new session. If the blocker is outside the design, it is the same
+     `/execute-study-step NN`.
+   - Say why it has to be a new session: every step starts from its written record, never
+     from this conversation.
+2. **Anything only the operator can do**, from this run's Findings: a ruling, an
+   affirmation, a change to a tree this session must not edit. One line each, with its
+   Finding number. If there is none, say "none".
+
+Nothing comes after this section. Do not use it to summarise the run.
