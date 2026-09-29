@@ -102,6 +102,35 @@ Expect: 4 commits pushed, nothing else changes.
 - If it can fail, say what failure looks like and what to do next.
 - If they must choose, give a recommendation and a default, not a menu.
 
+### Commands for the user to run: structure, not prose
+
+The reader works in several terminals at once, some already inside `ssh`, and pastes into
+whichever has focus. Give them the information laid out for copying, not a story.
+
+- **Group by machine.** One bold header per machine, stating how to be there: `**Mac — same
+shell as the last step**`, `**punk, as admin (ssh punk)**`, `**Mac — local terminal, not
+inside ssh punk**`. Never prompt strings or `❯❯❯` in headers.
+- **Under it, one code block** of commands only: one command per line, no `\` line breaks, no
+  trailing `# comments`. Every line copies and runs as is.
+- **Then `Expect:`**, as a short list: the output line or value per command that matters, and
+  what a failure looks like. No sentences explaining what the command does unless asked.
+- **A new header whenever the machine or shell changes.** If a block must stay in the same shell
+  (a variable, an `ssh-agent`, an open `sftp>` session), the header says so.
+- **A remote session is named by where it is**: "the `sftp>` session on the Storage Box", never
+  "on the box".
+- If a pasted output shows the wrong machine, say so first, in one line, with how to undo what
+  it touched there.
+
+```
+**Mac — same shell as the last step**
+
+    restic -o "$o" snapshots --no-lock
+
+Expect:
+- 3 snapshots, paths /run/offsite/{blobs,kuma-state,raw}
+- `exit status 255`: ssh failed; paste `ssh -v` output
+```
+
 **Probe before you write it.** Any instruction naming something that lives outside your own
 reasoning — a binary, a button, a branch, a remote, a secret, an endpoint, a file on another
 host — gets one cheap check first. `command -v foo`. `git ls-remote origin`. `curl -sI`.
@@ -149,7 +178,8 @@ matters. Caveats sprinkled through the text read as hedging and are easy to miss
 
 - Is the first line the answer?
 - Can they act without re-reading anything?
-- Is every command labelled with its host?
+- Are commands grouped under a bold machine header, one per line, no `\` breaks, no trailing
+  comments, with `Expect:` as a list and no prose around them?
 - Did I probe every remote thing a command names, or am I recalling that it exists?
 - Is any procedure here a summary of one I gave earlier? If so, it is broken — repeat it
   whole or link it.
