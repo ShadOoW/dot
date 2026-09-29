@@ -110,9 +110,11 @@ bindsym {
     # Exit split (return to single window)
     $mod+b split none
 
-    # Switch the current container between different layout styles
-    $mod+s exec ~/.config/sway/scripts/stacked-tabbed.sh
-    $mod+Shift+s layout toggle split
+    # Switch the current container between different layout styles. Both go through the
+    # script so they act on the group the window is in, not on autotiling's one-window
+    # wrapper around it — see the header of layout-toggle.sh.
+    $mod+s exec ~/.config/sway/scripts/layout-toggle.sh tabs
+    $mod+Shift+s exec ~/.config/sway/scripts/layout-toggle.sh split
 
     # Make the current focus fullscreen
     $mod+f fullscreen
