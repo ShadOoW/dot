@@ -1,25 +1,30 @@
 # omp
 
-Two model-role profiles for oh-my-pi, switchable per invocation.
+Model roles for oh-my-pi live in the base config; one overlay optionally hides DeepSeek.
 
-| profile         | command      | roles                                                                                                      |
-| --------------- | ------------ | ---------------------------------------------------------------------------------------------------------- |
-| mixed (default) | `omp`        | Claude for default/slow/plan/designer/vision/tiny/advisor, `deepseek-v4-flash` for task/worker/smol/commit |
-| claude-only     | `omp-claude` | Claude everywhere; the `deepseek` provider is disabled, so no role, picker or retry chain can reach it     |
+| profile     | command      | roles                                                                                                 |
+| ----------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+| base        | `omp`        | Opus for default, Sonnet for task/worker/smol, Haiku for commit — set in `~/.omp/agent/config.yml`    |
+| claude-only | `omp-claude` | the base roles, plus the `deepseek` provider disabled so no picker, cycle or retry chain can reach it |
 
-The mixed profile lives in `~/.omp/agent/config.yml`, which is **not** owned by
-this package: omp rewrites that file itself (`settings.set`, the `/model` role
+The roles live in `~/.omp/agent/config.yml`, which is **not** owned by this
+package: omp rewrites that file itself (`settings.set`, the `/model` role
 picker) and quarantines broken copies as `config.yml.bak-*` siblings. A symlink
 into this repo would turn every in-session model change into a git diff and drop
-backup files in `packages/`. The overlay is the part that is declarative, so the
-overlay is the part that is versioned here.
+backup files in `packages/`. Set roles with the picker or
+`omp config set modelRoles '<json>'`, not by hand-editing a file a live omp may rewrite.
+
+The roles used to exist only in the overlay. `dot session restore` resumes agents as
+bare `omp -r <id>`, which drops `--config`, so a restored session ran every subagent on
+the parent's Opus (~12% of one week's spend, 2026-09-21..25). Anything every launch
+path must see belongs in `config.yml`; the overlay is for opt-in differences only.
 
 ## Why an overlay and not `omp --profile claude`
 
 A named profile relocates the entire OMP user base — `agent.db` (which is the
 auth store), sessions, blobs, `RULES.md`, skills, caches. Switching would mean a
 second Anthropic login, a split session history, and duplicated rules, all for a
-four-line difference in `modelRoles`. Config overlays (`--config`,
+one-key difference (`disabledProviders`). Config overlays (`--config`,
 `PI_CONFIG_FILES`) layer over the global config for one process and share
 everything else.
 
@@ -31,20 +36,20 @@ Precedence, lowest to highest:
 ```sh
 omp-claude                                                  # one run
 export PI_CONFIG_FILES=$HOME/.omp/agent/claude-only.yml     # whole shell
-unset PI_CONFIG_FILES                                       # back to mixed
+unset PI_CONFIG_FILES                                       # back to base
 ```
 
 Not switchable mid-session: overlays are read at process start. `/model` inside
-a claude-only session writes to the global `config.yml` — it edits the _mixed_
-profile, and the overlay keeps masking it.
+a claude-only session writes to the global `config.yml`, which is why the overlay
+must not repeat any key `config.yml` owns — a duplicate would mask the change.
 
 ## Reading effective settings
 
-`omp config get <key>` ignores `--config` (it prints the mixed values whatever
+`omp config get <key>` ignores `--config` (it prints the base values whatever
 you pass). Use the env form to inspect the claude-only layer:
 
 ```sh
-PI_CONFIG_FILES=$HOME/.omp/agent/claude-only.yml omp config get modelRoles
+PI_CONFIG_FILES=$HOME/.omp/agent/claude-only.yml omp config get disabledProviders
 ```
 
 ## Adding a third profile
@@ -147,3 +152,22 @@ cd <project> && omp -p "Call the lsp tool with action=status." --model @smol
 `typescript-native` in that list means the swap is live; `typescript-language-server`
 means it fell back, and the heap-cap shim at `~/.local/bin/typescript-language-server`
 is what bounds it.
+
+## Prompt additions — `APPEND_SYSTEM.md`
+
+`home/.omp/agent/APPEND_SYSTEM.md` is added to the end of the system prompt of every
+session started from the `omp` CLI, under omp's "User Instructions" heading, which
+overrides conflicting built-in guidance. Subagents do not receive it (omp looks for the
+file only in `main.ts`), and they have no `ask` tool anyway (`hasUI: false`). A
+project-level `.omp/APPEND_SYSTEM.md` replaces it rather than stacking.
+
+It currently holds one rule: context for an `ask` goes in the chat message and the
+picker's `question` stays one sentence. omp's `question` field has no length guidance,
+so the model filled it with whole paragraphs, and the picker shows them as unformatted
+text.
+
+Check that it loaded:
+
+```sh
+omp -p --model @smol "Quote the system-prompt section about the ask picker, or say NONE."
+```
