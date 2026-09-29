@@ -4,6 +4,9 @@ set -euo pipefail
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/fuzzel-apps"
 CACHE_FILE="$CACHE_DIR/apps.tsv"
 USAGE_FILE="$CACHE_DIR/usage.tsv"
+# Hand-pinned order, one display name per line, first line ranks highest. Names are
+# the first column of $CACHE_FILE (i.e. what fuzzel shows), matched exactly.
+PRIORITY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/fuzzel-scripts/priority"
 
 # Where .desktop files are, per the XDG basedir spec: $XDG_DATA_HOME/
 # applications first, then one applications/ per entry in $XDG_DATA_DIRS.
@@ -97,21 +100,27 @@ if needs_rebuild; then
   build_cache
 fi
 
-# Generate display list: most-used apps first, then alphabetical
+# Generate display list: pinned apps first in file order, then most-used, then
+# alphabetical. This order IS the ranking fuzzel shows: it runs with --no-sort
+# below, because with sorting on it re-ranks matches by fzf score and the order
+# built here only breaks ties -- typing "chat" put ChatGPT above Google Chat no
+# matter how often Google Chat was launched. Cost: among unpinned, never-used
+# apps a loose fuzzy match can sit above a tight one; usage fixes that on the
+# second launch.
 generate_list() {
-  if [[ ! -f "$USAGE_FILE" ]]; then
-    cut -f1 "$CACHE_FILE"
-    return
-  fi
+  local priority=/dev/null usage=/dev/null
+  [[ -f "$PRIORITY_FILE" ]] && priority="$PRIORITY_FILE"
+  [[ -f "$USAGE_FILE" ]] && usage="$USAGE_FILE"
   awk -F'\t' '
-        NR==FNR { usage[$2]=int($1); next }
-        { print (usage[$1]+0) "\t" $1 }
-    ' "$USAGE_FILE" "$CACHE_FILE" |
-    sort -t$'\t' -k1,1rn -k2,2f |
-    cut -f2
+        FILENAME == ARGV[1] { if ($0 != "" && $0 !~ /^#/) pin[$0] = ++pins; next }
+        FILENAME == ARGV[2] { usage[$2] = int($1); next }
+        { printf "%d\t%d\t%s\n", ($1 in pin ? pin[$1] : 1000000), usage[$1] + 0, $1 }
+    ' "$priority" "$usage" "$CACHE_FILE" |
+    sort -t$'\t' -k1,1n -k2,2rn -k3,3f |
+    cut -f3
 }
 
-selected=$(generate_list | fuzzel --dmenu --no-run-if-empty) || true
+selected=$(generate_list | fuzzel --dmenu --no-sort --no-run-if-empty) || true
 [[ -z "$selected" ]] && exit 0
 
 exec_line=$(awk -F'\t' -v sel="$selected" '$1==sel { print $2; exit }' "$CACHE_FILE")

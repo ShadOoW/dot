@@ -14,10 +14,19 @@ This package provides a unified app launcher that combines:
 
 - `home/.config/fuzzel/fuzzel.ini` - Main configuration with Tokyo Night theme
 - `home/.config/fuzzel-scripts/app-launcher.sh` - Script that merges native apps + PWAs
+- `home/.config/fuzzel-scripts/priority` - Hand-pinned launcher order (see Ranking)
 
 ## Keybinding
 
 - `mod+d` - Open app launcher (handled by sway keybindings)
+
+## Ranking
+
+`app-launcher.sh` runs fuzzel with `--no-sort`, so the order it feeds fuzzel is the order
+matches appear in: names listed in `priority` (top first), then most-launched
+(`~/.cache/fuzzel-apps/usage.tsv`), then alphabetical. Without `--no-sort` fuzzel re-ranks
+by fzf score and typing `chat` put ChatGPT above Google Chat regardless of usage. To pin an
+app, add its display name — first column of `~/.cache/fuzzel-apps/apps.tsv` — to `priority`.
 
 ## PWA Support
 

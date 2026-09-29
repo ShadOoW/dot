@@ -1,0 +1,7 @@
+# Pinned launcher order for app-launcher.sh: one display name per line, exactly as
+# fuzzel shows it (first column of ~/.cache/fuzzel-apps/apps.tsv), top ranks highest.
+# Anything not listed comes after, most-used first. Blank lines and # lines are ignored.
+Google Chat Bruce
+Google Chat Shad
+Gmail Bruce
+Gmail Shad
