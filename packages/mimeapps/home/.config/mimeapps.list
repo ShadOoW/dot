@@ -25,6 +25,7 @@ x-scheme-handler/about=vivaldi-stable.desktop
 x-scheme-handler/unknown=vivaldi-stable.desktop
 x-scheme-handler/insomnia=insomnia.desktop
 x-scheme-handler/antigravity=antigravity.desktop
+inode/directory=org.gnome.Nautilus.desktop
 
 [Added Associations]
 image/jpeg=swayimg.desktop;
