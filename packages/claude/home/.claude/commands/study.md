@@ -77,6 +77,12 @@ reasons. If you would need to be in the room for it to be buildable, it is not f
 That completeness is deliberately also the test of the design — a fresh session that
 cannot build from it has found vagueness the operator approved without noticing.
 
+Two house rules bind section 9 (`.plans/PLAN.md`, house rules digest). A gate waits for a
+timer's own run only when this step adds or changes that timer, its unit or its status
+unit; otherwise it runs on a start by hand, and a timer run that must be seen is handed
+forward to the next session, never waited for. And anything only the operator can do
+that does not depend on the build goes first in the execution order.
+
 ---
 
 ### CONSTRAINTS

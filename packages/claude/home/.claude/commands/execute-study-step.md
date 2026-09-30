@@ -32,8 +32,12 @@ has produced the most valuable finding available at that moment.
 3. **Check section 9 is buildable before you start.** Every path, name, and contract it
    names must exist or be created by this step. Missing pieces are reported, not
    invented.
-4. **Run the gate once, now.** This is your baseline; without it you cannot attribute a
-   later failure to this step.
+4. **Check what the previous step handed forward.** If its `.plans/CHECKPOINTS.md` entry
+   has a **Handed forward** block, run those commands first. A stale unit is a Finding of
+   this run; it blocks nothing this step did not cause.
+5. **Run the gate once, now.** This is your baseline; without it you cannot attribute a
+   later failure to this step. Do anything the design lists for the operator first now,
+   too, before the build, so you are not waiting for it halfway through.
 
 ---
 
@@ -69,6 +73,12 @@ Implement exactly what section 9 says. Nothing adjacent, nothing anticipatory.
    Record how long the drill took. A drill run manually twice must become a script on
    the third occurrence; note when a step crosses that line. An annoying drill is a
    finding about the restore path, not a complaint — write it down as one.
+
+   Never block waiting for a timer. Unless this step adds or changes a timer, its unit or
+   its status unit, run every gate on a start by hand (`systemctl start <unit>.service`).
+   If the step does need the timer's own run, land on the gates that ran and put the
+   check in your CHECKPOINTS entry's **Handed forward** block for the next session (house
+   rules in `.plans/PLAN.md`). Start the VM test and its mutations together.
 
 ---
 
