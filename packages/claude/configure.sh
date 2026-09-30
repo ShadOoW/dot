@@ -32,7 +32,7 @@ else
 fi
 # bruce skills — source of truth is the fleet tree; link, never copy. Guarded so hosts
 # without /data/code/fleet (laptop) simply skip them.
-for skill in bruce bruce-design bruce-plan; do
+for skill in bruce bruce-design bruce-e2e bruce-plan; do
   if [ -d "/data/code/fleet/skills/$skill" ]; then
     mkdir -p "$HOME/.claude/skills"
     rm -rf "$HOME/.claude/skills/$skill"
