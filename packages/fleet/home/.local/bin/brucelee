@@ -2,8 +2,8 @@
 # The launcher for fleet's own CLIs — one file, dispatched by the name it was called as.
 #
 # `brucelee` is not a binary. It is /data/code/fleet/apps/brucelee/cli.ts, a Bun entry point
-# inside the fleet workspace, resolved through that workspace's node_modules. Three facts have
-# to be true before it runs, none of them the same on every host, so none is written down here.
+# inside the fleet workspace, resolved through that workspace's node_modules. Two facts have
+# to be true before it runs, neither the same on every host, so neither is written down here.
 #
 # ## Where the code is
 #
@@ -24,24 +24,14 @@
 #
 # FLEET_ROOT overrides the record, for running a branch of the kit without touching it.
 #
-# ## Which runtime can load it
+# ## Which runtime
 #
-# `brucelee` reaches @kit/lake, which imports @duckdb/node-api at module top level
-# (packages/lake/src/duck.ts:8), whose prebuilt .node dlopen's libstdc++.so.6. On NixOS that
-# library is in no default search path and the import fails outright:
-#
-#     error: libstdc++.so.6: cannot open shared object file    → exit 1
-#       at node_modules/@duckdb/node-bindings/duckdb.js:22
-#
-# nix-ld does not cover it — it interposes on the *exec* of a foreign dynamic binary, and
-# nothing foreign is exec'd here: the process is `bun`, a store binary, and the failure is a
-# dlopen inside it, which reads LD_LIBRARY_PATH and never NIX_LD_LIBRARY_PATH. So that host
-# provides `bun-native`, which is `bun` with exactly that one library path prefixed
-# (ragnarok hosts/desktop/default.nix, migration.md §4.9 bucket 4).
-#
-# It is resolved rather than assumed, because this repo also dresses macOS, where there is no
-# such wrapper and plain `bun` is already correct. That is the same choice §4.8's table
-# records for ~/.local/bin/sway: the wrapper resolves instead of asserting.
+# Plain `bun`. None of the three commands loads a native module: brucelee stopped importing
+# @kit/lake, and with it DuckDB's binding, when it moved onto the lake's published tables
+# (ops-next step 12h, 2026-09-30). Until then this ran the desk's `bun-native`, `bun` with
+# libstdc++'s directory prefixed to LD_LIBRARY_PATH, which every child process inherited. If a
+# command imports a native binding again, `error: libstdc++.so.6: cannot open shared object
+# file` is the sign, and `bun-native` (ragnarok hosts/desktop/default.nix) is the runtime.
 #
 # ## Why one file and not one per command
 #
@@ -108,10 +98,4 @@ if [ ! -d "$root/node_modules/effect" ]; then
   exit 2
 fi
 
-if command -v bun-native >/dev/null 2>&1; then
-  runtime=bun-native
-else
-  runtime=bun
-fi
-
-exec "$runtime" "$root/$entry" "$@"
+exec bun "$root/$entry" "$@"
