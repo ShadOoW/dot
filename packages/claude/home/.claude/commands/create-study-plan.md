@@ -33,7 +33,7 @@ result with the files closed.**
 4. **Naming happens in the spec, before the code.** Naming is planning. A word chosen
    during implementation is a word nobody reviewed.
 5. **The step files are thin at plan time.** You write the syllabus entry — what this
-   step teaches and how it will be judged. The *design* is produced later by `/study`,
+   step teaches and how it will be judged. The _design_ is produced later by `/study`,
    with the operator in the room. Do not design the steps here; you will be guessing at
    decisions that are the point of the exercise.
 
@@ -94,14 +94,14 @@ A drill performed manually twice becomes a script the third time, or it stops ha
 2. **`.plans/PLAN.md`** must contain, in order:
    - **What this is** — the system being learned and why, under 200 words.
    - **The contract** — the division of labour, stated once: the agent drafts and
-     implements; the operator owns the *why*, answers the five questions before code,
+     implements; the operator owns the _why_, answers the five questions before code,
      and must be able to explain each landed step with the files closed.
    - **House rules digest** — repo conventions every session must obey: the gate
      command, the commit policy, and any skill or context file that must be loaded.
    - **The ladder** — a table: step number, name, the one primitive it teaches, what it
      composes into, drill tier, and whether it is a step or a chore.
    - **Status ledger** — `[ ] pending` / `[~] in design` / `[>] designed, awaiting
-     build` / `[x] done` / `[!] blocked`. **The only place status lives.** Step files
+build` / `[x] done` / `[!] blocked`. **The only place status lives.** Step files
      carry no status field.
    - **Concept inventory** — the primitives established so far, appended as steps land.
      This is what lets a later step say "assumes 04, 07" instead of re-teaching.

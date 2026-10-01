@@ -572,8 +572,8 @@ NVIDIA _open_ modules only — no `P`, `M`, `D`, `W` or `L`. No kernel WARN/BUG/
 
 **CPU vulnerabilities** · **No `Vulnerable` line in any of the 19 files.** 14 `Not
 affected`; 5 mitigated: `reg_file_data_sampling`, `spec_store_bypass`, `spectre_v1`,
-`spectre_v2` (Enhanced IBRS + BHI_DIS_S), `vmscape`. All `CONFIG_MITIGATION_*` enabled,
-KASLR and `STRICT_KERNEL_RWX` on, no `mitigations=off`.
+`spectre_v2` (Enhanced IBRS + BHI*DIS_S), `vmscape`. All `CONFIG_MITIGATION*\*`enabled,
+KASLR and`STRICT_KERNEL_RWX`on, no`mitigations=off`.
 
 **GPU** · Driver 595.84 / CUDA 13.2; `nvidia`, `nvidia-dkms`, `nvidia-libs`,
 `nvidia-firmware` all at 595.84 — no skew. No nouveau conflict. Hybrid split correct:
