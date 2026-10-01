@@ -26,7 +26,7 @@
 #
 # ## Which runtime
 #
-# Plain `bun`. None of the three commands loads a native module: brucelee stopped importing
+# Plain `bun`. None of the four commands loads a native module: brucelee stopped importing
 # @kit/lake, and with it DuckDB's binding, when it moved onto the lake's published tables
 # (ops-next step 12h, 2026-09-30). Until then this ran the desk's `bun-native`, `bun` with
 # libstdc++'s directory prefixed to LD_LIBRARY_PATH, which every child process inherited. If a
@@ -49,6 +49,7 @@ case ${0##*/} in
   brucelee) entry=apps/brucelee/cli.ts ;;
   brucelee-tui) entry=apps/brucelee/tui.ts ;;
   nosy) entry=apps/nosy/nosy.ts ;;
+  entities) entry=apps/entities/cli-over-http.ts ;;
   *)
     echo "fleet: no entry point is registered for '${0##*/}'." >&2
     echo "       this launcher dispatches on the name it is called as; see the case" >&2
