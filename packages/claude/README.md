@@ -5,15 +5,15 @@ Manages Claude Code's user-level config and the slash-command library that is
 
 ## What this package manages
 
-| Path                                                           | Form                          | Why                                                                                     |
-| -------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
-| `~/.claude/commands/*.md`                                      | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them |
-| `~/.omp/agent/commands`                                        | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here    |
-| `~/.local/bin/claude-turn-*`                                   | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                    |
-| `~/.claude/skills/{bruce,bruce-design,bruce-e2e,bruce-plan}`   | symlinks (via `configure.sh`) | Point straight at `/data/code/fleet/skills/<name>`; no copy, no drift possible          |
-| `~/.claude/{CLAUDE.md,SHARED.md,COMMUNICATION.md,DOTFILES.md}` | per-file symlinks             | Machine-wide instructions. `SHARED.md` is the part both harnesses read                  |
-| `~/.omp/agent/AGENTS.md`                                       | per-file symlink              | omp's user context file: one line, `@~/.claude/SHARED.md`                               |
-| `~/.omp/agent/skills`                                          | symlink (via `configure.sh`)  | Points at `~/.claude/skills`, so omp offers the same skills as Claude Code              |
+| Path                                                                  | Form                          | Why                                                                                     |
+| --------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
+| `~/.claude/commands/*.md`                                             | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them |
+| `~/.omp/agent/commands`                                               | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here    |
+| `~/.local/bin/claude-turn-*`                                          | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                    |
+| `~/.claude/skills/{bruce,bruce-design,bruce-e2e,bruce-plan,entities}` | symlinks (via `configure.sh`) | Point straight at `/data/code/fleet/skills/<name>`; no copy, no drift possible          |
+| `~/.claude/{CLAUDE.md,SHARED.md,COMMUNICATION.md,DOTFILES.md}`        | per-file symlinks             | Machine-wide instructions. `SHARED.md` is the part both harnesses read                  |
+| `~/.omp/agent/AGENTS.md`                                              | per-file symlink              | omp's user context file: one line, `@~/.claude/SHARED.md`                               |
+| `~/.omp/agent/skills`                                                 | symlink (via `configure.sh`)  | Points at `~/.claude/skills`, so omp offers the same skills as Claude Code              |
 
 ## Skills payload
 
@@ -24,11 +24,11 @@ and `effect` is read at the vendored ref rather than mirrored here. Keeping a co
 hand-syncing it forever — the `effect` copy had already drifted 8 files out of sync with
 its authority before this package stopped carrying it.
 
-The bruce skills are not copies either: `configure.sh` loops over `bruce`, `bruce-design` and
-`bruce-plan`
-and creates `~/.claude/skills/<name>` as a symlink straight to
-`/data/code/fleet/skills/<name>`, so there is nothing here to regenerate or drift. A new
-fleet-owned skill is one more name in that loop.
+The fleet-owned skills are not copies either: `configure.sh` loops over `bruce`,
+`bruce-design`, `bruce-e2e`, `bruce-plan` and `entities` and creates
+`~/.claude/skills/<name>` as a symlink straight to `/data/code/fleet/skills/<name>`, so
+there is nothing here to regenerate or drift. A new fleet-owned skill is one more name in
+that loop.
 
 ## One set of instructions for both harnesses
 

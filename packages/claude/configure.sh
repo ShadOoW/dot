@@ -30,9 +30,9 @@ else
   echo "  To re-seed from scratch (loses live runtime prefs):"
   echo "      cp \"$SEED\" \"$DEST\""
 fi
-# bruce skills — source of truth is the fleet tree; link, never copy. Guarded so hosts
-# without /data/code/fleet (laptop) simply skip them.
-for skill in bruce bruce-design bruce-e2e bruce-plan; do
+# Fleet-owned skills (bruce's four, entities) — source of truth is the fleet tree; link,
+# never copy. Guarded so hosts without /data/code/fleet (laptop) simply skip them.
+for skill in bruce bruce-design bruce-e2e bruce-plan entities; do
   if [ -d "/data/code/fleet/skills/$skill" ]; then
     mkdir -p "$HOME/.claude/skills"
     rm -rf "$HOME/.claude/skills/$skill"
