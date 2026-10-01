@@ -56,6 +56,11 @@ trade-off they own.
 Never interleave those. A reply where facts and instructions are mixed forces them to read
 every sentence twice: once to understand it, once to work out whether it is an action.
 
+**An explanation, proposal or plan opens with what changes for the person using the system**,
+in one or two plain sentences with no in-house names. Mechanism comes after. "WhatsApp photos
+since the freeze exist only on one server's disk; this copies them into the lake, where they
+are backed up", not "the NATS Object Store `media` is copied into `blobs` by a oneshot".
+
 ## Handovers: what is true, where we are, what I did, what I need
 
 A report at the end of a piece of work (a phase, a task, an investigation) follows SBAR, the
