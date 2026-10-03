@@ -30,16 +30,46 @@ else
   echo "  To re-seed from scratch (loses live runtime prefs):"
   echo "      cp \"$SEED\" \"$DEST\""
 fi
-# Fleet-owned skills (bruce's four, entities) — source of truth is the fleet tree; link,
-# never copy. Guarded so hosts without /data/code/fleet (laptop) simply skip them.
-for skill in bruce bruce-design bruce-e2e bruce-plan entities; do
-  if [ -d "/data/code/fleet/skills/$skill" ]; then
-    mkdir -p "$HOME/.claude/skills"
-    rm -rf "$HOME/.claude/skills/$skill"
-    ln -sfn "/data/code/fleet/skills/$skill" "$HOME/.claude/skills/$skill"
-    echo "✓ linked $skill skill -> /data/code/fleet/skills/$skill"
-  fi
-done
+# Fleet's skills are source code in the fleet tree, one folder each under <fleet>/skills/.
+# A skill fleet links from its own committed .claude/skills/ is fleet-only and loads only
+# there; every other one is linked here, so it loads in every project. There is no list:
+# adding a skill, or making one fleet-only, is a fleet commit. The checkout is the per-host
+# record packages/dot/bootstrap.sh writes, the same one the fleet launchers read; a host
+# without it skips this block.
+record="${XDG_STATE_HOME:-$HOME/.local/state}/dot/fleet-root"
+fleet=""
+[ -f "$record" ] && fleet=$(cat "$record")
+if [ -n "$fleet" ] && [ -d "$fleet/skills" ]; then
+  mkdir -p "$HOME/.claude/skills"
+  # A link into fleet whose skill was deleted or became fleet-only is removed, so a skill
+  # never keeps loading everywhere after fleet stopped offering it.
+  for link in "$HOME/.claude/skills"/*; do
+    [ -L "$link" ] || continue
+    name=${link##*/}
+    case $(readlink "$link") in
+      "$fleet/skills/"*)
+        if [ ! -f "$fleet/skills/$name/SKILL.md" ] || [ -L "$fleet/.claude/skills/$name" ]; then
+          rm "$link"
+          echo "✓ unlinked $name skill — gone from fleet, or fleet-only"
+        fi
+        ;;
+    esac
+  done
+  for src in "$fleet/skills"/*/; do
+    name=$(basename "$src")
+    [ -f "$src/SKILL.md" ] || continue
+    [ -L "$fleet/.claude/skills/$name" ] && continue
+    dest="$HOME/.claude/skills/$name"
+    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+      echo "! $dest is a real directory; fleet's $name skill is not linked over it"
+      continue
+    fi
+    ln -sfn "$fleet/skills/$name" "$dest"
+    echo "✓ linked $name skill -> $fleet/skills/$name"
+  done
+else
+  echo "• no fleet checkout recorded at $record — fleet's skills are not linked"
+fi
 # omp reads skills from ~/.omp/agent/skills and ignores ~/.claude/skills unless its
 # `enabledProviders` lists `claude`, which would also pull in Claude's hooks, plugins and MCP.
 # Link the whole directory so omp offers exactly the skills Claude Code does. It must be

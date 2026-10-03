@@ -13,10 +13,20 @@ RULES="$HOME/.claude/WEB-VERIFY.md"
   exit 1
 }
 
-# 1. vendor skill — installs into <cwd>/.claude/skills, so run it from $HOME
+# 1. vendor skill — playwright-cli writes it into <cwd>/.claude/skills, so it is generated in
+#    a cache directory this package owns and ~/.claude/skills gets a link to the result. A
+#    skill under ~/.claude/skills is always a link to a source kept somewhere else, never a
+#    folder of its own. Re-running regenerates it; a cleared cache leaves a dangling link
+#    until the next run.
+VENDOR="${XDG_CACHE_HOME:-$HOME/.cache}/agent-web"
+SKILL_LINK="$HOME/.claude/skills/playwright-cli"
 if command -v playwright-cli >/dev/null 2>&1; then
-  (cd "$HOME" && playwright-cli install --skills >/dev/null)
-  echo "vendor skill: $HOME/.claude/skills/playwright-cli"
+  mkdir -p "$VENDOR" "$HOME/.claude/skills"
+  (cd "$VENDOR" && playwright-cli install --skills >/dev/null)
+  # The real folder earlier runs wrote straight into ~/.claude/skills is generated; replace it.
+  [ -L "$SKILL_LINK" ] || rm -rf "$SKILL_LINK"
+  ln -sfn "$VENDOR/.claude/skills/playwright-cli" "$SKILL_LINK"
+  echo "vendor skill: $SKILL_LINK -> $VENDOR/.claude/skills/playwright-cli"
 else
   echo "WARNING: playwright-cli not installed (bun install -g @playwright/cli@latest)" >&2
 fi
