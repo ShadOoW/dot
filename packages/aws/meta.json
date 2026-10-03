@@ -1,0 +1,11 @@
+{
+  "description": "AWS CLI profiles: Bruce's account through IAM Identity Center, for brucelee and the sms",
+  "packages": {
+    "arch": { "pacman": ["aws-cli-v2"] },
+    "void": { "xbps": [] },
+    "macos": { "brew": ["awscli"] }
+  },
+  "tags": ["dev"],
+  "cleanSteps": [],
+  "os": ["linux", "macos"]
+}
