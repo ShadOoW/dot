@@ -28,7 +28,7 @@
 #
 # Plain `bun`. None of the four commands loads a native module: brucelee stopped importing
 # @kit/lake, and with it DuckDB's binding, when it moved onto the lake's published tables
-# (ops-next step 12h, 2026-09-30). Until then this ran the desk's `bun-native`, `bun` with
+# (punk-records step 12h, 2026-09-30). Until then this ran the desk's `bun-native`, `bun` with
 # libstdc++'s directory prefixed to LD_LIBRARY_PATH, which every child process inherited. If a
 # command imports a native binding again, `error: libstdc++.so.6: cannot open shared object
 # file` is the sign, and `bun-native` (ragnarok hosts/desktop/default.nix) is the runtime.

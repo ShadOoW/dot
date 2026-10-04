@@ -4,9 +4,10 @@ description: |
   How the house's machines are declared and why. /data/config/punk-records is one NixOS flake
   holding every machine (punk, the desktop guest, kuma, hawk, rescue, installer): one folder per
   machine, a shared module only where two machines share a declaration, imports listed by hand,
-  each program beside the module that runs it. /data/ops-next holds the study ladder, the decision
-  records and the vocabulary that explain it, until ladder step 19a merges the two.
-  Use for anything under /data/config/punk-records or /data/ops-next: before adding, moving or
+  each program beside the module that runs it. The same repository holds the study ladder
+  (`.plans/`), the decision records (`decisions/`), the vocabulary (`VOCABULARY.md`) and `./check`
+  that explain it.
+  Use for anything under /data/config/punk-records: before adding, moving or
   changing a machine, module, service, check, secret, test or plan step, and before proposing a
   restructure (organise by feature, adopt Clan, a folder per service, split or join repositories,
   a Kubernetes cluster).
@@ -20,17 +21,14 @@ unit of attention). The layout below follows from that question; each rule says 
 tell a rule from an accident. Do not restructure on taste: a change to any rule here is a ladder
 rung with a decision record, and this skill changes in the same change.
 
-## Two trees today, one after step 19a
+## One repository
 
-| Tree | Holds | Remote |
-|---|---|---|
-| `/data/config/punk-records` | the flake, every machine, tests, operator tools (`bin/`), secrets, runbooks (`RECOVERY.md`, `ZFS.md`, `migration.md`) | `github.com/shadhq/ragnarok` |
-| `/data/ops-next` | the ladder (`.plans/PLAN.md`, one `study-NN-name.md` per step), `decisions/` (one rule per file; read `decisions/AGENTS.md`), `VOCABULARY.md`, `./check` | none: its history exists only on the desk |
-
-Until 19a lands, a step lands as two commits: the code in punk-records first, then the step file
-and ledger in ops-next, citing the punk-records commit by hash. 19a moves ops-next's history into
-punk-records at the same paths (`decisions/`, `.plans/`, `VOCABULARY.md`, `check`), so after it a
-step is one commit and every citation resolves in one tree.
+`/data/config/punk-records` (remote `github.com/shadhq/ragnarok`) holds the flake and every machine,
+and the ladder that explains them: `.plans/PLAN.md` and one `study-NN-name.md` per step, `decisions/`
+(one rule per file; read `decisions/AGENTS.md`), `VOCABULARY.md` and `./check`. They were a second
+repository, ops-next, until step 19a merged its history in at the same paths (2026-10-04). A step is
+one commit, and a citation between the code and its step resolves in one tree. `ops-next` appears
+only in history: records and old commit messages.
 
 ## Layout
 
@@ -42,6 +40,10 @@ tests/             VM tests and fixtures, used by checks
 bin/               operator tools run against a live machine (bin/hawk, bin/kuma, bin/desktop, …)
 secrets/<machine>/ one sops file per secret; secrets/default.nix lists them without a key
 installers/        the installer ISO
+.plans/            the ladder: PLAN.md, one study-NN-name.md per step, CHECKPOINTS.md, DEFERRED.md
+decisions/         one rule per file (decisions/AGENTS.md)
+VOCABULARY.md      every name chosen, and the check that chose it
+check              ./check: the vocabulary and retirement checks
 ```
 
 The machines: **punk** is the physical host (ZFS, Incus) and runs no service of its own beyond
@@ -113,7 +115,7 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   hatches (headscale, the WireGuard hub, backups) stay plain systemd units. A CronJob cannot run
   one job after another; the lake pipeline relies on systemd's `After=`.
 - **Separate repositories for docs, plans or config.** Two repositories turned every step into
-  two commits joined by a hand-copied hash and left citations uncheckable; step 19a undoes that.
+  two commits joined by a hand-copied hash and left citations uncheckable; step 19a undid that.
 
 ## How a change is made
 
@@ -123,25 +125,26 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   `.plans/DEFERRED.md`, each row with its trigger. Read PLAN.md's house rules before building.
 - **Names.** Every new name is checked against `VOCABULARY.md`: a standard word in its standard
   sense, never a word already taken (`decisions/0035`). `base`, for example, is taken.
-- **Gates.** `nix flake check` in punk-records on the desk before every commit that changes the
-  flake; `./check` in ops-next before a build, before its commit, and again after the commit. Every gate ships with
+- **Gates.** Both at the root, on the desk: `nix flake check` before every commit
+  (`checks.secret-set` runs gitleaks over every tracked file, `.plans/` included); `./check` before
+  a build, before its commit, and again after the commit. Every gate ships with
   a fixture proving it can fail (`decisions/0008`). A refactor is proven by unchanged store paths
   (step 15 did this for `hello`).
 - **Deploys** go from the desk: `bin/hawk deploy`, `bin/kuma deploy`, `bin/desktop deploy`;
   punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
-- **Commits.** punk-records: `<machine or area>: <what is now true> — ops-next step NN (name)`.
-  ops-next: `step NN: name — <what is now true>`, `plan: …` for planning. Read the `commit` skill.
+- **Commits.** A step is one commit: `step NN: name — <what is now true>`; outside the ladder
+  `<machine or area>: <what is now true>`; planning `plan: …`. In prose a step is `step NN` here
+  and `punk-records step NN` in another repository. Read the `commit` skill.
 - **Citations** name a heading or a symbol, never a line number, and resolve in the tree they are
   written in (`decisions/0024`; step 19b adds the check).
 
-## Planned changes to this layout (rungs 19a–19h)
+## Planned changes to this layout (rungs 19b–19h)
 
 Do not anticipate them in unrelated work, and do not contradict them. When one lands, update
 this skill in the same change.
 
 | Rung | Changes |
 |---|---|
-| 19a monorepo | ops-next's history and files into punk-records at the same paths; `/data/ops-next` deleted |
 | 19b citations | a check that every cited repository path exists |
 | 19c repo-layout | these rules as decision records; homes for shared facts and for `hosts/guest/`, `hosts/brucework-jira.nix` moved; README's file list replaced; this skill then cites the records |
 | 19d shared-module | `modules/offsite.nix` for punk and hawk |
@@ -160,4 +163,4 @@ this skill in the same change.
 - Nygard, decision records in the project repository:
   https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions
 - nixidy, Kubernetes manifests from Nix: https://github.com/arnarg/nixidy
-- The full comparison: ops-next `.plans/study-19c-repo-layout.md`, Findings.
+- The full comparison: `.plans/study-19c-repo-layout.md`, Findings.
