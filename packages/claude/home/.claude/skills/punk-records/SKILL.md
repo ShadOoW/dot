@@ -43,7 +43,7 @@ installers/        the installer ISO
 .plans/            the ladder: PLAN.md, one study-NN-name.md per step, CHECKPOINTS.md, DEFERRED.md
 decisions/         one rule per file (decisions/AGENTS.md)
 VOCABULARY.md      every name chosen, and the check that chose it
-check              ./check: the vocabulary and retirement checks
+check              ./check: the citations, retirement and vocabulary checks
 ```
 
 The machines: **punk** is the physical host (ZFS, Incus) and runs no service of its own beyond
@@ -135,17 +135,18 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
 - **Commits.** A step is one commit: `step NN: name — <what is now true>`; outside the ladder
   `<machine or area>: <what is now true>`; planning `plan: …`. In prose a step is `step NN` here
   and `punk-records step NN` in another repository. Read the `commit` skill.
-- **Citations** name a heading or a symbol, never a line number, and resolve in the tree they are
-  written in (`decisions/0024`; step 19b adds the check).
+- **Citations** name a heading or a symbol, never a line number, and resolve in the tree they are written in
+  (`decisions/0024`). `./check` is red on a path into this tree that does not resolve, outside the step files
+  and `.plans/CHECKPOINTS.md`: a move or delete fixes every citation in the same commit, a gone file is named
+  without its path, another repository's path is written absolute.
 
-## Planned changes to this layout (rungs 19b–19h)
+## Planned changes to this layout (rungs 19c–19h)
 
 Do not anticipate them in unrelated work, and do not contradict them. When one lands, update
 this skill in the same change.
 
 | Rung | Changes |
 |---|---|
-| 19b citations | a check that every cited repository path exists |
 | 19c repo-layout | these rules as decision records; homes for shared facts and for `hosts/guest/`, `hosts/brucework-jira.nix` moved; README's file list replaced; this skill then cites the records |
 | 19d shared-module | `modules/offsite.nix` for punk and hawk |
 | 19e addresses | one file for every machine's addresses |
