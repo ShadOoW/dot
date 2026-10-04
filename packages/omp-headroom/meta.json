@@ -1,0 +1,11 @@
+{
+  "description": "points omp's Anthropic provider at the desk's headroom proxy (user unit headroom-proxy, declared in punk-records) — desk only, because no other host runs that proxy and omp fails every request without it",
+  "packages": {
+    "arch": { "pacman": [] },
+    "void": { "xbps": [] },
+    "macos": { "brew": [] }
+  },
+  "tags": ["ai", "agent"],
+  "os": ["linux"],
+  "hosts": ["desktop"]
+}
