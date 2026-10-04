@@ -8,7 +8,8 @@ description: |
   Use whenever you are about to commit, are asked to commit, are writing or rewriting a
   commit message, are deciding how to split finished work into commits, or are unsure
   whether a repo wants `feat(x):` or `x: …`. Read it before the first `git commit` of a
-  session, not after.
+  session, not after. In the Bruce work repositories nothing is committed unless the user
+  asks; that rule is theirs alone, not this machine's.
 ---
 
 # Writing a commit here
@@ -16,6 +17,13 @@ description: |
 There is no single machine-wide format. **Derive the subject convention from the repo you
 are committing to**, using the measurements below, and never carry one repo's convention
 into another.
+
+**Bruce work repositories (`/data/code/work/bruce`) are the exception.** The user reviews the
+change in staging and commits it; you commit there only when they ask, in this conversation,
+for that commit. Then it is one commit per ticket per repository, its message from
+`brucelee`, folded with `git reset --soft`: the `bruce` skill's *Commits* section is the
+procedure. This skill's §1 and §6 still apply there; §2–§4 do not. Everywhere else this
+machine has no such rule: commit finished work by the repo's own convention.
 
 ## 1. Non-negotiable, every repo
 
@@ -131,6 +139,7 @@ Plus one line for anything deliberately left uncommitted, and whose it is.
 
 ## 6. Stop instead of committing when
 
+- the repo is a Bruce work repository and nobody asked for this commit in this conversation;
 - the tree is clean;
 - the work is half-done, stubbed, or has a `TODO` you introduced;
 - a gate is failing;
