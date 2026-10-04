@@ -3,7 +3,7 @@
 #
 #   show|hide|toggle  optional leading verb; defaults to toggle, so the four existing
 #                     $sp_* bindings keep working unchanged
-#   mark_name         sway mark to toggle (terminal, music, explorer, btw, scribe)
+#   mark_name         sway mark to toggle (terminal, music, explorer, btw)
 #   selector_type     app_id | class | instance
 #   selector_value    value of that selector (e.g. terminal-mark)
 #   command           how to launch the app if no window exists yet
@@ -11,9 +11,8 @@
 # toggle: hides the window when it is visible; shows it and re-applies geometry when it
 #         is hidden; launches it when it does not exist at all.
 # show:   summons a hidden window (launching it when absent); a visible window is a no-op.
-# hide:   stashes a visible window; nothing to hide is a successful no-op. show/hide exist
-#         for the wake service, which must be able to open and close the scribe surface
-#         without knowing whether it has ever been opened before.
+# hide:   stashes a visible window; nothing to hide is a successful no-op. show/hide let a
+#         caller open or close a surface without knowing whether it has ever been opened.
 #
 # Three failure modes this script exists to avoid. All three were live bugs on Void, and all
 # three were invisible because every one of them fails as a *silent no-op*:
@@ -112,10 +111,6 @@ apply_geometry() {
       ;;
     btw)
       swaymsg "[con_mark=\"$MARK_NAME\"] resize set width 60ppt height 45ppt, move position center"
-      ;;
-    scribe)
-      # Dictation buffer — tall enough for a couple of paragraphs without scrolling.
-      swaymsg "[con_mark=\"$MARK_NAME\"] resize set width 70ppt height 60ppt, move position center"
       ;;
   esac
 }
