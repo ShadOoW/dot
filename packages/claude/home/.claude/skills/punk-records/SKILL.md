@@ -44,6 +44,7 @@ installers/        the installer ISO
 decisions/         one rule per file (decisions/AGENTS.md)
 VOCABULARY.md      every name chosen, and the check that chose it
 check              ./check: the citations, retirement and vocabulary checks
+flake-check        ./flake-check: the Nix gate, what `nix flake check` checks, evaluated in parallel
 ```
 
 The machines: **punk** is the physical host (ZFS, Incus) and runs no service of its own beyond
@@ -125,11 +126,13 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   `.plans/DEFERRED.md`, each row with its trigger. Read PLAN.md's house rules before building.
 - **Names.** Every new name is checked against `VOCABULARY.md`: a standard word in its standard
   sense, never a word already taken (`decisions/0035`). `base`, for example, is taken.
-- **Gates.** Both at the root, on the desk: `nix flake check` before every commit
-  (`checks.secret-set` runs gitleaks over every tracked file, `.plans/` included); `./check` before
-  a build, before its commit, and again after the commit. Every gate ships with
-  a fixture proving it can fail (`decisions/0008`). A refactor is proven by unchanged store paths
-  (step 15 did this for `hello`).
+- **Gates.** Both at the root, on the desk: `./flake-check` before every commit: what
+  `nix flake check` checks, evaluated on every core (about 40 s against 75 s), printing each
+  machine's `drvPath` as `machine <name> <drvPath>`; a change of markdown documents only builds
+  `checks.secret-set` alone (gitleaks over every tracked file, `.plans/` included). `./check`
+  before a build, before its commit, and again after the commit. Every gate ships with a fixture
+  proving it can fail (`decisions/0008`). A refactor is proven by unchanged store paths (step 15
+  did this for `hello`): diff two runs' `machine` lines.
 - **Deploys** go from the desk: `bin/hawk deploy`, `bin/kuma deploy`, `bin/desktop deploy`;
   punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
 - **Commits.** A step is one commit: `step NN: name — <what is now true>`; outside the ladder
