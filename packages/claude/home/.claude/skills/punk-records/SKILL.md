@@ -10,7 +10,9 @@ description: |
   Use for anything under /data/config/punk-records: before adding, moving or
   changing a machine, module, service, check, secret, test or plan step, and before proposing a
   restructure (organise by feature, adopt Clan, a folder per service, split or join repositories,
-  a Kubernetes cluster).
+  a Kubernetes cluster); and whenever work needs fresh lake data — new rows in raw, bronze, silver
+  or the published Parquet files — before waiting for kuma's hourly jobs (bronze-load,
+  silver-build, jira-ingest…).
 ---
 
 # punk-records
@@ -127,6 +129,14 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   did this for `hello`): diff two runs' `machine` lines.
 - **Deploys** go from the desk: `bin/hawk deploy`, `bin/kuma deploy`, `bin/desktop deploy`;
   punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
+- **Run a lake job; never wait for its timer.** Work that needs a fresh run of a kuma job
+  (bronze-load, silver-build, jira-ingest, …) runs it now, from the desk:
+  `ssh admin@punk 'cd /data/config/punk-records && bin/kuma run bronze-load silver-build'`,
+  jobs in pipeline order. An early run does what the scheduled one would, costs seconds, and
+  is not an intervention to log; re-running a *failed* job is (`decisions/0033`). `run` itself
+  waits while another job runs or a timer is due within a minute, because the timers are
+  spread so no two jobs share kuma's memory; if it gives up after 10 minutes it names the job in
+  the way and when to try again. Never `ssh root@kuma … systemctl start`: it skips that check.
 - **Commits.** A step is one commit: `step NN: name — <what is now true>`; outside the ladder
   `<machine or area>: <what is now true>`; planning `plan: …`. In prose a step is `step NN` here
   and `punk-records step NN` in another repository. Read the `commit` skill.
