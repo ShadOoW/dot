@@ -132,7 +132,7 @@ inside ssh punk**`. Never prompt strings or `❯❯❯` in headers.
     restic -o "$o" snapshots --no-lock
 
 Expect:
-- 3 snapshots, paths /run/offsite/{blobs,kuma-state,raw}
+- 3 snapshots, paths /run/offsite/{blobs,raw,snake-state}
 - `exit status 255`: ssh failed; paste `ssh -v` output
 ```
 

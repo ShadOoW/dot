@@ -2,7 +2,7 @@
 name: punk-records
 description: |
   How the house's machines are declared and why. /data/config/punk-records is one NixOS flake
-  holding every machine (punk, the desktop guest, kuma, hawk, rescue, installer): one folder per
+  holding every machine (punk, the desktop guest, snake, hawk, rescue, installer): one folder per
   machine, a shared module only where two machines share a declaration, imports listed by hand,
   each program beside the module that runs it. The same repository holds the study ladder
   (`.plans/`), the decision records (`decisions/`), the vocabulary (`VOCABULARY.md`) and `./check`
@@ -11,7 +11,7 @@ description: |
   changing a machine, module, service, check, secret, test or plan step, and before proposing a
   restructure (organise by feature, adopt Clan, a folder per service, split or join repositories,
   a Kubernetes cluster); and whenever work needs fresh lake data — new rows in raw, bronze, silver
-  or the published Parquet files — before waiting for kuma's hourly jobs (bronze-load,
+  or the published Parquet files — before waiting for snake's hourly jobs (bronze-load,
   silver-build, jira-ingest…).
 ---
 
@@ -36,11 +36,11 @@ only in history: records and old commit messages.
 
 ```
 flake.nix          inputs; one module list per machine; packages; checks (19h moves checks out)
-hosts/<machine>/   one folder per nixosConfiguration and nothing else: punk, desktop, kuma, hawk, rescue, installer
+hosts/<machine>/   one folder per nixosConfiguration and nothing else: punk, desktop, snake, hawk, rescue, installer
 modules/           a declaration two or more machines import
 constants/         a value two or more machines read, or one reads about another: one file per value
 tests/             VM tests and fixtures, used by checks
-bin/               operator tools run against a live machine (bin/hawk, bin/kuma, bin/desktop, …)
+bin/               operator tools run against a live machine (bin/hawk, bin/snake, bin/desktop, …)
 secrets/<machine>/ one sops file per secret; secrets/default.nix lists them without a key
 .plans/            the ladder: PLAN.md, one study-NN-name.md per step, CHECKPOINTS.md, DEFERRED.md
 decisions/         one rule per file (decisions/AGENTS.md)
@@ -52,7 +52,7 @@ flake-check        ./flake-check: the Nix gate, what `nix flake check` checks, e
 The machines: **punk** is the physical host (ZFS, Incus) and runs no service of its own beyond
 what `decisions/0037` allows (reach, data, guests, shares; its closed list is
 `hosts/punk/host-list.nix`). **desktop** is the operator's workstation, a privileged Incus
-container on punk; no service may depend on it. **kuma** is an Incus VM on punk running the
+container on punk; no service may depend on it. **snake** is an Incus VM on punk running the
 house's services and the lake pipeline. **hawk** is the rented Hetzner server (barzakh's machine
 until step 17 reinstalled it as hawk) and runs the public services directly. **rescue** and
 **installer** are escape hatches. Global invariant 1: no service runs on the punk host or on the desk.
@@ -127,16 +127,16 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   before a build, before its commit, and again after the commit. Every gate ships with a fixture
   proving it can fail (`decisions/0008`). A refactor is proven by unchanged store paths (step 15
   did this for `hello`): diff two runs' `machine` lines.
-- **Deploys** go from the desk: `bin/hawk deploy`, `bin/kuma deploy`, `bin/desktop deploy`;
+- **Deploys** go from the desk: `bin/hawk deploy`, `bin/snake deploy`, `bin/desktop deploy`;
   punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
-- **Run a lake job; never wait for its timer.** Work that needs a fresh run of a kuma job
+- **Run a lake job; never wait for its timer.** Work that needs a fresh run of a snake job
   (bronze-load, silver-build, jira-ingest, …) runs it now, from the desk:
-  `ssh admin@punk 'cd /data/config/punk-records && bin/kuma run bronze-load silver-build'`,
+  `ssh admin@punk 'cd /data/config/punk-records && bin/snake run bronze-load silver-build'`,
   jobs in pipeline order. An early run does what the scheduled one would, costs seconds, and
   is not an intervention to log; re-running a *failed* job is (`decisions/0033`). `run` itself
   waits while another job runs or a timer is due within a minute, because the timers are
-  spread so no two jobs share kuma's memory; if it gives up after 10 minutes it names the job in
-  the way and when to try again. Never `ssh root@kuma … systemctl start`: it skips that check.
+  spread so no two jobs share snake's memory; if it gives up after 10 minutes it names the job in
+  the way and when to try again. Never `ssh root@snake … systemctl start`: it skips that check.
 - **Commits.** A step is one commit: `step NN: name — <what is now true>`; outside the ladder
   `<machine or area>: <what is now true>`; planning `plan: …`. In prose a step is `step NN` here
   and `punk-records step NN` in another repository. Read the `commit` skill.
