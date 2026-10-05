@@ -133,6 +133,10 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   did this for `hello`): diff two runs' `machine` lines.
 - **Deploys** go from the desk: `bin/hawk deploy`, `bin/snake deploy`, `bin/desktop deploy`;
   punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
+- **shark's CUDA programs are fetched, never compiled.** They come from `pkgsCuda`, which the
+  NixOS CUDA team's cache holds; only `bin/shark` trusts that cache, per command, and its
+  `dry-run` refuses a build that would run `nvcc`. Never `nix build` shark or
+  `.#whisperlivekit` by hand, on the desk or on punk: it compiles CUDA (step 21p).
 - **Run a lake job; never wait for its timer.** Work that needs a fresh run of a snake job
   (bronze-load, silver-build, jira-ingest, …) runs it now, from the desk:
   `ssh admin@punk 'cd /data/config/egghead && bin/snake run bronze-load silver-build'`,
