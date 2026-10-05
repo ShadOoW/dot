@@ -2,7 +2,7 @@
 name: egghead
 description: |
   How the house's machines are declared and why. /data/config/egghead is one NixOS flake
-  holding every machine (punk, the desktop guest, snake, hawk, rescue, installer): one folder per
+  holding every machine (punk, the desktop guest, snake, shark, hawk, rescue, installer): one folder per
   machine, a shared module only where two machines share a declaration, imports listed by hand,
   each program beside the module that runs it. The same repository holds the study ladder
   (`.plans/`), the decision records (`decisions/`), the vocabulary (`VOCABULARY.md`) and `./check`
@@ -38,7 +38,7 @@ named `ragnarok` under `shadhq`, or the redirect breaks).
 
 ```
 flake.nix          inputs; one module list per machine; packages; checks (19h moves checks out)
-hosts/<machine>/   one folder per nixosConfiguration and nothing else: punk, desktop, snake, hawk, rescue, installer
+hosts/<machine>/   one folder per nixosConfiguration and nothing else: punk, desktop, snake, shark, hawk, rescue, installer
 modules/           a declaration two or more machines import
 constants/         a value two or more machines read, or one reads about another: one file per value
 tests/             VM tests and fixtures, used by checks
@@ -55,7 +55,9 @@ The machines: **punk** is the physical host (ZFS, Incus) and runs no service of 
 what `decisions/0037` allows (reach, data, guests, shares; its closed list is
 `hosts/punk/host-list.nix`). **desktop** is the operator's workstation, a privileged Incus
 container on punk; no service may depend on it. **snake** is an Incus VM on punk running the
-house's services and the lake pipeline. **hawk** is the rented Hetzner server (barzakh's machine
+house's services and the lake pipeline. **shark** is an unprivileged Incus container on punk that
+computes on the GPU the desk also uses: the card's compute nodes only, no privilege, its `/var/lib`
+on a ZFS volume (step 21c). **hawk** is the rented Hetzner server (barzakh's machine
 until step 17 reinstalled it as hawk) and runs the public services directly. **rescue** and
 **installer** are escape hatches. Global invariant 1: no service runs on the punk host or on the desk.
 
