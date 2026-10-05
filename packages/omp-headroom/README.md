@@ -3,7 +3,7 @@
 `~/.omp/agent/models.yml` points omp's `anthropic` provider at the local headroom
 proxy (`http://127.0.0.1:8787/p/omp`), which compresses tool output before a
 request leaves the desk. The proxy is the user unit `headroom-proxy`, declared
-with the other desk units in punk-records (`hosts/desktop/default.nix`): a
+with the other desk units in egghead (`hosts/desktop/default.nix`): a
 long-running unit belongs to the machine's NixOS config, not to a dotfile. This
 package only redirects omp.
 
@@ -44,4 +44,4 @@ python3 -c 'import json; e=[json.loads(l) for l in open("/home/shad/.headroom/sa
 
 Keep it if the saving is worth 0.7 GiB of RAM and one more process in front of
 every request. Otherwise delete this package and the `headroom-proxy` unit in
-punk-records together.
+egghead together.

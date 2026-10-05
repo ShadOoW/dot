@@ -17,7 +17,7 @@
 #   2026-07-10  /data/config/dot/dot.ts
 #   2026-08-24  /data/code/fleet/apps/dot/dot.ts
 #
-# ragnarok's hosts/desktop could have carried a writeShellScriptBin instead and had the path
+# egghead's hosts/desktop could have carried a writeShellScriptBin instead and had the path
 # baked into a store derivation. That would be the fifth entry in that table, in the one layer
 # that is supposed to outlive the tree it names: migration.md §14.6 records that fleet is a
 # candidate for deletion, so a system generation must not contain /data/code/fleet.
@@ -28,10 +28,10 @@
 #
 # Plain `bun`. None of the four commands loads a native module: brucelee stopped importing
 # @kit/lake, and with it DuckDB's binding, when it moved onto the lake's published tables
-# (punk-records step 12h, 2026-09-30). Until then this ran the desk's `bun-native`, `bun` with
+# (egghead step 12h, 2026-09-30). Until then this ran the desk's `bun-native`, `bun` with
 # libstdc++'s directory prefixed to LD_LIBRARY_PATH, which every child process inherited. If a
 # command imports a native binding again, `error: libstdc++.so.6: cannot open shared object
-# file` is the sign, and `bun-native` (ragnarok hosts/desktop/default.nix) is the runtime.
+# file` is the sign, and `bun-native` (egghead hosts/desktop/default.nix) is the runtime.
 #
 # ## Why one file and not one per command
 #

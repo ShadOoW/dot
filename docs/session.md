@@ -90,7 +90,7 @@ apart because a timer saves far more often than a person: in the 20-deep history
 minutes of an ordinary afternoon apiece would push every deliberate save — the one a
 reboot or a sway stop took — out within hours. Unarmed because a login restores what
 someone chose to save, not whatever the timer last saw. On the NixOS desk
-`sway-autosave.timer` (punk-records `hosts/desktop`) runs it every 10 minutes, first at
+`sway-autosave.timer` (egghead `hosts/desktop`) runs it every 10 minutes, first at
 10 minutes into the session so it never captures a login restore half-done.
 
 Slot names are derived, never prompted: `agent:omp` → `agent-omp`,

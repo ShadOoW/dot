@@ -1,13 +1,13 @@
 ---
-name: punk-records
+name: egghead
 description: |
-  How the house's machines are declared and why. /data/config/punk-records is one NixOS flake
+  How the house's machines are declared and why. /data/config/egghead is one NixOS flake
   holding every machine (punk, the desktop guest, snake, hawk, rescue, installer): one folder per
   machine, a shared module only where two machines share a declaration, imports listed by hand,
   each program beside the module that runs it. The same repository holds the study ladder
   (`.plans/`), the decision records (`decisions/`), the vocabulary (`VOCABULARY.md`) and `./check`
   that explain it.
-  Use for anything under /data/config/punk-records: before adding, moving or
+  Use for anything under /data/config/egghead: before adding, moving or
   changing a machine, module, service, check, secret, test or plan step, and before proposing a
   restructure (organise by feature, adopt Clan, a folder per service, split or join repositories,
   a Kubernetes cluster); and whenever work needs fresh lake data — new rows in raw, bronze, silver
@@ -15,7 +15,7 @@ description: |
   silver-build, jira-ingest…).
 ---
 
-# punk-records
+# egghead
 
 One person runs every machine of the house, in evenings. Every choice here is judged by one
 question: does it reduce the evenings the system consumes (`decisions/0028`, dependability per
@@ -25,12 +25,14 @@ rung with a decision record, and this skill changes in the same change.
 
 ## One repository
 
-`/data/config/punk-records` (remote `github.com/shadhq/ragnarok`) holds the flake and every machine,
+`/data/config/egghead` (remote `github.com/shadhq/egghead`) holds the flake and every machine,
 and the ladder that explains them: `.plans/PLAN.md` and one `study-NN-name.md` per step, `decisions/`
 (one rule per file; read `decisions/AGENTS.md`), `VOCABULARY.md` and `./check`. They were a second
 repository, ops-next, until step 19a merged its history in at the same paths (2026-10-04). A step is
 one commit, and a citation between the code and its step resolves in one tree. `ops-next` appears
-only in history: records and old commit messages.
+only in history: records and old commit messages. Its earlier names are retired: `punk-records` (the folder and
+this skill, until step 21b) and `ragnarok` (the GitHub repository, which still redirects; never create a repository
+named `ragnarok` under `shadhq`, or the redirect breaks).
 
 ## Layout
 
@@ -131,7 +133,7 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
 - **Run a lake job; never wait for its timer.** Work that needs a fresh run of a snake job
   (bronze-load, silver-build, jira-ingest, …) runs it now, from the desk:
-  `ssh admin@punk 'cd /data/config/punk-records && bin/snake run bronze-load silver-build'`,
+  `ssh admin@punk 'cd /data/config/egghead && bin/snake run bronze-load silver-build'`,
   jobs in pipeline order. An early run does what the scheduled one would, costs seconds, and
   is not an intervention to log; re-running a *failed* job is (`decisions/0033`). `run` itself
   waits while another job runs or a timer is due within a minute, because the timers are
@@ -139,7 +141,7 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   the way and when to try again. Never `ssh root@snake … systemctl start`: it skips that check.
 - **Commits.** A step is one commit: `step NN: name — <what is now true>`; outside the ladder
   `<machine or area>: <what is now true>`; planning `plan: …`. In prose a step is `step NN` here
-  and `punk-records step NN` in another repository. Read the `commit` skill.
+  and `egghead step NN` in another repository. Read the `commit` skill.
 - **Citations** name a heading or a symbol, never a line number, and resolve in the tree they are written in
   (`decisions/0024`). `./check` is red on a path into this tree that does not resolve, outside the step files
   and `.plans/CHECKPOINTS.md`: a move or delete fixes every citation in the same commit, a gone file is named

@@ -22,7 +22,7 @@ The **app itself** is installed per-distro:
   `dot update source` intentionally does **not** build awsvpnclient on Arch — the
   `pkgbuilds` updater is gated on `xbps-create`, which is Void-only.
 - **NixOS (punk's desk container)** — not managed by `dot` at all:
-  `punk-records/hosts/desktop/bruce.nix` packages the .deb in a `buildFHSEnv`
+  `egghead/hosts/desktop/bruce.nix` packages the .deb in a `buildFHSEnv`
   sandbox, runs the daemon as `awsvpnclient.service`, and re-implements
   `aws-vpn-dns.service` as an `ip monitor link` watcher (udev announces no
   network devices inside LXC, so a `tun0.device`-bound unit never fires).
