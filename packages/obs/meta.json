@@ -1,0 +1,9 @@
+{
+  "description": "OBS on the MacBook: the meetings profile and scene collection, copied (never linked) into OBS's settings by configure.sh; egghead's bin/obs drives it over obs-websocket",
+  "packages": {
+    "macos": { "brew": ["obs"] }
+  },
+  "tags": ["macos", "recording"],
+  "cleanSteps": [],
+  "os": ["macos"]
+}

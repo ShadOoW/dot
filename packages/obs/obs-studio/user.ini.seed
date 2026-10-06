@@ -1,0 +1,8 @@
+[General]
+FirstRun=true
+
+[Basic]
+Profile=meetings
+ProfileDir=meetings
+SceneCollection=meetings
+SceneCollectionFile=meetings

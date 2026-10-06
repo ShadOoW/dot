@@ -1,0 +1,9 @@
+{
+  "type": "rtmp_custom",
+  "settings": {
+    "server": "srt://snake.tail.shadhq.com:8793?mode=caller&latency=500000&payload_size=1128",
+    "key": "",
+    "use_auth": false,
+    "bwtest": false
+  }
+}
