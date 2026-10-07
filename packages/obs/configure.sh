@@ -20,7 +20,7 @@
 #
 # Runs unprivileged. `dot pkg obs configure` asks for sudo first; this script needs none and
 # can be run directly: bash ~/code/dot/packages/obs/configure.sh
-# Design: egghead .plans/study-21j-recorder.md §9.3.3.
+# Design: egghead step 21j §9.3.3.
 set -euo pipefail
 
 if pgrep -x OBS >/dev/null; then

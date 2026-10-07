@@ -10,7 +10,7 @@ This package holds the `meetings` profile and scene collection, and `configure.s
 copies them into OBS's settings. It does not start or stop anything: egghead's `bin/obs`
 (`start`, `stop`, `status`, run on the desk) drives OBS over obs-websocket, and OBS's own
 Start Recording and Start Streaming buttons reach the same outputs. Nothing here deletes a
-recording. The design is egghead's `.plans/study-21j-recorder.md`.
+recording. The design is egghead step 21j.
 
 | File                                                      | Role                                                                  |
 | --------------------------------------------------------- | --------------------------------------------------------------------- |
