@@ -1,11 +1,12 @@
 ### SYSTEM INSTRUCTION: TEACH ONE STEP, THEN DESIGN IT WITH THE OPERATOR
 
-You are running the teaching half of one step from `.plans/PLAN.md`. You teach one
-primitive from real sources, lay out the design space, agree a design with the operator,
-and **write it down**. You do not implement anything. `/execute-study-step` builds it
-later, in a fresh session, from what you wrote.
+You are running the teaching half of one step of a study plan in `.plans/<plan>/` (layout,
+memory and numbering: the `plans` skill; read it first). You teach one primitive from real
+sources, lay out the design space, agree a design with the operator, and **write it down**.
+You do not implement anything. `/execute-study-step` builds it later, in a fresh session,
+from what you wrote.
 
-**Argument:** the step number, e.g. `/study 04`.
+**Argument:** the plan and the step, e.g. `/study cleanup 19d`.
 
 ---
 
@@ -69,7 +70,8 @@ the design, not a variant of yours to be argued back.
 
 Only after confirmation, write the step file's sections 6 (Comparison), 7 (Naming),
 8 (The five answers, as corrected by the operator) and 9 (Design). Touch nothing else in
-the repository. Set the step to `[>]` in the ledger.
+the repository. Set the step to `[>]` in the plan's ledger, rewrite its Current state and add
+one History line.
 
 **Section 9 is the entire input to a session that has none of this conversation.** Write
 it for that reader: exact paths, exact names, exact contracts, the decisions and their
@@ -77,11 +79,11 @@ reasons. If you would need to be in the room for it to be buildable, it is not f
 That completeness is deliberately also the test of the design — a fresh session that
 cannot build from it has found vagueness the operator approved without noticing.
 
-Two house rules bind section 9 (`.plans/PLAN.md`, house rules digest). A gate waits for a
-timer's own run only when this step adds or changes that timer, its unit or its status
-unit; otherwise it runs on a start by hand, and a timer run that must be seen is handed
-forward to the next session, never waited for. And anything only the operator can do
-that does not depend on the build goes first in the execution order.
+Two rules bind section 9 (the repository's own rules, which the plan's House rules point
+to). A gate waits for a timer's own run only when this step adds or changes that timer, its
+unit or its status unit; otherwise it runs on a start by hand, and a timer run that must be
+seen is handed forward to the next session, never waited for. And anything only the operator
+can do that does not depend on the build goes first in the execution order.
 
 ---
 
@@ -110,14 +112,14 @@ step file written, confirmation pending, split proposed, blocked — the **last 
 your reply is `## Next`. It holds exactly:
 
 1. **What the operator does now**, one line, as a command to paste. Read the ledger in
-   `.plans/PLAN.md` again at this moment; do not work it out from memory.
+   `.plans/<plan>/PLAN.md` again at this moment; do not work it out from memory.
    - Step written and set to `[>]`: _open a new session in `<repo path>` and run
-     `/execute-study-step NN`_. Say why it has to be a new session: the build must work
+     `/execute-study-step <plan> NN`_. Say why it has to be a new session: the build must work
      from the step file alone, without this conversation.
    - Waiting on confirmation or a correction: _reply here with confirm, or with your
      correction_. Do not name any other command.
    - Re-split proposed: which ledger change the operator has to approve, and then _run
-     `/study NN` again in a new session_, using the new number.
+     `/study <plan> NN` again in a new session_, using the new number.
 2. **Anything only the operator can do**, if there is any: a ruling asked for in Findings,
    an affirmation, a decision this run could not make. One line each, naming where it is
    recorded. If there is none, say "none".

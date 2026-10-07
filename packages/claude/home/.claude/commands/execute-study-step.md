@@ -4,7 +4,8 @@ You are building one step of a study ladder from its design, in a fresh session.
 design was agreed between the operator and another session that you cannot see. Your
 context is the step file and the repository.
 
-**Argument:** the step number, e.g. `/execute-study-step 04`.
+**Argument:** the plan and the step, e.g. `/execute-study-step cleanup 19d`. The plan is the
+folder `.plans/<plan>/`; its layout and memory are the `plans` skill's (read it first).
 
 ---
 
@@ -24,16 +25,16 @@ has produced the most valuable finding available at that moment.
 
 ### PRE-BUILD OBLIGATIONS
 
-1. **Read the whole step file**, then `.plans/PLAN.md`'s house rules digest, global
-   invariants and concept inventory. The inventory tells you which primitives are
-   already established and may be used without ceremony.
+1. **Read the whole step file**, then the plan's `PLAN.md`: Current state, House rules (and
+   the repository rules it points to), Open items and the Established list. The Established
+   list tells you which primitives are already in place and may be used without ceremony.
 2. **Confirm the step is `[>]`** in the ledger. `[ ]` means it has not been designed —
    stop and say so; do not design it yourself.
 3. **Check section 9 is buildable before you start.** Every path, name, and contract it
    names must exist or be created by this step. Missing pieces are reported, not
    invented.
-4. **Check what the previous step handed forward.** If its `.plans/CHECKPOINTS.md` entry
-   has a **Handed forward** block, run those commands first. A stale unit is a Finding of
+4. **Check what was handed forward.** If the plan's Open items or the previous step's
+   Findings name a check for the next session, run it first. A stale unit is a Finding of
    this run; it blocks nothing this step did not cause.
 5. **Run the gate once, now.** This is your baseline; without it you cannot attribute a
    later failure to this step. Do anything the design lists for the operator first now,
@@ -77,8 +78,8 @@ Implement exactly what section 9 says. Nothing adjacent, nothing anticipatory.
    Never block waiting for a timer. Unless this step adds or changes a timer, its unit or
    its status unit, run every gate on a start by hand (`systemctl start <unit>.service`).
    If the step does need the timer's own run, land on the gates that ran and put the
-   check in your CHECKPOINTS entry's **Handed forward** block for the next session (house
-   rules in `.plans/PLAN.md`). Start the VM test and its mutations together.
+   check in the plan's Open items for the next session (the repository's rules, which the
+   plan's House rules point to). Start the VM test and its mutations together.
 
 ---
 
@@ -89,12 +90,12 @@ The code is the byproduct. The record is the point.
 1. **Append to the step's `Findings`:** what surprised you, every place the design was
    wrong or thin, corrections later steps need, and the drill result with its number and
    its duration.
-2. **Append one entry to `.plans/CHECKPOINTS.md`:** the step, what it landed, the single
-   most surprising thing, and whether the design was buildable as written. This file is
-   the honest record of whether the approach is working; a step that landed code and
-   recorded nothing did not happen.
-3. **Update the concept inventory** in `PLAN.md` with the primitive this step
-   established, so later steps can assume it.
+2. **End the step's Findings with a build record:** what it landed, the single most
+   surprising thing, and whether the design was buildable as written. This is the honest
+   record of whether the approach is working; a step that landed code and recorded nothing
+   did not happen.
+3. **Update `PLAN.md`:** one line in Established for the primitive this step put in place;
+   Open items added or closed; Current state rewritten; one History line.
 4. **Flip the ledger** to `[x]` and commit code, step file and ledger together. Leave
    `[~]` or `[!]` with the blocker and its evidence if anything is unfinished.
 
@@ -119,16 +120,17 @@ of your final reply is `## Next`, written after the commit (or after the blocker
 recorded). It holds exactly:
 
 1. **What the operator does now**, one line, as a command to paste. Read the ledger in
-   `.plans/PLAN.md` again at this moment; do not work it out from memory.
+   `.plans/<plan>/PLAN.md` again at this moment; do not work it out from memory.
    - This step is `[x]`: find the first step after it that is not `[x]`. If it is `[>]`,
-     the line is _open a new session in `<repo path>` and run `/execute-study-step MM`_.
-     If it is `[ ]`, the line is _open a new session and run `/study MM`_. That goes for a
-     chore too, because `/study` handles chores. If no step remains, say the ladder is
-     finished and point to `PLAN.md` §"What this is" for what happens next.
+     the line is _open a new session in `<repo path>` and run `/execute-study-step <plan> MM`_.
+     If it is `[ ]`, the line is _open a new session and run `/study <plan> MM`_. That goes
+     for a chore too, because `/study` handles chores. If no step remains, say the plan has
+     met its "Done when" and that the operator may ask for a review and a close (the `plans`
+     skill).
    - This step is `[!]` or `[~]`: state what unblocks it, and which command to run once it
-     is unblocked. If the design was too vague to build from, that is usually `/study NN`
+     is unblocked. If the design was too vague to build from, that is usually `/study <plan> NN`
      again, in a new session. If the blocker is outside the design, it is the same
-     `/execute-study-step NN`.
+     `/execute-study-step <plan> NN`.
    - Say why it has to be a new session: every step starts from its written record, never
      from this conversation.
 2. **Anything only the operator can do**, from this run's Findings: a ruling, an

@@ -37,35 +37,38 @@ between a plan and a wish.
 
 ### REQUIREMENTS FOR PLAN GENERATION
 
-1. **Directory Structure**
-   - `.plans/` in the repository root.
-   - `.plans/PLAN.md` — the index and the single status ledger.
-   - `.plans/phase-XX-[brief-name].md` — one per phase, zero-padded, ordered.
+1. **Directory Structure** (the `plans` skill owns it; read it first)
+   - `.plans/<plan>/` in the repository root: one folder for this plan, a short lowercase
+     name the operator agrees to. Never add phases to another plan's folder.
+   - `.plans/<plan>/PLAN.md` — the index, the single status ledger and the plan's memory.
+   - `.plans/<plan>/NN-[brief-name].md` — one per phase, zero-padded, ordered.
 
-2. **Master Index (`.plans/PLAN.md`)** must contain, in order:
-   - **Executive summary** — what the refactor achieves, in under 200 words.
-   - **House rules digest** — the repo conventions every executing agent must obey,
-     stated once here rather than repeated in every phase. Include the exact gate
-     command, the commit policy, and any skill/context file that must be loaded.
-   - **Status ledger** — the checklist. `[ ] pending` / `[~] in progress` / `[x] done` /
-     `[!] blocked`. **This is the only place status lives.** Phase files must not carry
-     a status field; two copies of one fact drift.
+2. **Master Index (`.plans/<plan>/PLAN.md`)** must contain the `plans` skill's sections in its
+   order (Purpose, Done when, Current state, House rules, Ledger, Open items, History), and as
+   this kind's own sections:
+   - **Purpose** is the executive summary: what the refactor achieves, under 150 words.
+   - **House rules** name the exact gate command, the commit subject, and the skill or
+     context file every executing agent must load; the repository's own rules are pointed
+     to, never copied.
+   - **Ledger** — `[ ] pending` / `[~] in progress` / `[x] done` / `[!] blocked`. **This is
+     the only place status lives.** Phase files must not carry a status field; two copies
+     of one fact drift.
    - **Wave table** — wave number, phases in it, and the assertion that they share no
      files.
    - **File-ownership map** — path → phases that touch it. Concurrency is read from here.
    - **Global invariants** — rules no phase may violate, each with the file that
      enforces it if one exists.
    - **Blocking external decisions** — unresolved questions that gate specific phases,
-     naming the phase and the decision.
+     naming the phase and the decision. They are also Open items.
 
-3. **Phase Files (`.plans/phase-XX-[brief-name].md`)** — exact structure:
+3. **Phase Files (`.plans/<plan>/NN-[brief-name].md`)** — exact structure:
 
    ```
    # Phase XX: [Brief Name]
 
    **Dependencies:** [None | Phase YY, Phase ZZ]
    **Parallel-safe with:** [phase list | nothing in this wave]
-   **Status:** tracked in .plans/PLAN.md — do not add a status field here.
+   **Status:** tracked in the plan's PLAN.md — do not add a status field here.
 
    ## 1. Objective
    One sentence. What is true after this phase that is not true now.
@@ -128,7 +131,9 @@ between a plan and a wish.
 4. **Hand-off protocol** — state once in `PLAN.md`, not in every phase:
    - Gates green → set this phase to `[x]` in the ledger, commit code and ledger together.
    - Gates red → leave `[~]`, append to Findings, stop.
-   - Never delete or restructure `.plans/` files.
+   - Every boundary: rewrite Current state, add or close Open items, one History line.
+   - Never delete or restructure the plan's files; closing is the operator's call (the
+     `plans` skill, `close.md`).
    - Never edit a phase file other than your own, except appending to another's Findings
      when you have information it needs.
 
@@ -150,6 +155,6 @@ between a plan and a wish.
 
 ### ACTIONS TO EXECUTE NOW
 
-Complete the pre-generation obligations, then write `.plans/PLAN.md` and every
-`.plans/phase-XX-*.md` to the filesystem. Report the created files, the wave structure,
+Complete the pre-generation obligations, then write `.plans/<plan>/PLAN.md` and every
+`.plans/<plan>/NN-*.md` to the filesystem. Report the created files, the wave structure,
 and any claim you could not verify.

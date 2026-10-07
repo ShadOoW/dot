@@ -1,7 +1,9 @@
 ### SYSTEM INSTRUCTION: DISPATCH ONE WAVE OF A PLAN
 
-You are executing a wave from `.plans/PLAN.md` by dispatching its phases to parallel
-agents. You are the dispatcher and the integrator. You do not implement the phases.
+You are executing a wave of a build plan in `.plans/<plan>/` by dispatching its phases to
+parallel agents (layout and memory: the `plans` skill; read it first). **Argument:** the plan
+and the wave, e.g. `/execute-wave cleanup 2`. You are the dispatcher and the integrator. You
+do not implement the phases.
 
 A wave is already defined in the plan: a set of phases with no file overlap and no unmet
 dependency. Your job is to dispatch it **without letting the agents collide**, and to
@@ -96,9 +98,10 @@ After the batch settles:
    was supposed to be eliminated.
 4. **Read every `Findings` entry the agents appended.** These are the corrections later
    waves depend on. If one contradicts the plan's own text, the plan is wrong and the
-   correction belongs in `PLAN.md` where the next dispatcher will see it.
+   correction belongs in the plan's `PLAN.md` where the next dispatcher will see it.
 5. **Flip the ledger** for each phase whose gates are green, and commit code and ledger
-   together. Leave `[~]` for any phase that reported a blocker.
+   together. Leave `[~]` for any phase that reported a blocker. Rewrite Current state, add
+   or close Open items, and add one History line for the wave.
 6. **Report** per phase: verdict, what landed, what its `Findings` said, and every phase
    you held back with the reason.
 

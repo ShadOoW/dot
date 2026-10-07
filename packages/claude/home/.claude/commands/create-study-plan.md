@@ -85,35 +85,39 @@ A drill performed manually twice becomes a script the third time, or it stops ha
 
 ### REQUIREMENTS FOR GENERATION
 
-1. **Directory structure**
-   - `.plans/` in the repository root.
-   - `.plans/PLAN.md` — the ladder, the ledger, and the concept inventory.
-   - `.plans/study-XX-[brief-name].md` — one per step, zero-padded, ordered.
-   - `.plans/CHECKPOINTS.md` — created empty with its header. Append-only.
+1. **Directory structure** (the `plans` skill owns it; read it first)
+   - `.plans/<plan>/` in the repository root: one folder for this plan, a short lowercase
+     name the operator agrees to. Never add steps to another plan's folder.
+   - `.plans/<plan>/PLAN.md` — the ladder, the ledger and the plan's memory.
+   - `.plans/<plan>/NN-[brief-name].md` — one per step, zero-padded, ordered. There is no
+     separate build log: each build ends its step's Findings with a build record.
 
-2. **`.plans/PLAN.md`** must contain, in order:
-   - **What this is** — the system being learned and why, under 200 words.
+2. **`.plans/<plan>/PLAN.md`** must contain the `plans` skill's sections in its order
+   (Purpose, Done when, Current state, House rules, Ledger, Open items, History), and as this
+   kind's own sections:
+   - **Purpose** says what system is being learned and why, under 150 words.
    - **The contract** — the division of labour, stated once: the agent drafts and
      implements; the operator owns the _why_, answers the five questions before code,
      and must be able to explain each landed step with the files closed.
-   - **House rules digest** — repo conventions every session must obey: the gate
-     command, the commit policy, and any skill or context file that must be loaded.
+   - **House rules** name the gate command, the commit subject, and any skill or context file
+     that must be loaded; the repository's own rules are pointed to, never copied.
    - **The ladder** — a table: step number, name, the one primitive it teaches, what it
      composes into, drill tier, and whether it is a step or a chore.
-   - **Status ledger** — `[ ] pending` / `[~] in design` / `[>] designed, awaiting
-build` / `[x] done` / `[!] blocked`. **The only place status lives.** Step files
-     carry no status field.
-   - **Concept inventory** — the primitives established so far, appended as steps land.
+   - **Ledger** — `[ ] pending` / `[~] in design` / `[>] designed, awaiting build` /
+     `[x] done` / `[!] blocked`. **The only place status lives.** Step files carry no
+     status field.
+   - **Established** — one line per landed step: the primitive a later step may assume.
      This is what lets a later step say "assumes 04, 07" instead of re-teaching.
    - **Global invariants** — rules no step may violate, each with the file that
      enforces it where one exists.
    - **Open questions** — decisions deliberately deferred, each with the gate that would
-     settle it. A deferred decision with no gate is a decision being avoided.
+     settle it. A deferred decision with no gate is a decision being avoided. They are
+     also Open items.
    - **Kill criterion** — the condition under which this plan is wrong and must be
      re-cut. Default: two consecutive steps failing the explain-it-back gate means the
      steps are too large; stop and re-split rather than pushing through.
 
-3. **`.plans/study-XX-[brief-name].md`** — thin at plan time, exactly this shape:
+3. **`.plans/<plan>/NN-[brief-name].md`** — thin at plan time, exactly this shape:
 
    ```
    # Step XX: [Brief Name]
@@ -121,7 +125,7 @@ build` / `[x] done` / `[!] blocked`. **The only place status lives.** Step files
    **Kind:** step | chore
    **Assumes:** [steps whose concepts this builds on, or None]
    **Drill:** tier N — [what specifically gets destroyed and what is asserted]
-   **Status:** tracked in .plans/PLAN.md — do not add a status field here.
+   **Status:** tracked in the plan's PLAN.md — do not add a status field here.
 
    ## 1. Teaches
    The ONE primitive. One sentence. A chore says "nothing — this is a chore" and why
@@ -179,7 +183,7 @@ build` / `[x] done` / `[!] blocked`. **The only place status lives.** Step files
 
 ### ACTIONS TO EXECUTE NOW
 
-Complete the pre-generation obligations, then write `.plans/PLAN.md`, every
-`.plans/study-XX-*.md`, and an empty `.plans/CHECKPOINTS.md`. Report the ladder, the
+Complete the pre-generation obligations, then write `.plans/<plan>/PLAN.md` and every
+`.plans/<plan>/NN-*.md`. Report the ladder, the
 chores you separated out, every place comprehension order and build order disagreed,
 and any claim you could not verify.
