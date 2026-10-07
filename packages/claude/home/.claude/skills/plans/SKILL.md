@@ -109,3 +109,24 @@ Run them only when the operator asks, by name or with `/skill:plans`:
 
 Inside "Done when": a new step in the same plan. Outside it: say so to the operator and propose
 either a new plan folder or a parked idea. Never extend the running plan to absorb it.
+
+## What closed plans taught
+
+Each line cost a plan real sessions. Read them before writing a step or a gate.
+
+- **A measure that never produces a reading is worse than none.** egghead's first plan pre-registered
+  three explain-back questions per step and a kill criterion on them; 64 build replies listed the
+  questions and none was answered, so the criterion could never fire. Ask a question in the session
+  that needs the answer, or drop it.
+- **Probe the live system while designing, not while building.** A script that only passed
+  `shellcheck` or a dry run failed against its real target five times in two steps (wrong `PATH`,
+  invalid bucket names, `set -e` on an expected exit, a missing binary, a stale group). Run every
+  script a design depends on once, against the real target, before the design is confirmed.
+- **The second copy of a recipe becomes a tool.** The same hand-written gate recipe was rewritten
+  five times, and the fifth lost a result; it ended as `bin/snake run`. When a step's gate repeats
+  an earlier step's commands, make them a command in the repository first.
+- **A reading list states its size in lines.** An unstated cost looks free to accept, which is how a
+  step grows too large before anyone can say so.
+- **Open items are closed, not copied.** The same uncommitted edit was "left" by ten sessions in a
+  row, each copying it into its report. One list in `PLAN.md`; a session that cannot close an item
+  names who can.
