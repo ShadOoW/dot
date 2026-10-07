@@ -72,8 +72,7 @@
       "id": "sck_audio_capture",
       "versioned_id": "sck_audio_capture",
       "settings": {
-        "application": "com.google.Chrome",
-        "type": 1
+        "type": 0
       },
       "mixers": 2,
       "sync": 0,

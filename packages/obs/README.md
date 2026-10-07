@@ -1,7 +1,7 @@
 # obs
 
 macOS-only (`meta.os = ["macos"]`). OBS Studio on the MacBook records each meeting: the
-screen, the microphone and Chrome's audio, into an MKV in `~/Movies/meetings`, both audio
+screen, the microphone and everything the Mac plays, into an MKV in `~/Movies/meetings`, both audio
 tracks lossless (FLAC, 48 kHz). At the same time it streams a lighter copy to snake over the
 tailnet (SRT to `snake.tail.shadhq.com:8793/udp`: H.264 at 1500 kbps and the two voices as
 separate Opus tracks), reconnecting by itself. The stream can fail without touching the file.
@@ -69,9 +69,27 @@ them only when absent (`seeded`), and otherwise leaves them alone (`kept`).
 
 - `display_uuid` of the `Screen` source, in `meetings.json`. On another Mac it resolves to
   the wrong display or none, with no error: `bin/obs start` refuses a blank screen.
-- Chrome's bundle id (`com.google.Chrome`) on the `CallAudio` source. While Chrome is not
-  running that track records silence.
 - The recording path `/Users/youneselalami/Movies/meetings` in `basic.ini`.
+
+## The call track is everything the Mac plays
+
+`CallAudio` is OBS's macOS Audio Capture (`sck_audio_capture`) with `type: 0`: all of the
+Mac's sound except OBS's own (`setExcludesCurrentProcessAudio`), whichever app plays it. It
+captured Chrome alone (`type: 1`, `com.google.Chrome`) until 2026-10-07, and a standup held
+in Vivaldi recorded a silent call track with no error. One app by bundle id also misses an
+app launched after OBS: OBS lists running apps once, when the source is created. The cost of
+`type: 0`: notification sounds and anything else playing land on the call track too.
+
+## A screen that turns off kills both captures
+
+`Screen` and `CallAudio` are ScreenCaptureKit streams tied to a display. When the display
+turns off, macOS stops both, OBS logs `[ mac-screencapture ]: Stream stopped as no capture
+source was not found.` twice, and it never restarts them: every later recording has frozen
+video and an all-zero call track until OBS is restarted or each source's Reactivate button
+(`reactivate_capture`) is pressed (OBS 32.2.2, `mac-sck-common.m`, `didStopWithError`; upstream
+declined to restart automatically, obs-studio#10858). OBS keeps the display awake only while
+it records or streams, so the failure happens between meetings, while OBS sits idle. The
+microphone (`Mic/Aux`, CoreAudio) is not affected.
 
 ## macOS permissions
 
