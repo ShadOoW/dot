@@ -87,9 +87,11 @@ turns off, macOS stops both, OBS logs `[ mac-screencapture ]: Stream stopped as 
 source was not found.` twice, and it never restarts them: every later recording has frozen
 video and an all-zero call track until OBS is restarted or each source's Reactivate button
 (`reactivate_capture`) is pressed (OBS 32.2.2, `mac-sck-common.m`, `didStopWithError`; upstream
-declined to restart automatically, obs-studio#10858). OBS keeps the display awake only while
-it records or streams, so the failure happens between meetings, while OBS sits idle. The
-microphone (`Mic/Aux`, CoreAudio) is not affected.
+declined to restart automatically, obs-studio#10858). OBS keeps the display awake only while it
+records or streams, so the failure happens between meetings, while OBS sits idle. The
+microphone (`Mic/Aux`, CoreAudio) is not affected. egghead's `bin/obs start` presses that button
+on both sources before every recording it starts, so the desk's start is unaffected; one started
+from OBS's own button still needs the restart, or the press by hand.
 
 ## macOS permissions
 
