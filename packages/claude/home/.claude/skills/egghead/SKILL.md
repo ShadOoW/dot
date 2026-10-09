@@ -152,8 +152,12 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   before a build, before its commit, and again after the commit. Every gate ships with a fixture
   proving it can fail (`decisions/0008`). A refactor is proven by unchanged store paths (step 15
   did this for `hello`): diff two runs' `machine` lines.
-- **Deploys** go from the desk: `bin/hawk deploy`, `bin/snake deploy`, `bin/desktop deploy`;
-  punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
+- **Deploys.** `bin/hawk deploy` runs from the desk. `bin/snake deploy` and `bin/desktop deploy`
+  drive Incus, so they run on punk as admin, from the desk through ssh:
+  `ssh admin@punk 'cd /data/config/egghead && bin/snake deploy'` (on the desk they stop with
+  "incus not found — run this on punk as admin"; published-readme 01). punk's
+  `/data/config/egghead` is the desk's tree, uncommitted edits included, so it deploys what the
+  desk holds. punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
 - **shark's CUDA programs are fetched, never compiled.** They come from `pkgsCuda`, which the
   NixOS CUDA team's cache holds; only `bin/shark` trusts that cache, per command, and its
   `dry-run` refuses a build that would run `nvcc`. Never `nix build` shark or

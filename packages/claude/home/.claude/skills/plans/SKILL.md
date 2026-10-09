@@ -117,11 +117,20 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
 - **A measure that never produces a reading is worse than none.** egghead's first plan pre-registered
   three explain-back questions per step and a kill criterion on them; 64 build replies listed the
   questions and none was answered, so the criterion could never fire. Ask a question in the session
-  that needs the answer, or drop it.
+  that needs the answer, or drop it. It happened again in egghead's `published-readme` and
+  `meeting-links` (2026-10-09): both designs were confirmed without the explain-back, and both
+  plans carried a kill criterion counting failed explain-backs that therefore never had a reading.
 - **Probe the live system while designing, not while building.** A script that only passed
   `shellcheck` or a dry run failed against its real target five times in two steps (wrong `PATH`,
   invalid bucket names, `set -e` on an expected exit, a missing binary, a stale group). Run every
   script a design depends on once, against the real target, before the design is confirmed.
+  This covers the gate's own commands, run where the gate says: egghead's `published-readme 01`
+  named a deploy from the desk that stops at once there (it needs punk), and `meeting-links 01`
+  named a command another session's checked-out branches blocked.
+- **Re-read the live state when the build starts.** A design's census of authored files is true
+  the hour it is taken: `meeting-links 01` designed a cutover of "the two link files that exist",
+  and a third was written that morning, between design and build. A cutover over authored files
+  lists them again (`ls`, `git status`) before it rewrites any.
 - **The second copy of a recipe becomes a tool.** The same hand-written gate recipe was rewritten
   five times, and the fifth lost a result; it ended as `bin/snake run`. When a step's gate repeats
   an earlier step's commands, make them a command in the repository first.
