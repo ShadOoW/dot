@@ -16,3 +16,14 @@ windows to make room, and your own run may be killed too.
   gets the session killed.
 - **One heavy command at a time.** Do not start a second suite, build or VM while one is
   still running in the background.
+
+## Resource report
+
+When a task makes you run test suites, builds or VMs, keep a tally as you go: each heavy
+command, how long it took, and how it ended (passed, failed, or killed: exit code 137 or
+"Killed" means the memory killer). End your final report with one line, for example:
+
+    Resources: 4 test runs (1 full, 3 targeted), 3 min total; 0 killed.
+
+If a run was killed, say which one and what you did instead. If no heavy command ran,
+leave the line out.
