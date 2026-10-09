@@ -91,7 +91,9 @@ declined to restart automatically, obs-studio#10858). OBS keeps the display awak
 records or streams, so the failure happens between meetings, while OBS sits idle. The
 microphone (`Mic/Aux`, CoreAudio) is not affected. egghead's `bin/obs start` presses that button
 on both sources before every recording it starts, so the desk's start is unaffected; one started
-from OBS's own button still needs the restart, or the press by hand.
+from OBS's own button still needs the restart or the press, which `bin/obs reactivate` on the desk
+does mid-recording without stopping anything. egghead's meetings 21s pages the phone when a track
+stays digital silence for three minutes.
 
 ## macOS permissions
 
