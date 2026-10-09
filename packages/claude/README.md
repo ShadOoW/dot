@@ -5,15 +5,15 @@ Manages Claude Code's user-level config and the slash-command library that is
 
 ## What this package manages
 
-| Path                                                           | Form                          | Why                                                                                      |
-| -------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
-| `~/.claude/commands/*.md`                                      | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them  |
-| `~/.omp/agent/commands`                                        | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here     |
-| `~/.local/bin/claude-turn-*`                                   | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                     |
-| `~/.claude/skills/<fleet skill>`                               | symlinks (via `configure.sh`) | Every `<fleet>/skills/<name>` fleet does not keep fleet-only; no copy, no drift possible |
-| `~/.claude/{CLAUDE.md,SHARED.md,COMMUNICATION.md,DOTFILES.md}` | per-file symlinks             | Machine-wide instructions. `SHARED.md` is the part both harnesses read                   |
-| `~/.omp/agent/AGENTS.md`                                       | per-file symlink              | omp's user context file: one line, `@~/.claude/SHARED.md`                                |
-| `~/.omp/agent/skills`                                          | symlink (via `configure.sh`)  | Points at `~/.claude/skills`, so omp offers the same skills as Claude Code               |
+| Path                                                                    | Form                          | Why                                                                                      |
+| ----------------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `~/.claude/commands/*.md`                                               | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them  |
+| `~/.omp/agent/commands`                                                 | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here     |
+| `~/.local/bin/claude-turn-*`                                            | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                     |
+| `~/.claude/skills/<fleet skill>`                                        | symlinks (via `configure.sh`) | Every `<fleet>/skills/<name>` fleet does not keep fleet-only; no copy, no drift possible |
+| `~/.claude/{CLAUDE.md,SHARED.md,COMMUNICATION.md,DOTFILES.md,TESTS.md}` | per-file symlinks             | Machine-wide instructions. `SHARED.md` is the part both harnesses read                   |
+| `~/.omp/agent/AGENTS.md`                                                | per-file symlink              | omp's user context file: one line, `@~/.claude/SHARED.md`                                |
+| `~/.omp/agent/skills`                                                   | symlink (via `configure.sh`)  | Points at `~/.claude/skills`, so omp offers the same skills as Claude Code               |
 
 ## Skills payload
 
@@ -44,7 +44,7 @@ plugins, MCP servers and settings, and `config.yml` is not in this repo. Instead
 
 ```
 CLAUDE.md  = @~/.claude/WEB-VERIFY.md + @~/.claude/SHARED.md (+ Claude-only lines)
-SHARED.md  = @~/.claude/DOTFILES.md + @~/.claude/COMMUNICATION.md
+SHARED.md  = @~/.claude/DOTFILES.md + @~/.claude/COMMUNICATION.md + @~/.claude/TESTS.md
 ~/.omp/agent/AGENTS.md = @~/.claude/SHARED.md
 ```
 
