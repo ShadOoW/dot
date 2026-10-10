@@ -6,6 +6,13 @@ tracks lossless (FLAC, 48 kHz). At the same time it streams a lighter copy to sn
 tailnet (SRT to `snake.tail.shadhq.com:8793/udp`: H.264 at 1500 kbps and the two voices as
 separate Opus tracks), reconnecting by itself. The stream can fail without touching the file.
 
+Three folders live under `~/Movies`: `meetings` (this profile's own path, reaches the lake
+through egghead's `meeting-fetch`), `personal` (`bin/obs start personal`: the same settings,
+recording only, reaches the lake through egghead's `personal-fetch` instead, never
+`meeting-fetch`), and `tests` (`bin/obs start test`: nothing reads it). Each folder is
+served to snake by its own SSH key, forced to read that one folder and no other
+(egghead's `hosts/snake/recording-files`).
+
 This package holds the `meetings` profile and scene collection, and `configure.sh`, which
 copies them into OBS's settings. It does not start or stop anything: egghead's `bin/obs`
 (`start`, `stop`, `status`, run on the desk) drives OBS over obs-websocket, and OBS's own
