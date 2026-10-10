@@ -91,6 +91,11 @@ showed only the top-left 57% of the screen, enlarged 1.54×. Edit this file from
 itself saves (a scene-collection switch writes it), never by hand-computing the relative
 fields.
 
+egghead's `bin/obs start` checks this before every recording and sets the item back to
+"scale to inner bounds" at the live canvas size if anything moved it, printing one line
+naming what was wrong; so a mistake here costs a stderr line, not a recording. OBS's own
+Start Recording button skips that check.
+
 ## The call track is everything the Mac plays
 
 `CallAudio` is OBS's macOS Audio Capture (`sck_audio_capture`) with `type: 0`: all of the
