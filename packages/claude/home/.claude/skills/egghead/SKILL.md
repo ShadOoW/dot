@@ -173,6 +173,9 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   waits while another job runs or a timer is due within a minute, because the timers are
   spread so no two jobs share snake's memory; if it gives up after 10 minutes it names the job in
   the way and when to try again. Never `ssh root@snake … systemctl start`: it skips that check.
+  `run` prints none of the job's own lines (counts, what changed, a problem it counted); a gate
+  reads them from snake's journal (ticket-context 03):
+  `ssh admin@punk 'incus exec snake -- env PATH=/run/current-system/sw/bin journalctl -u silver-build.service -n 50 --no-pager'`.
 - **Removing a record from the lake** is `sudo bin/lake purge` on punk for the records in
   `hosts/punk/lake-purged.tsv` (`decisions/0043`); never `rm` under `/lake`, never a
   hand-written `DELETE`. `bin/lake show` looks first; `bin/lake query` replaces the

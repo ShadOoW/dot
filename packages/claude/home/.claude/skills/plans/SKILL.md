@@ -120,6 +120,8 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   that needs the answer, or drop it. It happened again in egghead's `published-readme` and
   `meeting-links` (2026-10-09): both designs were confirmed without the explain-back, and both
   plans carried a kill criterion counting failed explain-backs that therefore never had a reading.
+  And in `ticket-context` (2026-10-09 to 10-10): none of its 10 designs got an explain-back, and the
+  operator dropped its kill criterion at the second.
 - **Probe the live system while designing, not while building.** A script that only passed
   `shellcheck` or a dry run failed against its real target five times in two steps (wrong `PATH`,
   invalid bucket names, `set -e` on an expected exit, a missing binary, a stale group). Run every
@@ -127,6 +129,9 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   This covers the gate's own commands, run where the gate says: egghead's `published-readme 01`
   named a deploy from the desk that stops at once there (it needs punk), and `meeting-links 01`
   named a command another session's checked-out branches blocked.
+  It covers the repository's own lint gates too: `ticket-context 04` designed an exported `Lake` and
+  `05` an exported `lineStamp`, and fleet's dead-export check failed both builds, the second after
+  the first had written the lesson down. A design that exports a name says which file imports it.
 - **Re-read the live state when the build starts.** A design's census of authored files is true
   the hour it is taken: `meeting-links 01` designed a cutover of "the two link files that exist",
   and a third was written that morning, between design and build. A cutover over authored files
@@ -139,6 +144,10 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
 - **Open items are closed, not copied.** The same uncommitted edit was "left" by ten sessions in a
   row, each copying it into its report. One list in `PLAN.md`; a session that cannot close an item
   names who can.
+- **An item two plans share names one owner.** `ticket-context 06` left "should google-meet-ingest
+  skip purged records" to the `lake-purge` plan, and `lake-purge` left it to `ticket-context 06`;
+  neither would have ruled it. When an Open item points at another plan, that plan's Open items
+  say the same owner.
 - **A person looks at the first real output.** `personal 07`'s first live recording was cropped to
   the top-left 57% of the screen while every gate on it was green (sha256 equal end to end, a
   transcript in the table); the scene defect was older than the plan and every meeting recording
