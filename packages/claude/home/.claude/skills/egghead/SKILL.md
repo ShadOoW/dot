@@ -170,6 +170,10 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   waits while another job runs or a timer is due within a minute, because the timers are
   spread so no two jobs share snake's memory; if it gives up after 10 minutes it names the job in
   the way and when to try again. Never `ssh root@snake … systemctl start`: it skips that check.
+- **Removing a record from the lake** is `sudo bin/lake purge` on punk for the records in
+  `hosts/punk/lake-purged.tsv` (`decisions/0043`); never `rm` under `/lake`, never a
+  hand-written `DELETE`. `bin/lake show` looks first; `bin/lake query` replaces the
+  hand-copied catalog recipe.
 - **Commits.** A plan's step is one commit: `cleanup 19d: shared-module — <what is now true>`
   (the first plan's were `step NN: …`); outside a plan `<machine or area>: <what is now true>`;
   planning `plan: <plan> — …`. In prose a step is `step NN` or `cleanup 19d` here, and
