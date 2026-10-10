@@ -158,6 +158,9 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   "incus not found — run this on punk as admin"; published-readme 01). punk's
   `/data/config/egghead` is the desk's tree, uncommitted edits included, so it deploys what the
   desk holds. punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
+  A ZFS quota in `hosts/punk/storage/pool.nix` or `hosts/punk/lake-buckets.nix` is applied
+  when a disk is formatted, never at a switch: a change to one also runs `sudo zfs set quota=`
+  on punk (personal 07, which assumed the switch would).
 - **shark's CUDA programs are fetched, never compiled.** They come from `pkgsCuda`, which the
   NixOS CUDA team's cache holds; only `bin/shark` trusts that cache, per command, and its
   `dry-run` refuses a build that would run `nvcc`. Never `nix build` shark or

@@ -139,3 +139,8 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
 - **Open items are closed, not copied.** The same uncommitted edit was "left" by ten sessions in a
   row, each copying it into its report. One list in `PLAN.md`; a session that cannot close an item
   names who can.
+- **A person looks at the first real output.** `personal 07`'s first live recording was cropped to
+  the top-left 57% of the screen while every gate on it was green (sha256 equal end to end, a
+  transcript in the table); the scene defect was older than the plan and every meeting recording
+  had carried it for four days. A live phase's gate includes opening one real output and looking
+  at it, not only counting it.
