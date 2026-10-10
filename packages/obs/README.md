@@ -78,6 +78,19 @@ them only when absent (`seeded`), and otherwise leaves them alone (`kept`).
   the wrong display or none, with no error: `bin/obs start` refuses a blank screen.
 - The recording path `/Users/youneselalami/Movies/meetings` in `basic.ini`.
 
+## The screen is fitted to the canvas, never placed by hand
+
+The `Screen` item is "scale to inner bounds" (`bounds_type: 2`) at the canvas's full size,
+so it fills the frame whatever resolution macOS captures at (2940×1912 with "More Space"
+on the 2560×1664 panel). OBS stores an item's position and scale relative to the canvas
+it was laid out on (`scale_ref`, `pos_rel`, `scale_rel`, `bounds_rel`) and rebuilds the
+absolute values from them at load, so changing `BaseCX`/`BaseCY` in `basic.ini` moves and
+resizes every item. That happened from this package's first commit: the scene was laid out
+on a 1920×1080 canvas and the profile's is 2560×1664, so every recording until 2026-10-10
+showed only the top-left 57% of the screen, enlarged 1.54×. Edit this file from what OBS
+itself saves (a scene-collection switch writes it), never by hand-computing the relative
+fields.
+
 ## The call track is everything the Mac plays
 
 `CallAudio` is OBS's macOS Audio Capture (`sck_audio_capture`) with `type: 0`: all of the
