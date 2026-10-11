@@ -30,45 +30,45 @@ else
   echo "  To re-seed from scratch (loses live runtime prefs):"
   echo "      cp \"$SEED\" \"$DEST\""
 fi
-# Fleet's skills are source code in the fleet tree, one folder each under <fleet>/skills/.
-# A skill fleet links from its own committed .claude/skills/ is fleet-only and loads only
+# Logos' skills are source code in the logos tree, one folder each under <logos>/skills/.
+# A skill logos links from its own committed .claude/skills/ is logos-only and loads only
 # there; every other one is linked here, so it loads in every project. There is no list:
-# adding a skill, or making one fleet-only, is a fleet commit. The checkout is the per-host
-# record packages/dot/bootstrap.sh writes, the same one the fleet launchers read; a host
+# adding a skill, or making one logos-only, is a logos commit. The checkout is the per-host
+# record packages/dot/bootstrap.sh writes, the same one the logos launchers read; a host
 # without it skips this block.
-record="${XDG_STATE_HOME:-$HOME/.local/state}/dot/fleet-root"
-fleet=""
-[ -f "$record" ] && fleet=$(cat "$record")
-if [ -n "$fleet" ] && [ -d "$fleet/skills" ]; then
+record="${XDG_STATE_HOME:-$HOME/.local/state}/dot/logos-root"
+logos=""
+[ -f "$record" ] && logos=$(cat "$record")
+if [ -n "$logos" ] && [ -d "$logos/skills" ]; then
   mkdir -p "$HOME/.claude/skills"
-  # A link into fleet whose skill was deleted or became fleet-only is removed, so a skill
-  # never keeps loading everywhere after fleet stopped offering it.
+  # A link into logos whose skill was deleted or became logos-only is removed, so a skill
+  # never keeps loading everywhere after logos stopped offering it.
   for link in "$HOME/.claude/skills"/*; do
     [ -L "$link" ] || continue
     name=${link##*/}
     case $(readlink "$link") in
-      "$fleet/skills/"*)
-        if [ ! -f "$fleet/skills/$name/SKILL.md" ] || [ -L "$fleet/.claude/skills/$name" ]; then
+      "$logos/skills/"*)
+        if [ ! -f "$logos/skills/$name/SKILL.md" ] || [ -L "$logos/.claude/skills/$name" ]; then
           rm "$link"
-          echo "✓ unlinked $name skill — gone from fleet, or fleet-only"
+          echo "✓ unlinked $name skill — gone from logos, or logos-only"
         fi
         ;;
     esac
   done
-  for src in "$fleet/skills"/*/; do
+  for src in "$logos/skills"/*/; do
     name=$(basename "$src")
     [ -f "$src/SKILL.md" ] || continue
-    [ -L "$fleet/.claude/skills/$name" ] && continue
+    [ -L "$logos/.claude/skills/$name" ] && continue
     dest="$HOME/.claude/skills/$name"
     if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-      echo "! $dest is a real directory; fleet's $name skill is not linked over it"
+      echo "! $dest is a real directory; logos' $name skill is not linked over it"
       continue
     fi
-    ln -sfn "$fleet/skills/$name" "$dest"
-    echo "✓ linked $name skill -> $fleet/skills/$name"
+    ln -sfn "$logos/skills/$name" "$dest"
+    echo "✓ linked $name skill -> $logos/skills/$name"
   done
 else
-  echo "• no fleet checkout recorded at $record — fleet's skills are not linked"
+  echo "• no logos checkout recorded at $record — logos' skills are not linked"
 fi
 # omp reads skills from ~/.omp/agent/skills and ignores ~/.claude/skills unless its
 # `enabledProviders` lists `claude`, which would also pull in Claude's hooks, plugins and MCP.

@@ -15,7 +15,7 @@
 #   2026-05-15  $HOME/.config/dotfiles/dot.ts
 #   2026-05-25  $HOME/.config/dotfiles/dot.ts, with --cwd
 #   2026-07-10  /data/config/dot/dot.ts
-#   2026-08-24  /data/code/fleet/apps/dot/dot.ts
+#   2026-08-24  /data/code/logos/apps/dot/dot.ts
 #
 # The last of those is the one that made it visible: after the TypeScript moved to the kit,
 # a host could no longer fix itself by cloning this repo, because the code is not in it.
@@ -23,7 +23,7 @@
 # ## Where the CLI is
 #
 # That one genuinely cannot be derived — the kit is a different repository in a different
-# place per host (/data/code/fleet on the desktop, under $HOME on the laptop). So it is
+# place per host (/data/code/logos on the desktop, under $HOME on the laptop). So it is
 # recorded once per host by bootstrap.sh, and read here. A list of candidate paths guessed in
 # this file would be the same mistake as the table above, only quieter.
 #
@@ -52,13 +52,13 @@ fi
 
 if [ -z "$cli" ]; then
   echo "dot: this host has no kit recorded at $record." >&2
-  echo "     run $root/packages/dot/bootstrap.sh /path/to/fleet" >&2
+  echo "     run $root/packages/dot/bootstrap.sh /path/to/logos" >&2
   exit 2
 fi
 
 if [ ! -f "$cli" ]; then
   echo "dot: $record names $cli, which is not there." >&2
-  echo "     re-run $root/packages/dot/bootstrap.sh /path/to/fleet" >&2
+  echo "     re-run $root/packages/dot/bootstrap.sh /path/to/logos" >&2
   exit 2
 fi
 

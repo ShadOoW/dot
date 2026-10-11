@@ -17,11 +17,11 @@ its own symlink instead of spelling out a path.
 
 ```sh
 git clone git@github.com:ShadOoW/dot.git            # this repo, the payload
-git clone git@github.com:shadhq/fleet.git           # the kit, the CLI
-cd fleet && bun install --filter '@app/dot' --filter '@kit/*'
+git clone git@github.com:shadhq/logos.git           # the kit, the CLI
+cd logos && bun install --filter '@app/dot' --filter '@kit/*'
 
 cd ../dot
-packages/dot/bootstrap.sh ../fleet                  # record where the kit is
+packages/dot/bootstrap.sh ../logos                  # record where the kit is
 sh packages/dot/home/.local/bin/dot pkg dot link    # put the launcher on PATH
 dot doctor
 ```

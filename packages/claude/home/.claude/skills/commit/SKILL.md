@@ -3,7 +3,7 @@ name: commit
 description: |
   How a commit is written on this machine: staging discipline, one commit per intent, and
   the two subject conventions in use — Conventional Commits in /data/config/dot, and
-  `scope: sentence` in /data/code/fleet and /data/ops — plus why the body is the norm here
+  `scope: sentence` in /data/code/logos and /data/ops — plus why the body is the norm here
   rather than the exception.
   Use whenever you are about to commit, are asked to commit, are writing or rewriting a
   commit message, are deciding how to split finished work into commits, or are unsure
@@ -36,7 +36,7 @@ machine has no such rule: commit finished work by the repo's own convention.
 - **Never commit secrets**, `.env`, credentials, or anything under a `state/` directory.
 - **No trailers.** No `Co-Authored-By`, no "Generated with", no emoji.
 - **Do not commit over a failing check.** Run the repo's own gate first if it is cheap
-  (`just check` in dot, `bun run check` in fleet, `./bin/ops check` in ops). If it is red for
+  (`just check` in dot, `bun run check` in logos, `./bin/ops check` in ops). If it is red for
   a reason you did not cause, report that instead of committing through it.
 - If a hook rewrites files, re-stage the rewritten paths and commit again. Never
   `--no-verify`.
@@ -62,7 +62,7 @@ Measured over the last 60 commits of each, at the time of writing:
 | Repo | Convention | Subject length | Read as |
 |---|---|---|---|
 | `/data/config/dot` | **Conventional Commits** — 70/80 | mean 50, 4/60 over 72 | `chore(git): ignore playwright-cli artifacts machine-wide` |
-| `/data/code/fleet` | **`scope: sentence`** — 36/80, only 1 conventional | mean 71, max 159 | `people-web: two listeners, one process, and the index route stops claiming /` |
+| `/data/code/logos` | **`scope: sentence`** — 36/80, only 1 conventional | mean 71, max 159 | `people-web: two listeners, one process, and the index route stops claiming /` |
 | `/data/ops` | **`scope: sentence`** — 35/80, 21 conventional | mean 64, max 130 | `matrix: a bridge that rewrites its config owns a file git also owns` |
 
 **Before writing, look:** `git log --format='%s' -40`. Match what you see. If the log is
@@ -74,7 +74,7 @@ genuinely mixed, prefer the more recent half.
 style chore revert`. Scope is one lowercase noun, the package or module. Breaking change:
 `!` before the colon plus a `BREAKING CHANGE:` footer. Keep the whole line ≤72.
 
-### `scope: sentence` — fleet and ops
+### `scope: sentence` — logos and ops
 
 `<scope>: <a clause that states what changed and what is now true>`.
 
@@ -95,7 +95,7 @@ style chore revert`. Scope is one lowercase noun, the package or module. Breakin
 
 ## 4. Body — the norm, not the exception
 
-**Write a body.** Measured: 50/60 in fleet, 48/60 in ops, 47/60 in dot. A bare subject is
+**Write a body.** Measured: 50/60 in logos, 48/60 in ops, 47/60 in dot. A bare subject is
 the minority case on this machine, reserved for changes whose diff is self-evident.
 
 The body answers what the diff cannot:
@@ -115,7 +115,7 @@ Wrap at 72. Multi-line goes through a heredoc:
 
 ```sh
 git commit -F - <<'EOF'
-people: the web adapter runs from the fleet workspace
+people: the web adapter runs from the logos workspace
 
 package.nix names the path only in a comment, so editing it alone would have
 restarted onto the old path and then deleted that path.
@@ -131,7 +131,7 @@ EOF
 per commit:
 
 ```
-a1b2c3d people: the web adapter runs from the fleet workspace
+a1b2c3d people: the web adapter runs from the logos workspace
 e4f5g6h chore(git): ignore playwright-cli artifacts machine-wide
 ```
 

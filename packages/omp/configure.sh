@@ -4,13 +4,13 @@
 # ── Why a private prefix and not the system package ─────────────────────────────────
 # Arch `extra/typescript` is 6.0.3, whose LSP path is node: typescript-language-server
 # forks a tsserver child that holds the whole program graph in a V8 heap. Measured on
-# /data/code/fleet (751 TS files, 924 MiB node_modules), hover + references from a cold
+# /data/code/logos (751 TS files, 924 MiB node_modules), hover + references from a cold
 # start: 900 MiB PSS across 4 processes. The same probe against `tsc --lsp --stdio` from
 # TypeScript 7.0.2: 308 MiB in 1 process. Every agent session pays that difference, and
 # this box runs five or more at once.
 #
 # The install lives in ~/.local/share/typescript-native rather than on PATH so that
-# `tsc` keeps meaning 6.0.3 for builds — fleet still declares typescript ^6.0.0 and
+# `tsc` keeps meaning 6.0.3 for builds — logos still declares typescript ^6.0.0 and
 # typechecks with it. Only omp's language server is moved.
 #
 # ── Why the .bin/tsc path in lsp.json and not the raw Go binary ─────────────────────
@@ -63,7 +63,7 @@ bin="$PREFIX/node_modules/.bin/tsc"
 
 # ── The heap ceiling ────────────────────────────────────────────────────────────────
 # The Go server has no --max-old-space-size, and its working set does grow under a real
-# editing session: 150 fleet files opened, edited and closed, three passes, measured
+# editing session: 150 logos files opened, edited and closed, three passes, measured
 # 739 -> 943 -> 1091 MiB with a 1205 MiB peak (it does give memory back — 780 MiB once
 # idle, versus the node stack which ended that same run at 2155 MiB and still climbing).
 # typescript-go#3032 is the unbounded tail of that curve: closed for lack of a repro, but

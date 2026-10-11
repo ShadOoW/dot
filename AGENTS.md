@@ -3,7 +3,7 @@
 Stow-style dotfiles manager. `dot pkg <pkg> link` walks `packages/<pkg>/` and creates
 **symlinks** — `home/…` → `$HOME/…`, `system/{base,systemd,runit}/…` → `/…`
 (`src/lib/pkg.ts` maps the paths, `src/commands/link.ts` links). The CLI itself lives at
-**`/data/code/fleet/apps/dot`** since commit 02c065c — every `src/…` path below is relative
+**`/data/code/logos/apps/dot`** since commit 02c065c — every `src/…` path below is relative
 to that, not to this repo.
 
 This repo lives at **`/data/config/dot`**. Related: `/data/ops` (services; its `CLAUDE.md` is

@@ -15,7 +15,7 @@ signature** and the second-order coupling that file does not list.
 ---
 
 > All `src/…` paths in this document are relative to the moved CLI at
-> **`/data/code/fleet/apps/dot`** (entry `apps/dot/dot.ts`); this repo has no TS of its own.
+> **`/data/code/logos/apps/dot`** (entry `apps/dot/dot.ts`); this repo has no TS of its own.
 
 ## 1. Early boot — `/data` is unmounted until `local-fs.target`
 
@@ -158,12 +158,12 @@ no `meta.json` at all and therefore claim to apply everywhere, macOS included.
 
 `just check` (the recipe is `check`; **`just fmt` does not exist**, it is `format`) runs
 stylua/shfmt/ruff-format/prettier/kdlfmt/taplo; the CLI's `tsc --noEmit` and `bun test`
-gates moved with it to `/data/code/fleet/apps/dot`. What it does **not** catch, and you
+gates moved with it to `/data/code/logos/apps/dot`. What it does **not** catch, and you
 therefore must:
 
 - **No linter of any language.** `ruff.toml` is format-only; no shellcheck, no eslint. Unquoted
   expansions, `set -euo pipefail` omissions, undefined Python names all pass.
-- **The TS CLI (`/data/code/fleet/apps/dot`) has no formatter and no lint**, and its `tsconfig`
+- **The TS CLI (`/data/code/logos/apps/dot`) has no formatter and no lint**, and its `tsconfig`
   lacks `noUncheckedIndexedAccess` — direct risk in the code parsing `/proc/*/smaps_rollup`
   and `pacman -Q` output.
 - **CLI tests exist only under `apps/dot/src/lib/` (9 files).** `apps/dot/src/commands/link.ts` —

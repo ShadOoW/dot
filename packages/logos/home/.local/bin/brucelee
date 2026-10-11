@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
-# The launcher for fleet's own CLIs — one file, dispatched by the name it was called as.
+# The launcher for logos' own CLIs — one file, dispatched by the name it was called as.
 #
-# `brucelee` is not a binary. It is /data/code/fleet/apps/brucelee/cli.ts, a Bun entry point
-# inside the fleet workspace, resolved through that workspace's node_modules. Two facts have
+# `brucelee` is not a binary. It is /data/code/logos/apps/brucelee/cli.ts, a Bun entry point
+# inside the logos workspace, resolved through that workspace's node_modules. Two facts have
 # to be true before it runs, neither the same on every host, so neither is written down here.
 #
 # ## Where the code is
 #
-# The fleet checkout, recorded once per host by packages/dot/bootstrap.sh and read here.
+# The logos checkout, recorded once per host by packages/dot/bootstrap.sh and read here.
 # This is the same record `dot`'s own launcher reads for the same reason, and the header of
 # that file is the argument for it: four successive revisions of it named an absolute path
 # instead, and each was wrong on some host.
@@ -15,14 +15,14 @@
 #   2026-05-15  $HOME/.config/dotfiles/dot.ts
 #   2026-05-25  $HOME/.config/dotfiles/dot.ts, with --cwd
 #   2026-07-10  /data/config/dot/dot.ts
-#   2026-08-24  /data/code/fleet/apps/dot/dot.ts
+#   2026-08-24  /data/code/logos/apps/dot/dot.ts
 #
 # egghead's hosts/desktop could have carried a writeShellScriptBin instead and had the path
 # baked into a store derivation. That would be the fifth entry in that table, in the one layer
-# that is supposed to outlive the tree it names: migration.md §14.6 records that fleet is a
-# candidate for deletion, so a system generation must not contain /data/code/fleet.
+# that is supposed to outlive the tree it names: migration.md §14.6 records that logos is a
+# candidate for deletion, so a system generation must not contain /data/code/logos.
 #
-# FLEET_ROOT overrides the record, for running a branch of the kit without touching it.
+# LOGOS_ROOT overrides the record, for running a branch of the kit without touching it.
 #
 # ## Which runtime
 #
@@ -51,41 +51,41 @@ case ${0##*/} in
   nosy) entry=apps/nosy/nosy.ts ;;
   entities) entry=apps/entities/cli-over-http.ts ;;
   *)
-    echo "fleet: no entry point is registered for '${0##*/}'." >&2
+    echo "logos: no entry point is registered for '${0##*/}'." >&2
     echo "       this launcher dispatches on the name it is called as; see the case" >&2
-    echo "       statement in packages/fleet/home/.local/bin/brucelee." >&2
+    echo "       statement in packages/logos/home/.local/bin/brucelee." >&2
     exit 2
     ;;
 esac
 
 state="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
-record="$state/fleet-root"
+record="$state/logos-root"
 
 # Whichever of the two sources supplied the path is carried alongside it, because the
-# failure below names it. Blaming the record file for a path that came from FLEET_ROOT
+# failure below names it. Blaming the record file for a path that came from LOGOS_ROOT
 # sends the reader to re-run bootstrap.sh against a record that is already correct, and
 # the override is the case where they are most likely to be mid-experiment and least
 # likely to want a write to $XDG_STATE_HOME.
-root="${FLEET_ROOT:-}"
+root="${LOGOS_ROOT:-}"
 if [ -n "$root" ]; then
-  origin="FLEET_ROOT"
-  remedy="unset FLEET_ROOT, or point it at a fleet checkout"
+  origin="LOGOS_ROOT"
+  remedy="unset LOGOS_ROOT, or point it at a logos checkout"
 else
   origin="$record"
-  remedy="re-run <payload>/packages/dot/bootstrap.sh /path/to/fleet"
+  remedy="re-run <payload>/packages/dot/bootstrap.sh /path/to/logos"
   if [ -f "$record" ]; then
     root=$(cat "$record")
   fi
 fi
 
 if [ -z "$root" ]; then
-  echo "fleet: this host has no fleet checkout recorded at $record." >&2
-  echo "       run <payload>/packages/dot/bootstrap.sh /path/to/fleet" >&2
+  echo "logos: this host has no logos checkout recorded at $record." >&2
+  echo "       run <payload>/packages/dot/bootstrap.sh /path/to/logos" >&2
   exit 2
 fi
 
 if [ ! -f "$root/$entry" ]; then
-  echo "fleet: $origin names $root, which has no $entry." >&2
+  echo "logos: $origin names $root, which has no $entry." >&2
   echo "       $remedy" >&2
   exit 2
 fi
@@ -94,7 +94,7 @@ fi
 # without this the first thing the operator sees is a module-resolution stack from inside
 # effect, which reads as a broken CLI rather than as a missing `bun install`.
 if [ ! -d "$root/node_modules/effect" ]; then
-  echo "fleet: $root has no node_modules/effect." >&2
+  echo "logos: $root has no node_modules/effect." >&2
   echo "       run: cd $root && bun install" >&2
   exit 2
 fi

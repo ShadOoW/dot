@@ -67,7 +67,7 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
    nothing else there; a file only one machine uses in its folder, the program a module runs
    beside it; a declaration two machines run in `modules/`; a value two machines read, or one
    reads about another, in `constants/`; no file reads another machine's folder.
-   `checks.machine-folders` is red on a breach. fleet is a flake input only for the apps
+   `checks.machine-folders` is red on a breach. logos is a flake input only for the apps
    `migration.md` §14.6 names.
 2. **A declaration two machines share is one module in `modules/`, never a copy.** Why: copies
    drift silently; a fix to one never reaches the other. Known copies still to remove: the

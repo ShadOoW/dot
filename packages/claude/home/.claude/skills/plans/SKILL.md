@@ -130,7 +130,7 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   named a deploy from the desk that stops at once there (it needs punk), and `meeting-links 01`
   named a command another session's checked-out branches blocked.
   It covers the repository's own lint gates too: `ticket-context 04` designed an exported `Lake` and
-  `05` an exported `lineStamp`, and fleet's dead-export check failed both builds, the second after
+  `05` an exported `lineStamp`, and logos' dead-export check failed both builds, the second after
   the first had written the lesson down. A design that exports a name says which file imports it.
 - **Re-read the live state when the build starts.** A design's census of authored files is true
   the hour it is taken: `meeting-links 01` designed a cutover of "the two link files that exist",

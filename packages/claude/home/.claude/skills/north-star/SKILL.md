@@ -6,7 +6,7 @@ description: |
   then golden traces, then quarterly sampling), regeneration over migration, signal
   priorities, and the kill criteria for the kit and its Effect bet.
   Use when deciding whether to add, keep, or kill a service, integration, pipeline, or
-  dependency in /data/code/fleet, dot, or another private project; when weighing test
+  dependency in /data/code/logos, dot, or another private project; when weighing test
   strategy, backups, migration, or compatibility there; and when a rule cites the
   north-star skill and you need the reasoning around it. Does NOT apply to work projects
   under /data/code/work — those have their own objectives and their own AGENTS.md. egghead

@@ -7,35 +7,35 @@
 #
 # Usage:
 #
-#     packages/dot/bootstrap.sh /data/code/fleet     # desktop
-#     packages/dot/bootstrap.sh ~/code/fleet         # laptop
+#     packages/dot/bootstrap.sh /data/code/logos     # desktop
+#     packages/dot/bootstrap.sh ~/code/logos         # laptop
 #
-# Then `dot pkg dot link` puts the launcher on PATH, and `dot pkg fleet link` puts the other
-# fleet CLIs there too.
+# Then `dot pkg dot link` puts the launcher on PATH, and `dot pkg logos link` puts the other
+# logos CLIs there too.
 set -eu
 
 if [ $# -ne 1 ]; then
-  echo "usage: $0 <path-to-fleet-checkout>" >&2
+  echo "usage: $0 <path-to-logos-checkout>" >&2
   exit 2
 fi
 
-fleet=$(cd "$1" 2>/dev/null && pwd -P) || {
+logos=$(cd "$1" 2>/dev/null && pwd -P) || {
   echo "bootstrap: $1 is not a directory" >&2
   exit 2
 }
 
-cli="$fleet/apps/dot/dot.ts"
+cli="$logos/apps/dot/dot.ts"
 if [ ! -f "$cli" ]; then
-  echo "bootstrap: $cli is not there — is $fleet a fleet checkout?" >&2
+  echo "bootstrap: $cli is not there — is $logos a logos checkout?" >&2
   exit 2
 fi
 
 # Refuse a checkout whose dependencies are not installed. Without this the first thing the
 # operator sees is a module-resolution stack from inside effect, which reads as a broken CLI
 # rather than as a missing `bun install`.
-if [ ! -d "$fleet/node_modules/effect" ]; then
-  echo "bootstrap: $fleet has no node_modules/effect." >&2
-  echo "           run: cd $fleet && bun install --filter '@app/dot' --filter '@kit/*'" >&2
+if [ ! -d "$logos/node_modules/effect" ]; then
+  echo "bootstrap: $logos has no node_modules/effect." >&2
+  echo "           run: cd $logos && bun install --filter '@app/dot' --filter '@kit/*'" >&2
   exit 2
 fi
 
@@ -44,12 +44,16 @@ mkdir -p "$state"
 printf '%s\n' "$cli" >"$state/cli-path"
 
 # The checkout root, as well as the one file inside it. `dot`'s own launcher needs the file
-# and derives nothing; packages/fleet's launchers need the root, because each one names a
+# and derives nothing; packages/logos' launchers need the root, because each one names a
 # different entry point under apps/. Deriving one from the other is possible — three
 # dirnames — and is the kind of arithmetic that silently stops being true the moment an
 # entry point moves, which is precisely the mistake the header of dot's launcher records
 # four revisions of. Two lines instead.
-printf '%s\n' "$fleet" >"$state/fleet-root"
+printf '%s\n' "$logos" >"$state/logos-root"
+
+# A host bootstrapped before the checkout was renamed may still hold the old record file.
+# Two records would leave the launchers' answer ambiguous, so the stale one goes.
+rm -f "$state/fleet-root"
 
 echo "dot: kit recorded — $cli"
-echo "dot: fleet root recorded — $fleet"
+echo "dot: logos root recorded — $logos"
