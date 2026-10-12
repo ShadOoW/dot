@@ -3,6 +3,11 @@
   "name": "brucelee sign-in click",
   "version": "1.0",
   "description": "dev-ready 04: clicks the already-signed-in Google account or AWS's confirm button, so an async sign-in lands inside the VPN's few-second window.",
+  "host_permissions": [
+    "https://accounts.google.com/*",
+    "https://identitycenter.amazonaws.com/*",
+    "https://*.awsapps.com/*"
+  ],
   "content_scripts": [
     {
       "matches": ["https://accounts.google.com/*"],
