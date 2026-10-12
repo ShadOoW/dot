@@ -6,8 +6,7 @@ Stow-style dotfiles manager. `dot pkg <pkg> link` walks `packages/<pkg>/` and cr
 **`/data/code/logos/apps/dot`** since commit 02c065c — every `src/…` path below is relative
 to that, not to this repo.
 
-This repo lives at **`/data/config/dot`**. Related: `/data/ops` (services; its `CLAUDE.md` is
-the authoritative host-conventions file) and `/data/config/network` (router).
+This repo lives at **`/data/config/dot`**. Related: `/data/config/network` (router).
 
 ---
 

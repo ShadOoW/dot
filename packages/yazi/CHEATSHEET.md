@@ -33,7 +33,6 @@ Select multiple items with `Space`, then act on them.
 | `gdw` | /data/downloads  |
 | `gds` | /data/screens    |
 | `gdm` | /data/media      |
-| `gdo` | /data/ops        |
 | `gdS` | /data/stash      |
 
 ## Files

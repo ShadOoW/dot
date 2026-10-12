@@ -215,11 +215,6 @@ run = "cd /data/media"
 desc = "Go: /data/media"
 
 [[mgr.prepend_keymap]]
-on = ["g", "d", "o"]
-run = "cd /data/ops"
-desc = "Go: /data/ops"
-
-[[mgr.prepend_keymap]]
 on = ["g", "d", "S"]
 run = "cd /data/stash"
 desc = "Go: /data/stash"

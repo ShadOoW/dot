@@ -124,7 +124,7 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
    and that copy has never been drilled.
 12. **Services are added as they are needed** (operator, 2026-10-04: "no limit, we add the
    services we need"); a service of the old tree returns only when `fleet/MISSED.md` says it was
-   reached for. `/data/ops` is reference only: nothing here may depend on it.
+   reached for. The old tree is deleted (cleanup 22c); its last published state is `shadhq/ops` at `6d7ec9e`.
 
 ## Considered and rejected — do not re-propose without the trigger
 
