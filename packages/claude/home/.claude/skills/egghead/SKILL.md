@@ -74,9 +74,15 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
    fix of a known copy (cleanup 19d, 2026-10-12): punk's and hawk's offsite backups shared 122
    lines of code, byte-identical, now one module with options for what each machine copies, its
    directory on the box, its key and punk's clone of snake's volume; `machines/punk/offsite.nix`
-   and `machines/hawk/offsite.nix` hold only that. Still a copy: the settings every machine
-   shares (Nix, SSH, the `admin` user, locale, ZFS boot, the snapshot template; cleanup 19g). Do
-   not add a third copy: extract first.
+   and `machines/hawk/offsite.nix` hold only that. cleanup 19g did the same for the rest: five
+   modules, each named for what it configures and imported by the machines that run it, never a
+   catch-all (no one module is common to every machine): `zfs-boot.nix` (the pinned ZFS; punk,
+   hawk, rescue, installer), `zfs-pool.nix` (`rpool`'s flags and the `local`/`safe` split, with
+   `zfs-pool.refreservation`; punk, hawk), `snapshots.nix` (sanoid's `precious` template; punk,
+   hawk), `ssh.nix` (password and keyboard-interactive login off; punk, hawk, snake, shark) and
+   `admin.nix` (the `admin` account, sudo, Nix's settings; punk, hawk). What stays per machine:
+   keys, `PermitRootLogin` on the guests, `systemPackages`, locale, `stateVersion`, the scrub
+   interval. Do not add a third copy: extract first.
 3. **A module in `modules/` names nothing true of one machine only.** An address, an interface,
    a peer is an option with no default, set in that machine's list in `flake.nix` (step 15's rule,
    `decisions/0010`, one source per fact). A module in `hosts/<machine>/` may hold its own
