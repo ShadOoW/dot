@@ -11,34 +11,6 @@ Three flag files, each read by a different launcher. **None of them supports com
 Every flag file in this package is flags-only, one per line. Reasoning that would otherwise
 be a comment goes here instead.
 
-## `vivaldi-sign-in` — a scoped extension that finishes a sign-in already warm (dev-ready 04)
-
-The VPN's SAML exchange and AWS SSO both end with the operator clicking one button that is
-already on the page: the Google account tile that is already signed in, or AWS Identity
-Center's "allow access" confirmation. The VPN's endpoint replaces its SAML session roughly
-every five seconds, so a human's reaction time to an async browser popup never lands the
-click in time (`dev-ready` plan, step 03's measurements). `vivaldi-sign-in` is a
-narrowly-scoped Manifest V3 content script, matching only `accounts.google.com`,
-`identitycenter.amazonaws.com` and `*.awsapps.com`, that clicks the same button the operator
-already would — never reading, storing or sending a credential, cookie or token. It reuses
-the operator's own Vivaldi session (which stays warm because he uses it all day); it is not
-a second browser profile.
-
-### One-time install
-
-`--load-extension` does not install an unpacked extension on this Vivaldi (confirmed live,
-2026-10-12, Vivaldi 8.2.4133.52 — Chromium's 2024+ change applies here too), so the install
-is a one-time GUI step:
-
-1. `dot pkg browsers link` (restores `~/.config/vivaldi-sign-in/` if anything moved it).
-2. In Vivaldi, open `chrome://extensions`, enable Developer Mode, click "Load unpacked",
-   choose `~/.config/vivaldi-sign-in/`.
-
-A fresh Vivaldi profile or a reinstalled OS loses step 2's registration (Vivaldi's own
-"this unpacked extension is loaded" record lives in the profile's `Preferences`, outside
-dot's reach) and needs it redone by hand — same one-time cost, not a new one. The only
-ongoing cost is Chrome's permanent, dismissible "Developer mode extensions" banner.
-
 ## The main window wedges while its PWAs keep working (2026-09-13, attempt 5)
 
 Symptom: the Vivaldi window on sway workspace 2 stops responding — no clicks, no
