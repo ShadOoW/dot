@@ -228,7 +228,7 @@ Each cost a build session at least once; most cost several (the step's Findings,
 - **`git log --diff-filter=D` does not see a decision renumbered by a rename**; compare the sets
   of numbers before and after (steps 04b, 04c).
 - **A command sent over ssh is parsed twice**, locally and by the remote shell: quote each
-  argument with `printf '%q '`, as `barzakh-copy`'s `remote` does (steps 16a, 16b, 16j).
+  argument with `printf '%q '`, as the barzakh copy's `remote` did (`git log --grep '^step 16a:'`).
 - **`incus exec` into a NixOS guest has Incus's bare `PATH`**: prefix ad hoc commands with
   `PATH=/run/current-system/sw/bin`, as `bin/snake`'s `kexec` does (steps 09, 12g, 12i, 12n).
 - **Incus's `systemd.credential.*` keys store the value in plaintext** in the instance and in
