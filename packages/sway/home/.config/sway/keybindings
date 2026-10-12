@@ -192,9 +192,6 @@ bindsym $mod+p exec grim -g "$(swaymsg -t get_tree | jq -r '.. | select(.pid? an
 # Either one toggles: press again to stop, finalize the file and tear down the mix.
 bindsym $mod+Shift+r exec ~/.local/bin/recorder.sh full
 
-# Lock screen
-bindsym $mod+l exec swaylock
-
 # Force-kill focused window (SIGKILL for unresponsive processes)
 bindsym $mod+Shift+q exec ~/.config/sway/scripts/force-kill.sh
 
