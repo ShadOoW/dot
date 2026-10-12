@@ -85,8 +85,10 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
    hand; importing a module turns it on; no `enable` option; no automatic import of a directory.
 5. **Never keep a list of machines, files or units by hand** (`decisions/0029`). Derive it from
    the declaration and make the flake red when they disagree: `checks.host-list`,
-   `checks.secret-set`, the backup sets (`nix build .#hawk-backup-set`). Lists still kept by hand,
-   to be derived in cleanup 19f: the Storage Box's `authorized_keys` and Prometheus's scrape targets.
+   `checks.secret-set`, the backup sets (`nix build .#hawk-backup-set`). The Storage Box's
+   `authorized_keys` and Prometheus's node scrape targets are derived in `flake.nix` from the
+   machines (cleanup 19f), and `RemoteWriteMissing`'s rules are held to the derived writers by
+   `checks.prometheus`.
 6. **One shape across services** (`0028`). A scheduled job is a `Type=oneshot` unit, a timer and a
    status unit that writes through `modules/status-file.nix`; exit codes follow `decisions/0039`;
    state goes in `StateDirectory`; produced records go to the lake (`decisions/0040`); only state
@@ -250,12 +252,11 @@ Each cost a build session at least once; most cost several (the step's Findings,
 
 Do not anticipate them in unrelated work, and do not contradict them. When one lands, update
 this skill in the same change. 19d shared-module landed 2026-10-12: `modules/offsite.nix`,
-rule 2 above.
+rule 2 above; 19f derived-peers landed 2026-10-12.
 
 | Step | Changes |
 |---|---|
 | 19e addresses | one file for every machine's addresses |
-| 19f derived-peers | the Storage Box's keys and Prometheus's targets derived from the machines |
 | 19g machine-module | one module for what every machine shares |
 | 19h flake-outputs | each check in its own file; no `specialArgs` |
 
