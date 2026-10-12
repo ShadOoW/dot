@@ -1,32 +1,33 @@
 # dot
 
-The launcher, in its own package.
+The fresh-host bootstrap, in its own package.
 
-It used to live in `packages/zsh`, which meant the CLI that links your packages could only be
-put on PATH by linking your shell first. `dot` is not zsh, and on a host where nothing is
-linked yet the launcher is the one thing you need before anything else.
+The one thing a host needs before any command exists: a way to say where the kit was
+cloned. Everything that actually dispatches commands — `dot` among them — lives in
+`packages/logos`'s shared launcher (logos 13); this package holds only `bootstrap.sh`,
+which has no dependency on `dot` or on anything being linked yet.
 
 ## Two repositories
 
 The payload — `packages/`, `pkgbuilds/`, `docs/` — is this repo. The TypeScript is in the kit
-(`apps/dot`), a different repository, cloned somewhere different on each host. Neither tree
-can name the other, which is why `bootstrap.sh` exists and why `home/.local/bin/dot` resolves
-its own symlink instead of spelling out a path.
+(`apps/dot`, `apps/brucelee`, …), a different repository, cloned somewhere different on each
+host. Neither tree can name the other, which is why `bootstrap.sh` resolves everything by
+path rather than spelling one out.
 
 ## A new host
 
 ```sh
 git clone git@github.com:ShadOoW/dot.git            # this repo, the payload
-git clone git@github.com:shadhq/logos.git           # the kit, the CLI
+git clone git@github.com:shadhq/logos.git           # the kit
 cd logos && bun install --filter '@app/dot' --filter '@kit/*'
 
 cd ../dot
-packages/dot/bootstrap.sh ../logos                  # record where the kit is
-sh packages/dot/home/.local/bin/dot pkg dot link    # put the launcher on PATH
+packages/dot/bootstrap.sh ../logos   # records where the kit is, links every command
 dot doctor
 ```
 
-The one recorded fact is `${XDG_STATE_HOME:-~/.local/state}/dot/cli-path`. `DOT_CLI`
-overrides it for a run against a branch; `DOT_ROOT` overrides the payload the launcher
-derived, which is mostly useful for pointing `dot` at another machine's checkout over a
-mount.
+The one recorded fact is `${XDG_STATE_HOME:-~/.local/state}/dot/logos-root`. `LOGOS_ROOT`
+overrides it for a run against a branch, or for pointing a command at another machine's
+checkout over a mount. After adding or removing a command's declaration, `dot pkg logos
+configure` re-reads the manifests and updates the links — `bootstrap.sh` is only for the
+first host.

@@ -1,5 +1,5 @@
 {
-  "description": "launchers for logos' own CLIs — brucelee and its TUI, resolved from the per-host logos-root record rather than an absolute path",
+  "description": "the launcher for logos' commands: reads the command name and runs its package's entry point",
   "packages": {
     "arch": { "pacman": [] },
     "void": { "xbps": [] },
@@ -7,5 +7,8 @@
     "macos": { "brew": [] }
   },
   "tags": ["dev", "cli"],
+  "cleanSteps": [
+    "find \"$HOME/.local/bin\" -maxdepth 1 -type l -lname '../libexec/launcher' -delete"
+  ],
   "os": ["linux", "macos"]
 }

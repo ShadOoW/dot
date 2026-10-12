@@ -1,5 +1,5 @@
 {
-  "description": "The dot launcher itself: resolves the payload from its own symlink, execs the kit's CLI",
+  "description": "The fresh-host bootstrap: records where the kit is, links the shared launcher and every command it dispatches",
   "packages": {
     "arch": { "pacman": ["bun"] },
     "void": { "xbps": ["bun"] },

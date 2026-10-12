@@ -1,0 +1,80 @@
+#!/usr/bin/env sh
+# The launcher for every command this tree declares in a `bin` field (logos 13). One file,
+# dispatched by the name it was invoked as — `~/.local/bin/<name>` is a symlink to this file,
+# generated and pruned by `tooling/launcher/link.ts` from the workspace manifests, never
+# hand-written here. Two facts have to be true before any command can run, neither the same
+# on every host, so neither is written down as a path.
+#
+# ## Where the payload is
+#
+# This file is inside it. Walking its own symlink chain and going five directories up names
+# the checkout on any host with no path spelled out — `packages/logos/home/.local/libexec/`
+# is five below the payload root, the same depth `dot`'s own former launcher used
+# (`packages/dot/home/.local/bin/`). That answer is exported as DOT_ROOT, because
+# `apps/dot/dot.ts`'s CLI reads it (`apps/dot/src/lib/config.ts:69`) and its literal fallback
+# (`/data/config/dot`) is false on the Mac, which keeps the payload under its own $HOME.
+#
+# ## Where the checkout is
+#
+# That cannot be derived — the kit is a different repository in a different place per host
+# (/data/code/logos on the desktop, under $HOME on the laptop). Recorded once per host by
+# `packages/dot/bootstrap.sh`, read here. LOGOS_ROOT overrides it, for running a branch of
+# the kit without touching the record.
+#
+# ## Why one file and not one per command
+#
+# This file holds no command name, no entry path and no list — that is what it replaces
+# (the four-revision table of a hardcoded path going wrong on some host each time is the
+# same mistake one layer up, and the case statement this file used to carry one arm per
+# command was the milder version of it). `tooling/launcher/run.ts` reads the manifests fresh
+# on every invocation and resolves the name there, so adding a command is one line in one
+# package's `bin` field, never an edit here.
+set -eu
+
+name=${0##*/}
+
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+payload=$(cd "$(dirname "$self")/../../../../.." && pwd -P)
+export DOT_ROOT="${DOT_ROOT:-$payload}"
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/dot"
+record="$state/logos-root"
+
+root="${LOGOS_ROOT:-}"
+if [ -n "$root" ]; then
+  origin="LOGOS_ROOT"
+  remedy="unset LOGOS_ROOT, or point it at a logos checkout"
+else
+  origin="$record"
+  remedy="re-run $payload/packages/dot/bootstrap.sh /path/to/logos"
+  if [ -f "$record" ]; then
+    root=$(cat "$record")
+  fi
+fi
+
+if [ -z "$root" ]; then
+  echo "$name: this host has no logos checkout recorded at $record." >&2
+  echo "       run $payload/packages/dot/bootstrap.sh /path/to/logos" >&2
+  exit 2
+fi
+
+if [ ! -d "$root" ]; then
+  echo "$name: $origin names $root, which is not there." >&2
+  echo "       $remedy" >&2
+  exit 2
+fi
+
+if [ ! -d "$root/node_modules/effect" ]; then
+  echo "$name: $root has no node_modules/effect." >&2
+  echo "       run: cd $root && bun install" >&2
+  exit 2
+fi
+
+exec bun "$root/tooling/launcher/run.ts" "$name" "$@"
