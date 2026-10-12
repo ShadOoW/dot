@@ -39,7 +39,7 @@ repository named `ragnarok` under `shadhq`, or the redirect breaks).
 ## Layout
 
 ```
-flake.nix                 (logos' root) inputs; one module list per machine; packages; checks
+flake.nix                 (logos' root) inputs; one module list per machine; the cross-machine derivations (cleanup 19f); packages; the list of checks, each a file beside what it tests (cleanup 19h)
 fleet/machines/<machine>/ one folder per nixosConfiguration and nothing else: punk, desktop, snake, shark, hawk, rescue, installer
 fleet/modules/           a declaration two or more machines import
 fleet/constants/         a value two or more machines read, or one reads about another: one file per value
@@ -96,7 +96,8 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
    `checks.secret-set`, the backup sets (`nix build .#hawk-backup-set`). The Storage Box's
    `authorized_keys` and Prometheus's node scrape targets are derived in `flake.nix` from the
    machines (cleanup 19f), and `RemoteWriteMissing`'s rules are held to the derived writers by
-   `checks.prometheus`.
+   `checks.prometheus`. `checks.zfs-parity` and `checks.nvidia-parity` pick their machines by rule,
+   and there is one `<machine>-backup-set` package per machine that builds one (cleanup 19h).
 6. **One shape across services** (`0028`). A scheduled job is a `Type=oneshot` unit, a timer and a
    status unit that writes through `fleet/modules/status-file.nix`; exit codes follow
    `docs/decisions/0039`; state goes in `StateDirectory`; produced records go to the lake
@@ -260,13 +261,12 @@ Each cost a build session at least once; most cost several (the step's Findings,
 
 Do not anticipate them in unrelated work, and do not contradict them. When one lands, update
 this skill in the same change. 19d shared-module landed 2026-10-12: `modules/offsite.nix`,
-rule 2 above; 19f derived-peers landed 2026-10-12.
+rule 2 above; 19f derived-peers landed 2026-10-12; 19h flake-outputs landed 2026-10-12.
 
 | Step | Changes |
 |---|---|
 | 19e addresses | one file for every machine's addresses |
 | 19g machine-module | one module for what every machine shares |
-| 19h flake-outputs | each check in its own file; no `specialArgs` |
 
 ## Sources of the comparison (read 2026-10-04)
 
