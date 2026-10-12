@@ -70,10 +70,13 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
    `checks.machine-folders` is red on a breach. logos is a flake input only for the apps
    `migration.md` §14.6 names.
 2. **A declaration two machines share is one module in `modules/`, never a copy.** Why: copies
-   drift silently; a fix to one never reaches the other. Known copies still to remove: the
-   offsite backup (`hosts/punk/offsite.nix` and `hosts/hawk/offsite.nix`, 122 lines of code in
-   common; cleanup 19d) and the settings every machine shares (Nix, SSH, the `admin` user, locale,
-   ZFS boot, the snapshot template; cleanup 19g). Do not add a third copy: extract first.
+   drift silently; a fix to one never reaches the other. `modules/offsite.nix` is the second
+   fix of a known copy (cleanup 19d, 2026-10-12): punk's and hawk's offsite backups shared 122
+   lines of code, byte-identical, now one module with options for what each machine copies, its
+   directory on the box, its key and punk's clone of snake's volume; `machines/punk/offsite.nix`
+   and `machines/hawk/offsite.nix` hold only that. Still a copy: the settings every machine
+   shares (Nix, SSH, the `admin` user, locale, ZFS boot, the snapshot template; cleanup 19g). Do
+   not add a third copy: extract first.
 3. **A module in `modules/` names nothing true of one machine only.** An address, an interface,
    a peer is an option with no default, set in that machine's list in `flake.nix` (step 15's rule,
    `decisions/0010`, one source per fact). A module in `hosts/<machine>/` may hold its own
@@ -243,14 +246,14 @@ Each cost a build session at least once; most cost several (the step's Findings,
 - **No `perl` on the desk.** A throwaway rewrite script uses `python3` (step 19a; again at
   the first plan's close).
 
-## Planned changes to this layout (cleanup 19d–19h)
+## Planned changes to this layout (cleanup 19e–19h)
 
 Do not anticipate them in unrelated work, and do not contradict them. When one lands, update
-this skill in the same change.
+this skill in the same change. 19d shared-module landed 2026-10-12: `modules/offsite.nix`,
+rule 2 above.
 
 | Step | Changes |
 |---|---|
-| 19d shared-module | `modules/offsite.nix` for punk and hawk |
 | 19e addresses | one file for every machine's addresses |
 | 19f derived-peers | the Storage Box's keys and Prometheus's targets derived from the machines |
 | 19g machine-module | one module for what every machine shares |
