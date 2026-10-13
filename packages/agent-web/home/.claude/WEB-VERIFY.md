@@ -22,6 +22,5 @@ syntax. Hard rules that hold even before those skills are loaded:
 - No harness-native browser tools or browser relays for verification; `playwright-cli` is
   the standard because its profile is shared across every agent and harness.
 - Agent config belongs in `$HOME`, never in a project: no per-project `.claude/`,
-  `.playwright/`, or committed profiles/skills.
-- Vitest 4: bare `--silent` before a path is a parse error — use `--silent=true <path>`;
-  same for any optional-value flag placed before a positional argument.
+  `.playwright/`, or committed profiles/skills. The one file a tool puts there is headroom's
+  `wrap claude` writing `.claude/settings.local.json`, which the machine-wide gitignore covers.
