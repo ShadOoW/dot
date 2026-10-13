@@ -194,6 +194,7 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   `fleet/machines/punk/lake-purged.tsv` (`docs/decisions/0043`); never `rm` under `/lake`, never a
   hand-written `DELETE`. `fleet/bin/lake show` looks first; `fleet/bin/lake query` replaces the
   hand-copied catalog recipe.
+- **Log an intervention.** When you act on something already live because it did not do what it was declared to do (re-run or unlock a failed job, repair a deploy that broke a service, a credential or a disk that ran out), or the operator says something broke and you fix it, append one line to `fleet/INTERVENTIONS.md` before the session ends: `YYYY-MM-DD <service> — what broke; what was done`. The file's header says what counts and what does not: a plan step's own work, an early run of a healthy job and a fault in work not yet deployed do not. Commit the line with the fix when there is one, otherwise alone as `interventions: <service> — <what was done>`. Write it when it happens, never from memory of an earlier session, and never leave it uncommitted (decision 0033).
 - **Commits.** A plan's step is one commit: `cleanup 19d: shared-module — <what is now true>`
   (the first plan's were `step NN: …`); outside a plan `<machine or area>: <what is now true>`;
   planning `plan: <plan> — …`. In prose a step is `step NN` or `cleanup 19d` here, and
