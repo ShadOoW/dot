@@ -44,6 +44,13 @@ machine has no such rule: commit finished work by the repo's own convention.
   cost three build attempts in one step (logos 21 Findings 12, 13, 25). Build a private one
   instead: `export GIT_INDEX_FILE=$(mktemp)`, `git read-tree HEAD`, `git add <your paths>`,
   then run the gate with that same variable still exported — `check:staged` honours it.
+- **A private index has an order, and the check comes after the commit.** Read it from HEAD as
+  late as you can — one read an hour before committing took a file another session had landed in
+  the meantime back to its pre-commit content (ticket-flow 03's build). Immediately after the
+  commit, `git diff --stat HEAD~1 HEAD` must list only your own paths; that check, not the index,
+  is what catches a sweep. Then `unset GIT_INDEX_FILE` and `git reset -q -- <your paths>`, in that
+  order: with the variable still exported you reset the private index and leave the shared one
+  holding a staged reversal of the commit (ticket-flow 07 Finding 17, 09 Finding 14).
 - If a hook rewrites files, re-stage the rewritten paths and commit again. Never
   `--no-verify`.
 

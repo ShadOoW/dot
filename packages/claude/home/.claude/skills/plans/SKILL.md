@@ -181,7 +181,10 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   `meeting-links` (2026-10-09): both designs were confirmed without the explain-back, and both
   plans carried a kill criterion counting failed explain-backs that therefore never had a reading.
   And in `ticket-context` (2026-10-09 to 10-10): none of its 10 designs got an explain-back, and the
-  operator dropped its kill criterion at the second.
+  operator dropped its kill criterion at the second. And in `ticket-flow` (2026-10-11 to 10-13): it
+  was asked at 6 of its 14 studies and answered at 0, while the plan's own contract said the operator
+  "must be able to explain each landed step with the files closed"; its close recorded the clause as
+  never measured.
 - **Probe the live system while designing, not while building.** A script that only passed
   `shellcheck` or a dry run failed against its real target five times in two steps (wrong `PATH`,
   invalid bucket names, `set -e` on an expected exit, a missing binary, a stale group). Run every
