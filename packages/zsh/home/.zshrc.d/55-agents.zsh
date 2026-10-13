@@ -1,5 +1,5 @@
 # Coding agents start inside one shared memory budget, agents.slice, where a
-# host declares it (the NixOS desk: egghead hosts/desktop, systemd.user.slices.agents).
+# host declares it (the NixOS desk: logos' `fleet/machines/desktop`, systemd.user.slices.agents).
 # Everything an agent starts (vitest, browsers, tsc) stays in its scope, so when
 # agents together outgrow the budget the kernel kills inside it, never Steam, a
 # game or the wallpaper. Hosts without the slice run the commands unchanged.

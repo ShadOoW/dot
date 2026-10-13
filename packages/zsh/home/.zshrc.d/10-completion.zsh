@@ -31,8 +31,8 @@ autoload -Uz compinit
 # look worthless. That mismeasurement is why this comment first said the fix
 # was cosmetic.
 #
-# The remaining duplicate is /etc/zshrc's own compinit, which egghead
-# turns off in hosts/desktop (programs.zsh.enableGlobalCompInit = false) so
+# The remaining duplicate is /etc/zshrc's own compinit, which logos
+# turns off in `fleet/machines/desktop` (programs.zsh.enableGlobalCompInit = false) so
 # that this file is the single owner. On a machine where it is still on, the
 # -C above makes the second run nearly free anyway.
 typeset -ga _zcompdump_fresh=(${ZDOTDIR:-$HOME}/.zcompdump(Nmh-24))

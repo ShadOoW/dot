@@ -7,17 +7,17 @@ tailnet (SRT to `snake.tail.shadhq.com:8793/udp`: H.264 at 1500 kbps and the two
 separate Opus tracks), reconnecting by itself. The stream can fail without touching the file.
 
 Three folders live under `~/Movies`: `meetings` (this profile's own path, reaches the lake
-through egghead's `meeting-fetch`), `personal` (`obs start personal`: the same settings,
-recording only, reaches the lake through egghead's `personal-fetch` instead, never
-`meeting-fetch`), and `tests` (`obs start test`: nothing reads it). Each folder is
-served to snake by its own SSH key, forced to read that one folder and no other
-(egghead's `hosts/snake/recording-files`).
+through `meeting-fetch`, `lake/sources/meetings/`), `personal` (`obs start personal`: the same
+settings, recording only, reaches the lake through `personal-fetch`, `lake/sources/personal/`,
+instead, never `meeting-fetch`), and `tests` (`obs start test`: nothing reads it). Each folder
+is served to snake by its own SSH key, forced to read that one folder and no other
+(`lake/recording-files/recording-files`).
 
 This package holds the `meetings` profile and scene collection, and `configure.sh`, which
-copies them into OBS's settings. It does not start or stop anything: egghead's `obs`
-(`start`, `stop`, `status`, run on the desk) drives OBS over obs-websocket, and OBS's own
-Start Recording and Start Streaming buttons reach the same outputs. Nothing here deletes a
-recording. The design is egghead step 21j.
+copies them into OBS's settings. It does not start or stop anything: the `obs` command
+(`apps/obs/obs`, verbs `start`, `stop`, `status`, run on the desk) drives OBS over
+obs-websocket, and OBS's own Start Recording and Start Streaming buttons reach the same
+outputs. Nothing here deletes a recording. The design is egghead step 21j.
 
 | File                                                      | Role                                                                  |
 | --------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -91,7 +91,7 @@ showed only the top-left 57% of the screen, enlarged 1.54×. Edit this file from
 itself saves (a scene-collection switch writes it), never by hand-computing the relative
 fields.
 
-egghead's `obs start` checks this before every recording and sets the item back to
+`obs start` checks this before every recording and sets the item back to
 "scale to inner bounds" at the live canvas size if anything moved it, printing one line
 naming what was wrong; so a mistake here costs a stderr line, not a recording. OBS's own
 Start Recording button skips that check.
@@ -114,10 +114,10 @@ video and an all-zero call track until OBS is restarted or each source's Reactiv
 (`reactivate_capture`) is pressed (OBS 32.2.2, `mac-sck-common.m`, `didStopWithError`; upstream
 declined to restart automatically, obs-studio#10858). OBS keeps the display awake only while it
 records or streams, so the failure happens between meetings, while OBS sits idle. The
-microphone (`Mic/Aux`, CoreAudio) is not affected. egghead's `obs start` presses that button
+microphone (`Mic/Aux`, CoreAudio) is not affected. `obs start` presses that button
 on both sources before every recording it starts, so the desk's start is unaffected; one started
 from OBS's own button still needs the restart or the press, which `obs reactivate` on the desk
-does mid-recording without stopping anything. egghead's meetings 21s pages the phone when a track
+does mid-recording without stopping anything. `meetings 21s` pages the phone when a track
 stays digital silence for three minutes.
 
 ## macOS permissions

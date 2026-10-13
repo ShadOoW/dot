@@ -9,8 +9,8 @@ description: |
   dependency in /data/code/logos, dot, or another private project; when weighing test
   strategy, backups, migration, or compatibility there; and when a rule cites the
   north-star skill and you need the reasoning around it. Does NOT apply to work projects
-  under /data/code/work — those have their own objectives and their own AGENTS.md. egghead
-  keeps its own principles in its `decisions/` directory; follow those there.
+  under /data/code/work — those have their own objectives and their own AGENTS.md. The machines
+  under logos' `fleet/` are the `fleet` skill's business, with their rules in `docs/decisions/`.
 ---
 
 # north-star
