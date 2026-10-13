@@ -36,8 +36,14 @@ machine has no such rule: commit finished work by the repo's own convention.
 - **Never commit secrets**, `.env`, credentials, or anything under a `state/` directory.
 - **No trailers.** No `Co-Authored-By`, no "Generated with", no emoji.
 - **Do not commit over a failing check.** Run the repo's own gate first if it is cheap
-  (`just check` in dot, `bun run check` in logos, `./bin/ops check` in ops). If it is red for
-  a reason you did not cause, report that instead of committing through it.
+  (`just check` in dot, `bun run check:staged` in logos — HEAD plus what is staged, in a
+  throwaway copy, inside `nix develop /data/code/logos` — `./bin/ops check` in ops). If it
+  is red for a reason you did not cause, report that instead of committing through it.
+- **Another session may hold the same index.** It can stage, unstage or rewrite entries you
+  never touched while you work, so a shared-index gate checks a tree that is not yours — it
+  cost three build attempts in one step (logos 21 Findings 12, 13, 25). Build a private one
+  instead: `export GIT_INDEX_FILE=$(mktemp)`, `git read-tree HEAD`, `git add <your paths>`,
+  then run the gate with that same variable still exported — `check:staged` honours it.
 - If a hook rewrites files, re-stage the rewritten paths and commit again. Never
   `--no-verify`.
 
