@@ -221,3 +221,19 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   counting the folders its rule covered instead of opening each file, and the walk it designed
   could not resolve the tree at all; the build had to re-cut it. Checking a claim means opening the
   file and the line.
+- **A one-line fix is made, not parked, and the reply asks for whatever the session cannot reach.**
+  A parked item is the cheapest thing to write and the last thing anyone reads. retention 01's close
+  failed two `check:staged` runs on a one-line defect in `tooling/probes/imports/run.sh` that had
+  been a `logos` Open item since 23; the same step's three-file doc correction, its `xattr` answer
+  and its home measurement each cost one query. An item is written with its size — `one line`, `a
+  step`, `a ruling` — the one-liners are fixed in the session that noticed them, and the rest is
+  asked for in that session's reply, where an unanswered question is visible.
+- **Before a rename or a move, grep the tree for the old name and account for every hit.** The
+  design carries that grep's output with a line per hit: corrected here, or not mine and why.
+  retention 01 §10 asked for "the two stale comments"; five files asserted the old lake layout, and
+  the other three were one `grep` away when the design was cut — they surfaced at the build instead,
+  as an Open item still open at the close.
+- **When a plan's Open items double, review them.** `review.md` may run mid-plan, and the moment the
+  waiting list grows is when an item is still cheap to turn into a step or a question. Every item
+  retention held at 01's close had been created by a session doing the work rather than by the step
+  it was running, and none of them needed to wait that long.
