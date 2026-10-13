@@ -5,8 +5,9 @@ description: |
   folder per plan (a feature or one body of work), each with its own ledger, memory and finish
   line, opened, run, reviewed and closed on its own. Covers the folder layout, the two kinds of
   plan (build, run by /create-plan and /execute-wave; study, run by /create-study-plan, /study and
-  /execute-study-step), what a plan remembers and where, how steps are numbered and cited, and
-  the review and close procedures (review.md, close.md beside this file).
+  /execute-study-step), which model each study session runs on, what a plan remembers and where,
+  how steps are numbered and cited, and the review and close procedures (review.md, close.md
+  beside this file).
   Use before creating, reading, resuming, extending, reviewing or closing anything under a
   `.plans/` directory; when the operator asks to review or close a plan; and when new work
   comes up while a plan is running. Not for Bruce tickets: their plans live in brucelee's state
@@ -48,6 +49,65 @@ feature to it was always the easy path.
 
 The step and phase file formats are the commands' own; this skill does not restate them. A plan
 says its kind in its first line: `# <plan> — a build plan` or `# <plan> — a study plan`.
+
+## Which model runs a session
+
+Every session of a study plan starts fresh, so its model is chosen when it is launched, and the
+session before it names that choice in its `## Next` line. Judgement is spent in the design, with
+the operator in the room; a build that follows a confirmed design is following specific
+instructions, which is the work the smaller model does as well for less.
+
+| Session | Model |
+|---|---|
+| `/create-study-plan`, and `/study` on a step | Opus 5.5 |
+| `/study` on a chore | Sonnet 5.5 |
+| `/execute-study-step` | the step's **Build session** line: Sonnet 5.5 unless it names Opus and why |
+
+**A build gets Opus only for a reason the design names**, one of:
+
+- **unknown cause**: the build has to find out something no design could settle in advance, such
+  as a failure with no reproduction yet;
+- **unlisted reach**: the change migrates callers or files the design could not list one by one;
+- **escalated**: an earlier build of this step had the context, clearly tried, and was still wrong.
+
+A design tempted to name Opus because "the build will have to work it out" has a gap in section 9:
+close the gap instead. Haiku 5.5 runs no plan session; it suits subagent lookups, not a build bound
+by a repository's rules. Fable 5.1 runs one only when the operator picks it: it drains the weekly
+limit fastest, and on Max past half of it bills usage credits.
+
+**Effort is `high` on both models.** That is Sonnet's own default; on Opus it is one level above
+the default (`medium`), because the plans that went well ran their Opus designs at `high`, and the
+saving is meant to come from moving builds to Sonnet, not from thinner designs. When a build
+fails, ask whether it did not know enough or did not try hard enough (Anthropic's own rule), and
+the cause picks the retry:
+
+| The build stopped because | Retry |
+|---|---|
+| a sentence of section 9 could not be acted on | `/study <plan> NN` again: the design is at fault, not the model |
+| it had the context, tried, and was still wrong | the same step on Opus; the design's Build session line becomes `escalated` |
+| it skipped a file, a gate or a caller, or stopped partway | the same step on the same model at `xhigh` |
+
+**Launch commands**, for omp. `/ss5` switches the session to Sonnet 5.5 and `/so5` to Opus 5.5,
+each at `high`; an argument changes it (`/ss5 xhigh`). Both are defined in dot's omp package
+(`hooks/pre/model-switch.ts`), which holds the model IDs; when a model ships, change them there
+and in the shell form below.
+
+A `## Next` line gives the in-window form, because it skips both the model picker and a new
+process. Always include the switch line: `/new` keeps the model but resets effort to omp's
+configured level, and the switch sets it back to `high`.
+
+    /new
+    /ss5
+    /execute-study-step <plan> NN
+
+From a shell instead, one line: `omp --model anthropic/claude-sonnet-5-5 "/execute-study-step <plan> NN"`.
+
+**Why the rule is a default, not a certainty.** Sonnet 5.5 costs half of Opus 5.5 per token
+($2/$10 against $4/$20 per million) but can spend more tokens on the same task: in one public
+five-run test it wrote twice Opus's output on an agentic bug fix, and its overall saving came to
+about 36%, not 50% (The New Stack, 2026-10-08). Every build record names the model and effort it
+ran on, and the review counts builds and stops per model (`review.md`): that count, not this
+paragraph, is what says whether the rule holds for this operator's plans.
 
 ## PLAN.md, in order
 
@@ -153,3 +213,11 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   transcript in the table); the scene defect was older than the plan and every meeting recording
   had carried it for four days. A live phase's gate includes opening one real output and looking
   at it, not only counting it.
+- **The design record lands with the code, in the same session.** `logos` 17 and 18 each wrote the
+  design and left it uncommitted while the build ran; a later session then re-designed against the
+  tree and the first design was found only in a working tree. The design is a file in the plan
+  folder, committed before or with the build.
+- **A design's edit list is read against the tree, not counted.** `logos` 17 checked its §9 by
+  counting the folders its rule covered instead of opening each file, and the walk it designed
+  could not resolve the tree at all; the build had to re-cut it. Checking a claim means opening the
+  file and the line.
