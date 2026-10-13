@@ -7,14 +7,14 @@ tailnet (SRT to `snake.tail.shadhq.com:8793/udp`: H.264 at 1500 kbps and the two
 separate Opus tracks), reconnecting by itself. The stream can fail without touching the file.
 
 Three folders live under `~/Movies`: `meetings` (this profile's own path, reaches the lake
-through egghead's `meeting-fetch`), `personal` (`bin/obs start personal`: the same settings,
+through egghead's `meeting-fetch`), `personal` (`obs start personal`: the same settings,
 recording only, reaches the lake through egghead's `personal-fetch` instead, never
-`meeting-fetch`), and `tests` (`bin/obs start test`: nothing reads it). Each folder is
+`meeting-fetch`), and `tests` (`obs start test`: nothing reads it). Each folder is
 served to snake by its own SSH key, forced to read that one folder and no other
 (egghead's `hosts/snake/recording-files`).
 
 This package holds the `meetings` profile and scene collection, and `configure.sh`, which
-copies them into OBS's settings. It does not start or stop anything: egghead's `bin/obs`
+copies them into OBS's settings. It does not start or stop anything: egghead's `obs`
 (`start`, `stop`, `status`, run on the desk) drives OBS over obs-websocket, and OBS's own
 Start Recording and Start Streaming buttons reach the same outputs. Nothing here deletes a
 recording. The design is egghead step 21j.
@@ -68,14 +68,14 @@ them only when absent (`seeded`), and otherwise leaves them alone (`kept`).
 - The `user.ini` seed names the `meetings` profile and collection, with `FirstRun=true`,
   which skips OBS's setup wizard.
 - The websocket seed enables the server on 4455 with no password. On its first load
-  obs-websocket generates one and saves it; `bin/obs` reads it from that file over
+  obs-websocket generates one and saves it; `obs` reads it from that file over
   `ssh mac` at each call. It has one home, this Mac, and is never in git. A lost file is
   seeded again and OBS makes a new password; nothing else changes.
 
 ## Values true of this Mac only
 
 - `display_uuid` of the `Screen` source, in `meetings.json`. On another Mac it resolves to
-  the wrong display or none, with no error: `bin/obs start` refuses a blank screen.
+  the wrong display or none, with no error: `obs start` refuses a blank screen.
 - The recording path `/Users/youneselalami/Movies/meetings` in `basic.ini`.
 
 ## The screen is fitted to the canvas, never placed by hand
@@ -91,7 +91,7 @@ showed only the top-left 57% of the screen, enlarged 1.54×. Edit this file from
 itself saves (a scene-collection switch writes it), never by hand-computing the relative
 fields.
 
-egghead's `bin/obs start` checks this before every recording and sets the item back to
+egghead's `obs start` checks this before every recording and sets the item back to
 "scale to inner bounds" at the live canvas size if anything moved it, printing one line
 naming what was wrong; so a mistake here costs a stderr line, not a recording. OBS's own
 Start Recording button skips that check.
@@ -114,9 +114,9 @@ video and an all-zero call track until OBS is restarted or each source's Reactiv
 (`reactivate_capture`) is pressed (OBS 32.2.2, `mac-sck-common.m`, `didStopWithError`; upstream
 declined to restart automatically, obs-studio#10858). OBS keeps the display awake only while it
 records or streams, so the failure happens between meetings, while OBS sits idle. The
-microphone (`Mic/Aux`, CoreAudio) is not affected. egghead's `bin/obs start` presses that button
+microphone (`Mic/Aux`, CoreAudio) is not affected. egghead's `obs start` presses that button
 on both sources before every recording it starts, so the desk's start is unaffected; one started
-from OBS's own button still needs the restart or the press, which `bin/obs reactivate` on the desk
+from OBS's own button still needs the restart or the press, which `obs reactivate` on the desk
 does mid-recording without stopping anything. egghead's meetings 21s pages the phone when a track
 stays digital silence for three minutes.
 
@@ -124,7 +124,7 @@ stays digital silence for three minutes.
 
 OBS needs **Screen Recording** and **Microphone** in System Settings → Privacy & Security.
 An OBS update can drop them (it did with OBS 32.1); the screen then records black, which
-is what `bin/obs start`'s blank-screen refusal catches. When `global.ini` is gone, OBS
+is what `obs start`'s blank-screen refusal catches. When `global.ini` is gone, OBS
 shows its permissions dialog once at launch: one click, kept on purpose, because it is the
 only place that says a permission is missing.
 
@@ -132,5 +132,5 @@ only place that says a permission is missing.
 
 With it, OBS starts the recording only once the stream has connected, and stops it when
 the stream stops: snake being down at the start would mean no local file. The recording
-and the stream are separate outputs here; `bin/obs start` starts the recording first, then
+and the stream are separate outputs here; `obs start` starts the recording first, then
 the stream, and the recording never stops with the stream.

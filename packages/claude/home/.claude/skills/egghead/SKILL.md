@@ -44,7 +44,7 @@ fleet/machines/<machine>/ one folder per nixosConfiguration and nothing else: pu
 fleet/modules/           a declaration two or more machines import
 fleet/constants/         a value two or more machines read, or one reads about another: one file per value
 fleet/tests/             VM tests and fixtures, used by checks
-fleet/bin/               operator tools run against a live machine (fleet/bin/hawk, fleet/bin/snake, …)
+apps/<command>/libexec/  operator tools run against a live machine (fleet hawk, fleet snake, …)
 fleet/secrets/<machine>/ one sops file per secret; fleet/secrets/default.nix lists them without a key
 .plans/<plan>/           (logos' root) one folder per plan in flight, deleted when it closes (the plans skill)
 docs/decisions/          one rule per file (docs/decisions/AGENTS.md)
@@ -166,9 +166,9 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   before a build, before its commit, and again after the commit. Every gate ships with a fixture
   proving it can fail (`docs/decisions/0008`). A refactor is proven by unchanged store paths
   (step 15 did this for `hello`): diff two runs' `machine` lines.
-- **Deploys.** `fleet/bin/hawk deploy` runs from the desk. `fleet/bin/snake deploy` and
-  `fleet/bin/desktop deploy` drive Incus, so they run on punk as admin, from the desk through ssh:
-  `ssh admin@punk 'cd /data/code/logos && fleet/bin/snake deploy'` (on the desk they stop with
+- **Deploys.** `fleet hawk deploy` runs from the desk. `fleet snake deploy` and
+  `fleet desktop deploy` drive Incus, so they run on punk as admin, from the desk through ssh:
+  `ssh admin@punk 'fleet snake deploy'` (on the desk they stop with
   "incus not found — run this on punk as admin"; published-readme 01). punk's
   `/data/code/logos` is the desk's tree, uncommitted edits included, so it deploys what the
   desk holds. punk's own switch is the operator's (it needs sudo). Nothing is built on hawk.
@@ -176,12 +176,12 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   applied when a disk is formatted, never at a switch: a change to one also runs `sudo zfs set quota=`
   on punk (personal 07, which assumed the switch would).
 - **shark's CUDA programs are fetched, never compiled.** They come from `pkgsCuda`, which the
-  NixOS CUDA team's cache holds; only `fleet/bin/shark` trusts that cache, per command, and its
+  NixOS CUDA team's cache holds; only `fleet shark` trusts that cache, per command, and its
   `dry-run` refuses a build that would run `nvcc`. Never `nix build` shark or
   `.#whisperlivekit` by hand, on the desk or on punk: it compiles CUDA (step 21p).
 - **Run a lake job; never wait for its timer.** Work that needs a fresh run of a snake job
   (bronze-load, silver-build, jira-ingest, …) runs it now, from the desk:
-  `ssh admin@punk 'cd /data/code/logos && fleet/bin/snake run bronze-load silver-build'`,
+  `ssh admin@punk 'lake jobs run bronze-load silver-build'`,
   jobs in pipeline order. An early run does what the scheduled one would, costs seconds, and
   is not an intervention to log; re-running a *failed* job is (`docs/decisions/0033`). `run` itself
   waits while another job runs or a timer is due within a minute, because the timers are
@@ -190,9 +190,9 @@ until step 17 reinstalled it as hawk) and runs the public services directly. **r
   `run` prints none of the job's own lines (counts, what changed, a problem it counted); a gate
   reads them from snake's journal (ticket-context 03):
   `ssh admin@punk 'incus exec snake -- env PATH=/run/current-system/sw/bin journalctl -u silver-build.service -n 50 --no-pager'`.
-- **Removing a record from the lake** is `sudo fleet/bin/lake purge` on punk for the records in
+- **Removing a record from the lake** is `sudo lake purge` on punk for the records in
   `fleet/machines/punk/lake-purged.tsv` (`docs/decisions/0043`); never `rm` under `/lake`, never a
-  hand-written `DELETE`. `fleet/bin/lake show` looks first; `fleet/bin/lake query` replaces the
+  hand-written `DELETE`. `lake show` looks first; `lake query` replaces the
   hand-copied catalog recipe.
 - **Log an intervention.** When you act on something already live because it did not do what it was declared to do (re-run or unlock a failed job, repair a deploy that broke a service, a credential or a disk that ran out), or the operator says something broke and you fix it, append one line to `fleet/INTERVENTIONS.md` before the session ends: `YYYY-MM-DD <service> — what broke; what was done`. The file's header says what counts and what does not: a plan step's own work, an early run of a healthy job and a fault in work not yet deployed do not. Commit the line with the fix when there is one, otherwise alone as `interventions: <service> — <what was done>`. Write it when it happens, never from memory of an earlier session, and never leave it uncommitted (decision 0033).
 - **Commits.** A plan's step is one commit: `cleanup 19d: shared-module — <what is now true>`
@@ -231,7 +231,7 @@ Each cost a build session at least once; most cost several (the step's Findings,
 - **A command sent over ssh is parsed twice**, locally and by the remote shell: quote each
   argument with `printf '%q '`, as the barzakh copy's `remote` did (`git log --grep '^step 16a:'`).
 - **`incus exec` into a NixOS guest has Incus's bare `PATH`**: prefix ad hoc commands with
-  `PATH=/run/current-system/sw/bin`, as `bin/snake`'s `kexec` does (steps 09, 12g, 12i, 12n).
+  `PATH=/run/current-system/sw/bin`, as `apps/fleet/libexec/snake.sh`'s `kexec` does (steps 09, 12g, 12i, 12n).
 - **Incus's `systemd.credential.*` keys store the value in plaintext** in the instance and in
   Incus's database: never use them for a secret (step 09).
 - **A guest is recreated under a new name, never renamed in place.** Incus renames a bridge only
