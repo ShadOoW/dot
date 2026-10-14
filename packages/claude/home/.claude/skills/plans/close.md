@@ -67,9 +67,12 @@ report asks the operator.
 
 ## 3. Retire
 
-1. **History is safe.** The Findings survive only in git history, which is the argument for
-   deleting rather than archiving in the tree, but only if history is backed up: push, and check
-   the remote holds the commit before deleting.
+1. **History is safe only once it is off this machine.** The Findings survive in git history, and
+   that is the argument for deleting rather than archiving: the folder's record has to be at the
+   remote already. So the closing session pushes itself — `nix develop <root> -c git push`, the one
+   case where a session pushes unasked — and proves it with `git rev-parse origin/<branch>` before
+   deleting anything. A refused push means the folder waits, and the reason is reported as a
+   blocker, not as a request for the operator to push.
 2. **No citation into the folder survives outside `.plans/`.** Rewrite each to the step's name
    (`<plan> NN`, with its section). A citation of a deleted path is worse than none: it reads as
    authoritative.
@@ -85,6 +88,6 @@ report asks the operator.
 3. The citation sweep's result: zero paths into the folder outside `.plans/`.
 4. Anything kept, and why it does not become a second description of the tree.
 5. Nothing asked of the operator that a session can do: every such item was done here or made a
-   step, and the report says which. A `push` is not asked for — the operator pushes at his own
-   cadence and a session never pushes unasked (the `commit` skill) — and neither is a check to
-   re-run, a count to re-take, or a file to read.
+   step, and the report says which. A check to re-run, a count to re-take, a file to read — none of
+   those is his. The push is §3's, done by this session, and it is not mentioned in the report
+   unless it was refused: the reason then, and not the request.

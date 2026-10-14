@@ -32,7 +32,15 @@ machine has no such rule: commit finished work by the repo's own convention.
   be editing in the same tree; an unrelated modified file is theirs. Leave it and say so.
 - **Never amend, rebase, reset --hard, or force-push a commit you did not create in this
   session.** If a rewrite looks necessary, stop and report.
-- **Never push unless asked.** A `post-commit` hook that pushes is not you pushing.
+- **Never push unless asked.** A `post-commit` hook that pushes is not you pushing. The standing
+  exception is a plan close that is about to delete a folder: its Findings then exist only in
+  history, so the closing session pushes and proves the remote holds the commit (`plans` skill,
+  `close.md`).
+- **An unpushed state is not news.** Say nothing about a push, or about commits sitting local,
+  unless a named consequence exists: another machine has to pull them, a handoff to another person
+  depends on them, or a record's only copy is about to leave the tree. "It would be safer backed
+  up" is not a consequence and does not earn a sentence — the operator pushes at his own cadence
+  and does not need a status line to remember the command.
 - **Never commit secrets**, `.env`, credentials, or anything under a `state/` directory.
 - **No trailers.** No `Co-Authored-By`, no "Generated with", no emoji.
 - **Do not commit over a failing check.** Run the repo's own gate first if it is cheap

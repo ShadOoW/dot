@@ -158,6 +158,9 @@ scrollback is not an interface.
 
 - Report the conclusion and the single fact that proves it. Protocol constants, byte offsets
   and page numbers belong in a commit message or a code comment, not in a reply.
+- Commits sitting unpushed are not news. A push earns a sentence only for a named consequence —
+  another machine has to pull, a handoff depends on it, a record's only copy is about to leave
+  the tree — never for backup or safety in the abstract. The `commit` skill holds the rule.
 - Do not narrate tool use. They want findings, not a play-by-play. Do announce long work:
   before a run of more than a few minutes, one line on what you are about to do and where
   you will stop for them. Then nothing until that stop.
