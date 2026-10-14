@@ -42,6 +42,17 @@ measured output, why it is open, and exactly what closes it. A carried item that
 its evidence has to be rediscovered. A step file carried whole keeps its number and moves with
 `git mv`. The successor never cites the closed plan's files: they are about to be deleted.
 
+**The plan it goes into is the repository's carry plan, `.plans/leftovers/`, unless an open plan
+already owns the item** — a plan whose "Done when" covers it, or which already holds it. Create
+`.plans/leftovers/` only when the repository has none; otherwise add the item to it: a step if the
+item is designed, else an Open item under a heading naming the plan just closed, plus one History
+line for the close. Four closes in a row (logos, ticket-flow, cleanup, squad) each wrote
+`.plans/<plan>-leftovers/` instead, and four such folders were merged back into one on 2026-10-14:
+`ls .plans` had stopped naming the plans, and no session could tell which folder held an item. A
+second carry list is the one nobody reads. The carry plan is drained the same way anything else is
+— the item becomes a step of a plan that owns its area, is parked in the ideas repository, or is
+done — and it is never deleted by a close that is not its own.
+
 Deferred work the operator has said to park goes to the ideas repository (the `ideas` skill),
 quoting the operator's words. Without those words it is an Open item of a plan, and the close
 report asks the operator.

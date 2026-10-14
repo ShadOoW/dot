@@ -30,10 +30,12 @@ feature to it was always the easy path.
   <plan>/                one folder per plan, a short lowercase name: cleanup, meetings
     PLAN.md              the plan's index and its whole memory
     NN-<name>.md         one file per step or phase, ending in its Findings
+  leftovers/             the carry plan: what closed plans left unfinished (close.md, section 2)
 ```
 
-- `.plans/` holds plan folders and nothing else. No index file: `ls .plans` lists the open plans,
-  `git log --grep '^plan: close'` the closed ones.
+- `.plans/` holds plan folders and nothing else. No index file: `ls .plans` lists the open plans
+  and `leftovers`, the carry plan every close writes into; `git log --grep '^plan: close'` lists the
+  closed ones.
 - **A new piece of work is a new folder**, never new steps on a running plan whose "Done when" it
   is outside. A plan may grow steps only inside its own "Done when"; anything else is a new plan,
   or a parked idea (the `ideas` skill).
@@ -262,3 +264,10 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   `squad 06` discarded a trial only if its session file showed it read `.plans/squad/`, the one folder holding
   the answer key; trial 2 answered the question from `.plans/focus/PLAN.md`'s prose instead, which no rule
   guarded a day after 05's sweep had bounded its census to ticket files, skills and rule packs.
+- **Unfinished work has one carry plan, not one per close.** Four closes in a row — `logos` on
+  2026-10-13, then `ticket-flow`, `cleanup` and `squad` — each wrote `.plans/<plan>-leftovers/`
+  because no open plan owned their items, so `ls .plans` listed four folders that could never close,
+  and nothing said which of them held an item. They were merged into `.plans/leftovers/` on
+  2026-10-14, and `close.md` section 2 now names that folder as the destination: a close adds to it,
+  a step if the item is designed and an Open item under a heading naming its origin otherwise, and
+  creates it only when the repository has none.
