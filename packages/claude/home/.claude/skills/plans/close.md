@@ -42,6 +42,14 @@ measured output, why it is open, and exactly what closes it. A carried item that
 its evidence has to be rediscovered. A step file carried whole keeps its number and moves with
 `git mv`. The successor never cites the closed plan's files: they are about to be deleted.
 
+**Carry only what the operator, or something outside this repository, owns.** Before writing an
+item, ask who closes it. If a session can — a defect, a check to write, a comment to correct, a
+count to re-take, a push — then it is not an Open item: it is done in this session when it is one
+sitting, and a step otherwise. Never write a line that asks the operator to run something a session
+can run. The four carry folders merged on 2026-10-14 held 73 items, 17 of them work a session could
+have done; four of those were two-line fixes, and the same folders carried counts that had already
+drifted.
+
 **The plan it goes into is the repository's carry plan, `.plans/leftovers/`, unless an open plan
 already owns the item** — a plan whose "Done when" covers it, or which already holds it. Create
 `.plans/leftovers/` only when the repository has none; otherwise add the item to it: a step if the
@@ -76,3 +84,7 @@ report asks the operator.
 2. What was carried, into which plan.
 3. The citation sweep's result: zero paths into the folder outside `.plans/`.
 4. Anything kept, and why it does not become a second description of the tree.
+5. Nothing asked of the operator that a session can do: every such item was done here or made a
+   step, and the report says which. A `push` is not asked for — the operator pushes at his own
+   cadence and a session never pushes unasked (the `commit` skill) — and neither is a check to
+   re-run, a count to re-take, or a file to read.

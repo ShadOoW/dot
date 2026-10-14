@@ -128,9 +128,13 @@ paragraph, is what says whether the rule holds for this operator's plans.
 6. The kind's own sections: the wave table and file-ownership map of a build plan; the ladder
    table, kill criterion and **Established** list of a study plan (one line per landed step: the
    primitive a later step may assume without re-teaching).
-7. **Open items** — every ruling awaited, push owed, defect noticed and not fixed, each with what
-   closes it and who. Closed items are deleted, not struck through. This is the one list; a
-   session's report names items here, it does not copy them.
+7. **Open items** — what only the operator, or something outside this repository, can close: a
+   ruling awaited, an act needing his credentials, his hands or a machine of his, a wait on a
+   person or a system. Each names what closes it and who. What a session can do is not an item:
+   it is done now when it is one sitting, and it is a step otherwise. `push owed`, `re-run the
+   check`, `re-measure the count` and `read the output` are not the operator's work. Closed items
+   are deleted, not struck through. This is the one list; a session's report names items here, it
+   does not copy them.
 8. **History** — append-only, one line per session: date · step · what landed or why it stopped ·
    commit.
 
@@ -140,9 +144,9 @@ paragraph, is what says whether the rule holds for this operator's plans.
   wrong, the drill and its number, and at the end of a build a short record: what landed, the
   most surprising thing, whether the design was buildable as written. There is no separate
   build log.
-- **Current state** holds what a cold reader needs now. **Open items** hold what is unfinished.
-  **History** holds one line per session. Nothing is copied from one session's report to the
-  next.
+- **Current state** holds what a cold reader needs now. **Open items** hold what is unfinished and
+  not a session's to do. **History** holds one line per session. Nothing is copied from one
+  session's report to the next.
 - **Lessons that outlive the plan** are not kept in it: at close they move into code comments,
   decision records, checks, the repository's skill, or this skill (`close.md`).
 
@@ -271,3 +275,12 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   2026-10-14, and `close.md` section 2 now names that folder as the destination: a close adds to it,
   a step if the item is designed and an Open item under a heading naming its origin otherwise, and
   creates it only when the repository has none.
+- **A plan's Open items are the operator's list, not the session's leftovers.** The four carry
+  folders merged on 2026-10-14 held 73 items: 38 were rulings, 24 needed the operator's hands or a
+  dashboard, and **17 were work a session could have done and none ever did** — "push the commits",
+  "re-run the check", "read the output", "re-measure the count". A session that can act acts; a line
+  asking the operator to run something an agent can run is noise, and it is what accumulates when
+  the end of a session writes down what it could have finished. Four of those 17 were two-line
+  fixes. Of the 38 rulings, several were counts that had drifted within the day (104 files holding
+  a retired word were 75; 24 unaffirmed decisions were 19): an item carrying a moving count is a
+  measurement, and the thing to carry is the one-line decision it implies.
