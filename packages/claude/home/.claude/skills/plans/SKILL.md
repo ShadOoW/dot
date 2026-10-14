@@ -184,7 +184,8 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   operator dropped its kill criterion at the second. And in `ticket-flow` (2026-10-11 to 10-13): it
   was asked at 6 of its 14 studies and answered at 0, while the plan's own contract said the operator
   "must be able to explain each landed step with the files closed"; its close recorded the clause as
-  never measured.
+  never measured. And in `cleanup` (2026-10-07 to 10-14): its designs were confirmed with a word and
+  no explain-back, under the same clause.
 - **Probe the live system while designing, not while building.** A script that only passed
   `shellcheck` or a dry run failed against its real target five times in two steps (wrong `PATH`,
   invalid bucket names, `set -e` on an expected exit, a missing binary, a stale group). Run every
@@ -240,3 +241,14 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   waiting list grows is when an item is still cheap to turn into a step or a question. Every item
   retention held at 01's close had been created by a session doing the work rather than by the step
   it was running, and none of them needed to wait that long.
+- **An Open item names the paths and commands of the day it was written, and goes stale when another
+  plan moves them.** At `cleanup`'s review, 7 of its 58 Open items were already closed in the tree or
+  named a deleted script folder (`fleet/bin/desktop deploy` after logos 23 removed it), and the
+  operator's keepsakes folder was `~/keep`, not the `~/keepsakes` the plan said for a week. A close
+  re-verifies every item against the tree and writes it again with today's paths and one line of
+  evidence; an item inherited from an earlier plan is verified twice, since its paths predate two
+  renames.
+- **A session launched on a step that is already `[x]` checks it and stops.** `cleanup 19d` was
+  re-launched on a closed step on 2026-10-14; the commit it made from a private index parented on a
+  newer HEAD and deleted another plan's design from the tree (repaired the same hour). A step's
+  record is the commit that closed it; a second visit changes nothing.

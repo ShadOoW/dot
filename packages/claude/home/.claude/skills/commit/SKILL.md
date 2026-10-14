@@ -38,7 +38,9 @@ machine has no such rule: commit finished work by the repo's own convention.
 - **Do not commit over a failing check.** Run the repo's own gate first if it is cheap
   (`just check` in dot, `bun run check:staged` in logos — HEAD plus what is staged, in a
   throwaway copy, inside `nix develop /data/code/logos` — `./bin/ops check` in ops). If it
-  is red for a reason you did not cause, report that instead of committing through it.
+  is red for a reason you did not cause, report that instead of committing through it. Write a
+  long gate's whole output to a file; piped through `tail` or `head`, a red run's failing check is
+  lost (cleanup 17b Finding 21).
 - **Another session may hold the same index.** It can stage, unstage or rewrite entries you
   never touched while you work, so a shared-index gate checks a tree that is not yours — it
   cost three build attempts in one step (logos 21 Findings 12, 13, 25). Build a private one
@@ -51,6 +53,19 @@ machine has no such rule: commit finished work by the repo's own convention.
   is what catches a sweep. Then `unset GIT_INDEX_FILE` and `git reset -q -- <your paths>`, in that
   order: with the variable still exported you reset the private index and leave the shared one
   holding a staged reversal of the commit (ticket-flow 07 Finding 17, 09 Finding 14).
+- **On a shared index, commit the paths in one command.** `git commit -- <paths>` takes only
+  those paths from the working tree whatever another session has staged; a plain `git commit`
+  swept another session's staged deletions into its own commit (cleanup 17b Finding 19). `git
+  reset -q -- <paths>` afterwards only for paths nobody else staged: it once unstaged another
+  session's change to a file (cleanup 22c Finding 12).
+- **A private index pins the tree, never the parent.** If HEAD moves during a long gate, a plain
+  `git commit` parents the new commit on the moved HEAD and reverts what landed in between: it
+  reverted 17 files of one step (cleanup 22c Finding 21) and deleted another plan's design
+  (cleanup 19d). Land it with `git
+  commit-tree` and `git update-ref refs/heads/<branch> <new> <old>`, which refuses when HEAD
+  moved. An exported `GIT_INDEX_FILE` does not survive from a backgrounded call into the next
+  call: build the index, compare its tree with the one `check:staged` named, and commit in a
+  single command.
 - If a hook rewrites files, re-stage the rewritten paths and commit again. Never
   `--no-verify`.
 
