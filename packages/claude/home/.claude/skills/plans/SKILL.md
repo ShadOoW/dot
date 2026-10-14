@@ -1,17 +1,21 @@
 ---
 name: plans
 description: |
-  How work that spans sessions is planned in a repository on this machine: `.plans/` holds one
-  folder per plan (a feature or one body of work), each with its own ledger, memory and finish
-  line, opened, run, reviewed and closed on its own. Covers the folder layout, the two kinds of
-  plan (build, run by /create-plan and /execute-wave; study, run by /create-study-plan, /study and
-  /execute-study-step), which model each study session runs on, what a plan remembers and where,
-  how steps are numbered and cited, and the review and close procedures (review.md, close.md
-  beside this file).
-  Use before creating, reading, resuming, extending, reviewing or closing anything under a
-  `.plans/` directory; when the operator asks to review or close a plan; and when new work
-  comes up while a plan is running. Not for Bruce tickets: their plans live in brucelee's state
-  and follow the bruce-plan skill.
+  How work that spans sessions is planned and run in a repository on this machine: `.plans/`
+  holds one folder per plan (a feature or one body of work), each with its own ledger, memory
+  and finish line, opened, run, reviewed and closed on its own. This skill runs every plan
+  session, with no command: creating a plan (create.md), designing a step (design.md), building
+  it in a fresh session (build.md), running a wave of parallel steps (waves.md), reviewing
+  (review.md) and closing (close.md), each a procedure file beside this one. Covers the folder
+  layout, the phrases that pick a procedure, the two step depths (consult and inform), what a
+  reply may ask of the operator, which model runs each session, what a plan remembers and
+  where, and how steps are numbered and cited.
+  Use before creating, designing, building, resuming, extending, reviewing or closing a plan,
+  or running a wave of one; when the operator says "next step", "design <plan> NN", "build
+  <plan> NN", "run wave N of <plan>", "review <plan>" or "close <plan>"; before reading or
+  writing anything under a `.plans/` directory; and when new work comes up while a plan is
+  running. Not for Bruce tickets: their plans live in brucelee's state and follow the
+  bruce-plan skill.
 ---
 
 # Plans
@@ -41,29 +45,72 @@ feature to it was always the easy path.
   or a parked idea (the `ideas` skill).
 - Two plans may be open at once. A step that needs another plan's step says so in its
   **Assumes** line, naming both: `cleanup 19d`.
+- The step file's format, and the phase format of a plan in waves, are `create.md`'s; this skill
+  does not restate them.
 
-## Two kinds of plan
+## How a plan runs
 
-| Kind | When | Created by | Run by |
-|---|---|---|---|
-| build | the agent rediscovering nothing matters most; phases may run in parallel | `/create-plan <plan>` | `/execute-wave <plan> <wave>` |
-| study | the operator must be able to explain the result; one step at a time | `/create-study-plan <plan>` | `/study <plan> NN`, then `/execute-study-step <plan> NN` |
+There is one kind of plan: a ladder of steps run one at a time, each designed in one session and
+built in a fresh one. A plan whose steps may run in parallel adds a wave table (`waves.md`); its
+first line is `# <plan> — a plan in waves`. Every other plan's first line is `# <plan>`. Old first
+lines (`— a study plan`, `— a build plan`) are read as the plain kind and the waves kind until
+`workflow 03` rewrites them.
 
-The step and phase file formats are the commands' own; this skill does not restate them. A plan
-says its kind in its first line: `# <plan> — a build plan` or `# <plan> — a study plan`.
+| The operator says | The session follows |
+|---|---|
+| "create a plan for …", "plan …" | `create.md` |
+| "design <plan> NN", "design the next step" | `design.md` |
+| "build <plan> NN", "build the next step" | `build.md` |
+| "next step", "next step of <plan>" | the ledger: the first step not `[x]` — `[ ]` or `[~]` → `design.md`; `[>]` → `build.md`; `[!]` → say what unblocks it and stop |
+| "run wave N of <plan>" | `waves.md` |
+| "review <plan>", "close <plan>" | `review.md`, `close.md` |
+
+When the plan is not named and `.plans/` holds more than one open plan, the session lists them in
+one line and stops; that is the one question it may ask before working.
+
+**Depth.** Every step has one:
+
+- **consult** — the operator designs this step with the agent. The design session teaches the
+  mechanism the step rests on, shows the options with its recommendation, answers his questions,
+  and writes the design only after he confirms or corrects it.
+- **inform** — the agent designs alone. The design session researches, decides, writes the design
+  and tells him in a few lines what the step will build and what the research changed. Launching
+  the build is his approval; a correction sent before the build replaces the design.
+
+The words are RACI's (consulted: asked before; informed: told after). The depth is set per step in
+the ladder table when the plan is created; the operator changes any step's depth by saying so, and
+the session edits the ladder row and adds a History line.
+
+## What a reply may ask of the operator
+
+Only three things, each given as host, command and what to expect when it is an act:
+(1) an act that needs his hands, his sudo, or a credential the session must not hold;
+(2) his approval for a request to a system he has not cleared in this conversation — his
+employer's accounts, production, a paid API beyond the plan's stated budget;
+(3) a change to what the plan is for: its Purpose, or the meaning of a Done-when line.
+
+Everything else inside the plan's scope the session decides on its own recommendation, does, and
+records in the step's Findings as `Decided: <what> — reverse by <how>`. A one-line fix is made.
+Done-when wording that keeps its meaning is corrected, with a History line. A question with
+nothing for him to act on is not asked. When nothing qualifies, the reply says
+`Needs you: nothing.`
+
+Every reply that ends a session ends with `## Needs you` then `## Next`, in that order; nothing
+follows `## Next`.
 
 ## Which model runs a session
 
-Every session of a study plan starts fresh, so its model is chosen when it is launched, and the
+Every session of a plan starts fresh, so its model is chosen when it is launched, and the
 session before it names that choice in its `## Next` line. Judgement is spent in the design, with
 the operator in the room; a build that follows a confirmed design is following specific
 instructions, which is the work the smaller model does as well for less.
 
 | Session | Model |
 |---|---|
-| `/create-study-plan`, and `/study` on a step | Opus 5.5 |
-| `/study` on a chore | Sonnet 5.5 |
-| `/execute-study-step` | the step's **Build session** line: Sonnet 5.5 unless it names Opus and why |
+| create a plan | Opus 5.5 |
+| a design session | Opus 5.5 |
+| a build | the step's **Build session** line: Sonnet 5.5 unless it names Opus and why |
+| a wave | Opus 5.5 |
 
 **A build gets Opus only for a reason the design names**, one of:
 
@@ -72,10 +119,10 @@ instructions, which is the work the smaller model does as well for less.
 - **unlisted reach**: the change migrates callers or files the design could not list one by one;
 - **escalated**: an earlier build of this step had the context, clearly tried, and was still wrong.
 
-A design tempted to name Opus because "the build will have to work it out" has a gap in section 9:
-close the gap instead. Haiku 5.5 runs no plan session; it suits subagent lookups, not a build bound
-by a repository's rules. Fable 5.1 runs one only when the operator picks it: it drains the weekly
-limit fastest, and on Max past half of it bills usage credits.
+A design tempted to name Opus because "the build will have to work it out" has a gap in the
+Design section: close the gap instead. Haiku 5.5 runs no plan session; it suits subagent lookups,
+not a build bound by a repository's rules. Fable 5.1 runs one only when the operator picks it: it
+drains the weekly limit fastest, and on Max past half of it bills usage credits.
 
 **Effort is `high` on both models.** That is Sonnet's own default; on Opus it is one level above
 the default (`medium`), because the plans that went well ran their Opus designs at `high`, and the
@@ -85,7 +132,7 @@ the cause picks the retry:
 
 | The build stopped because | Retry |
 |---|---|
-| a sentence of section 9 could not be acted on | `/study <plan> NN` again: the design is at fault, not the model |
+| a sentence of the Design section could not be acted on | `design <plan> NN` again: the design is at fault, not the model |
 | it had the context, tried, and was still wrong | the same step on Opus; the design's Build session line becomes `escalated` |
 | it skipped a file, a gate or a caller, or stopped partway | the same step on the same model at `xhigh` |
 
@@ -100,9 +147,9 @@ configured level, and the switch sets it back to `high`.
 
     /new
     /ss5
-    /execute-study-step <plan> NN
+    build <plan> NN
 
-From a shell instead, one line: `omp --model anthropic/claude-sonnet-5-5 "/execute-study-step <plan> NN"`.
+From a shell instead, one line: `omp --model anthropic/claude-sonnet-5-5 "build <plan> NN"`.
 
 **Why the rule is a default, not a certainty.** Sonnet 5.5 costs half of Opus 5.5 per token
 ($2/$10 against $4/$20 per million) but can spend more tokens on the same task: in one public
@@ -123,18 +170,19 @@ paragraph, is what says whether the rule holds for this operator's plans.
 4. **House rules** — a pointer to the repository's own rules (its skill, AGENTS.md, README), plus
    only what is particular to this plan. Never a copy of the repository's rules: copies drift.
 5. **Ledger** — one line per step in run order: `[ ]` pending · `[~]` in design or in progress ·
-   `[>]` designed, awaiting build (study plans) · `[x]` done · `[!]` blocked, saying on whom.
+   `[>]` designed, awaiting build · `[x]` done · `[!]` blocked, saying on whom.
    The only place status lives; step files carry none.
-6. The kind's own sections: the wave table and file-ownership map of a build plan; the ladder
-   table, kill criterion and **Established** list of a study plan (one line per landed step: the
-   primitive a later step may assume without re-teaching).
+6. The ladder table (step, name, what it builds, depth, drill), the **Established** list (one
+   line per landed step: the primitive a later step may assume without re-teaching), and for a
+   plan in waves the wave table and file-ownership map.
 7. **Open items** — what only the operator, or something outside this repository, can close: a
    ruling awaited, an act needing his credentials, his hands or a machine of his, a wait on a
    person or a system. Each names what closes it and who. What a session can do is not an item:
    it is done now when it is one sitting, and it is a step otherwise. `push owed`, `re-run the
    check`, `re-measure the count` and `read the output` are not the operator's work. Closed items
    are deleted, not struck through. This is the one list; a session's report names items here, it
-   does not copy them.
+   does not copy them. What a session may decide or do itself (*What a reply may ask of the
+   operator*, above) is never an item.
 8. **History** — append-only, one line per session: date · step · what landed or why it stopped ·
    commit.
 
@@ -191,7 +239,9 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   was asked at 6 of its 14 studies and answered at 0, while the plan's own contract said the operator
   "must be able to explain each landed step with the files closed"; its close recorded the clause as
   never measured. And in `cleanup` (2026-10-07 to 10-14): its designs were confirmed with a word and
-  no explain-back, under the same clause.
+  no explain-back, under the same clause. The explain-back was removed from the workflow on
+  2026-10-14 (workflow 01): a consult step answers the operator's questions instead of asking him
+  to recite the design.
 - **Probe the live system while designing, not while building.** A script that only passed
   `shellcheck` or a dry run failed against its real target five times in two steps (wrong `PATH`,
   invalid bucket names, `set -e` on an expected exit, a missing binary, a stale group). Run every

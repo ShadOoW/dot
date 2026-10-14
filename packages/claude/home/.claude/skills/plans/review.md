@@ -64,11 +64,16 @@ Answer each from the record, with a number where one exists:
   be none; each one is a finding about how the plan was run).
 - **Builds that stopped,** grouped by cause: a design the tree contradicted, a gate that could
   not fail, a precondition outside the plan, a live-system fact learned too late.
+- **Models:** builds per model from the build records, and the stops on each by
+  cause. A Sonnet build that stopped for want of capability is a miss of the Build session rule;
+  an Opus build whose design named no reason is spend the rule did not ask for. Report both
+  counts, even when they are zero.
 - **Lessons hit more than once:** the same surprise in two or more steps' Findings means the
   lesson never reached a check, a tool or a skill.
 - **Open items carried:** items that sat in Open items across several sessions without moving.
-- **The plan's own instruments:** if the plan has a kill criterion or an explain-back, did it
-  ever produce a reading? An instrument that never ran is reported as such, not as a pass.
+- **The plan's own instruments:** if the plan carries an instrument of its own (an older plan's
+  kill criterion or explain-back), did it ever produce a reading? An instrument that never ran is
+  reported as such, not as a pass.
 - **Writing against code:** lines of plan markdown against lines of code changed.
 - **What worked,** with the evidence: the gate that caught a real defect, the drill that failed
   for a reason.

@@ -1,9 +1,9 @@
-### SYSTEM INSTRUCTION: DISPATCH ONE WAVE OF A PLAN
+# Running one wave of a plan
 
-You are executing a wave of a build plan in `.plans/<plan>/` by dispatching its phases to
-parallel agents (layout and memory: the `plans` skill; read it first). **Argument:** the plan
-and the wave, e.g. `/execute-wave cleanup 2`. You are the dispatcher and the integrator. You
-do not implement the phases.
+You are executing a wave of a plan in waves in `.plans/<plan>/` by dispatching its phases to
+parallel agents (layout and memory: the `plans` skill; read it first). The operator says
+`run wave N of <plan>`. You are the dispatcher and the integrator. You do not implement the
+phases.
 
 A wave is already defined in the plan: a set of phases with no file overlap and no unmet
 dependency. Your job is to dispatch it **without letting the agents collide**, and to
@@ -11,7 +11,7 @@ own the parts that cannot be delegated.
 
 ---
 
-### WHY THIS IS A COMMAND AND NOT JUST "RUN THE PHASES"
+### WHY THIS IS A PROCEDURE AND NOT JUST "RUN THE PHASES"
 
 Delegation fails in four specific ways, and all four are the dispatcher's fault:
 
@@ -103,7 +103,8 @@ After the batch settles:
    together. Leave `[~]` for any phase that reported a blocker. Rewrite Current state, add
    or close Open items, and add one History line for the wave.
 6. **Report** per phase: verdict, what landed, what its `Findings` said, and every phase
-   you held back with the reason.
+   you held back with the reason. The report ends with `## Needs you` and `## Next`, per
+   the `plans` skill.
 
 Never mark a phase `[x]` on an agent's say-so. The ledger is the artifact the next
 session trusts; putting an unverified claim in it is how a plan starts lying.
