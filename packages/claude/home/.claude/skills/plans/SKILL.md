@@ -252,3 +252,13 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   re-launched on a closed step on 2026-10-14; the commit it made from a private index parented on a
   newer HEAD and deleted another plan's design from the tree (repaired the same hour). A step's
   record is the commit that closed it; a second visit changes nothing.
+- **An operator-only act inside a build's own execution order makes the design two sessions.** `squad 06`
+  put punk's `nixos-rebuild switch` — which needs the operator's sudo — inside a sequence its §9.2 called the
+  build's, so the build stopped at that step and handed it over, and the before-read it had banked first was
+  then the one irreplaceable reading (the job named the lake four minutes after the switch). A design that
+  needs such an act takes it *before* the build, with any before-read as late as it can be, or says in its
+  execution order that the build returns to the operator at that step.
+- **A check's "no hint" rule has to cover every prose source a session can read, plan folders included.**
+  `squad 06` discarded a trial only if its session file showed it read `.plans/squad/`, the one folder holding
+  the answer key; trial 2 answered the question from `.plans/focus/PLAN.md`'s prose instead, which no rule
+  guarded a day after 05's sweep had bounded its census to ticket files, skills and rule packs.
