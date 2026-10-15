@@ -11,53 +11,117 @@
 // subagent, with the subagent's name, and may refuse it. So each guarded helper gets an
 // allowlist here, and anything not on it is refused with the reason (workflow 05).
 //
+// WHAT THIS PROMISES. The plausible accident is impossible: a helper cannot write the tree, the
+// build, the dependencies or the database, and a git read cannot hand a program of the
+// developer's own configuration the file names the command matched. The rules are argv rules:
+// they read the words a command names a program with, and for git they add the flags that turn
+// the configuration's programs off. Every way of running a program this file refuses is here with
+// a test.
+//
+// WHAT IT ADDS. For every allowed git read: `GIT_OPTIONAL_LOCKS=0` before the program, `-c
+// core.pager=cat -c core.fsmonitor=false -c log.showSignature=false` after it, and
+// `--no-ext-diff --no-textconv` (diff) or `--no-textconv` (log, show, blame, grep) after the
+// subcommand. A rewrite is an insertion and nothing else — every other command runs byte for byte
+// as written — and omp revalidates a rewritten command against the tool schema and displays it
+// before it runs, so the operator sees what actually ran (`ToolCallEventResult.input`,
+// shared-events.d.ts).
+//
+// WHAT IT DOES NOT BOUND, and cannot from here:
+//   - a repository's own configuration still names programs these rules never see
+//     (`filter.<driver>.clean`, `core.fsmonitor`, `diff.<driver>.command` reached by a command
+//     whose flags are not the ones refused below), and a clone of the developer's tree is where a
+//     repository decides that;
+//   - a later git or ripgrep that adds another program channel is unbounded until a rule names it;
+//     the channels refused below are the ones measured on git 2.54.0 and ripgrep 15.1.0;
+//   - npm's argv channel before the script name: `npm run <script>` is bounded, the script itself
+//     is the developer's own code;
+//   - three ways the guard is not reached at all: the operator's own session (no `ctx.agent`, or
+//     `kind !== "sub"`, by design), a shell-holding agent whose name is not in `HELPERS` (which is
+//     why a new shell helper's list goes here before its agent file is linked), and a hook omp
+//     failed to load — logged (`logger.error("Failed to load extension", …)`, sdk.ts) and absent
+//     from the transcript, so the checks are `bun test packages/omp/test` and `dot pkg omp status`.
+// A pattern allowlist of this shape is not a containment boundary, and the vendors of every
+// allowlist it resembles say so: Claude Code's docs ("isn't a security boundary around the
+// program"), omp's own bundled docs ("Pattern approval is not containment"), Codex (its `.rules`
+// only decide what may run outside the sandbox), Trail of Bits ("allowlists of safe commands
+// without a sandbox is fundamentally flawed", with the `rg --pre` and `git show --output` RCEs),
+// and the eight bypasses of CVE-2025-66032. A boundary is an OS sandbox — `bwrap --ro-bind / / …
+// -- bash -c <cmd>` on Linux, which is what Codex does, Seatbelt on macOS — plus a read-only
+// database credential; neither is this file's, and the step that needs the second is 08.
+//
 // Fail-closed: a command this file cannot read for certain — command substitution, a heredoc, a
 // redirect outside /tmp, an unknown program — is refused. A refused helper says so in its answer,
-// and the fix is a line here, not a wider rule.
+// and the fix is a line here, not a wider rule. So is a bug in this file: the hook is bound to the
+// extension runner, whose `#runHandlerWithTimeout` catches a throw and returns `onFailure("error",
+// …)`, and a 30 s timeout does the same, both becoming `{ block: true }` on a `tool_call`
+// (extensions/runner.ts, "an unresponsive extension MUST NOT be treated as silent consent").
 
 import type { ExtensionAPI } from '@oh-my-pi/pi-coding-agent';
 
 export type Helper = 'bruce-catch-up' | 'bruce-review' | 'bruce-verify';
 
-/** `undefined` when the command may run; otherwise why it may not. */
-export type Refusal = string | undefined;
+/** Why a command may not run. */
+export type Refusal = string;
+
+/** Where a rule wants words added to the command the model wrote, and what to add. */
+export type Insertion = { readonly at: number; readonly text: string };
+
+/** What `judge` answers: the command that will run, or why none will. */
+export type Guarded = { readonly command: string } | { readonly refusal: string };
 
 const WORKSPACE = '/data/code/work/bruce';
 const HOME = process.env.HOME ?? '/home/shad';
 const TICKETS = `${HOME}/.local/state/brucelee/tickets`;
 
 /** The tools a guarded helper may call at all; its own `tools` line is narrower still. */
-const TOOLS: ReadonlySet<string> = new Set(['read', 'grep', 'glob', 'find', 'bash', 'yield']);
+const TOOLS: Readonly<Record<string, true>> = { read: true, grep: true, glob: true, find: true, bash: true, yield: true };
 
 // ── reading a command line ───────────────────────────────────────────────────
 
-type Token = { readonly word: string } | { readonly op: string };
+/** Where a word sits in the line the model wrote; an insertion is spliced in at one of these. */
+type Span = { readonly start: number; readonly end: number };
+
+/** A word, with the source it was read from, so a rule can add words around it. */
+type Word = Span & { readonly text: string };
+
+type Token = Word | { readonly op: string };
 
 /**
- * Shell words and operators, quotes honoured. Refuses what it cannot read for certain:
- * command substitution, process substitution, heredocs and backslash-newline.
+ * Shell words and operators, quotes honoured, each word carrying the span it was read from.
+ * Refuses what it cannot read for certain: command substitution, process substitution, heredocs
+ * and backslash-newline.
  */
 const tokenize = (line: string): readonly Token[] | string => {
   const out: Token[] = [];
   let word = '';
+  let start = 0;
   let inWord = false;
-  let i = 0;
-  const flush = (): void => {
-    if (inWord) out.push({ word });
+  /** Ends the word being read at `at`, which is where its source stops. */
+  const flush = (at: number): void => {
+    if (inWord) out.push({ text: word, start, end: at });
     word = '';
     inWord = false;
   };
+  /** Opens a word at `at`, unless one is already open — `a"b"c` is one word. */
+  const begin = (at: number): void => {
+    if (!inWord) {
+      inWord = true;
+      start = at;
+    }
+  };
+  let i = 0;
   while (i < line.length) {
     const c = line[i] as string;
     if (c === "'") {
       const end = line.indexOf("'", i + 1);
       if (end < 0) return 'an unclosed single quote';
+      begin(i);
       word += line.slice(i + 1, end);
-      inWord = true;
       i = end + 1;
       continue;
     }
     if (c === '"') {
+      begin(i);
       let j = i + 1;
       while (j < line.length && line[j] !== '"') {
         if (line[j] === '\\' && j + 1 < line.length) {
@@ -70,26 +134,25 @@ const tokenize = (line: string): readonly Token[] | string => {
         j += 1;
       }
       if (j >= line.length) return 'an unclosed double quote';
-      inWord = true;
       i = j + 1;
       continue;
     }
     if (c === '\\') {
       if (line[i + 1] === '\n' || i + 1 >= line.length) return 'a line continuation';
+      begin(i);
       word += line[i + 1];
-      inWord = true;
       i += 2;
       continue;
     }
     if (c === '`' || (c === '$' && line[i + 1] === '(')) return 'command substitution';
     if ((c === '<' || c === '>') && line[i + 1] === '(') return 'process substitution';
     if (c === ' ' || c === '\t') {
-      flush();
+      flush(i);
       i += 1;
       continue;
     }
     if (c === '\n' || c === ';') {
-      flush();
+      flush(i);
       out.push({ op: ';' });
       i += 1;
       continue;
@@ -97,13 +160,13 @@ const tokenize = (line: string): readonly Token[] | string => {
     const two = line.slice(i, i + 2);
     if (two === '<<') return 'a heredoc';
     if (two === '&&' || two === '||') {
-      flush();
+      flush(i);
       out.push({ op: two });
       i += 2;
       continue;
     }
     if (c === '|' || c === '&') {
-      flush();
+      flush(i);
       out.push({ op: c });
       i += 1;
       continue;
@@ -114,7 +177,7 @@ const tokenize = (line: string): readonly Token[] | string => {
       if (fd !== '') {
         word = '';
         inWord = false;
-      } else flush();
+      } else flush(i);
       let op = fd + c;
       i += 1;
       if (line[i] === '>') {
@@ -128,50 +191,49 @@ const tokenize = (line: string): readonly Token[] | string => {
       out.push({ op });
       continue;
     }
+    begin(i);
     word += c;
-    inWord = true;
     i += 1;
   }
-  flush();
+  flush(line.length);
   return out;
 };
 
-type Segment = { readonly words: readonly string[]; readonly pipedFrom: readonly string[] | undefined };
+/** One simple command: its words, in the order the model wrote them. */
+type Segment = { readonly words: readonly Word[] };
 
-/** Simple commands, with their redirects checked and removed; a pipe's left side is kept. */
+/** Simple commands, with their redirects checked and removed. */
 const segments = (tokens: readonly Token[]): readonly Segment[] | string => {
   const out: Segment[] = [];
-  let words: string[] = [];
-  let pipedFrom: readonly string[] | undefined;
+  let words: Word[] = [];
   for (let i = 0; i < tokens.length; i += 1) {
     const t = tokens[i] as Token;
-    if ('word' in t) {
-      words.push(t.word);
+    if ('text' in t) {
+      words.push(t);
       continue;
     }
     if (t.op === '&') return 'a background job';
     if (t.op === '|' || t.op === ';' || t.op === '&&' || t.op === '||') {
       if (words.length === 0) return `an empty command before "${t.op}"`;
-      out.push({ words, pipedFrom });
-      pipedFrom = t.op === '|' ? words : undefined;
+      out.push({ words });
       words = [];
       continue;
     }
     // A redirect: `2>&1` and `>&2` need no file; every other one names a file in /tmp or /dev/null.
     if (t.op.endsWith('&')) {
       const next = tokens[i + 1];
-      if (next !== undefined && 'word' in next && /^\d$/u.test(next.word)) {
+      if (next !== undefined && 'text' in next && /^\d$/u.test(next.text)) {
         i += 1;
         continue;
       }
       return `the redirect "${t.op}"`;
     }
     const next = tokens[i + 1];
-    if (next === undefined || !('word' in next)) return `a redirect "${t.op}" with no file`;
-    if (!tmpOrNull(next.word)) return `a redirect to ${next.word} — only /tmp/… or /dev/null`;
+    if (next === undefined || !('text' in next)) return `a redirect "${t.op}" with no file`;
+    if (!tmpOrNull(next.text)) return `a redirect to ${next.text} — only /tmp/… or /dev/null`;
     i += 1;
   }
-  if (words.length > 0) out.push({ words, pipedFrom });
+  if (words.length > 0) out.push({ words });
   return out;
 };
 
@@ -183,7 +245,12 @@ const under = (path: string, root: string): boolean =>
 
 // ── what each program may do ─────────────────────────────────────────────────
 
-type Rule = (args: readonly string[], helper: Helper) => Refusal;
+/**
+ * What a rule answers: why the command may not run, the words it wants added to it, or nothing.
+ * `spans` holds where each word of `args` sits in the line, for the rules that insert.
+ */
+type Ruling = Refusal | readonly Insertion[] | undefined;
+type Rule = (args: readonly string[], helper: Helper, spans: readonly Span[]) => Ruling;
 
 const has = (args: readonly string[], ...flags: readonly string[]): boolean =>
   args.some((a) => flags.some((f) => a === f || a.startsWith(`${f}=`)));
@@ -196,7 +263,14 @@ const reading: Readonly<Record<string, Rule>> = {
   wc: () => undefined,
   ls: () => undefined,
   grep: () => undefined,
-  rg: (a) => (has(a, '--pre') ? 'rg --pre runs a program' : undefined),
+  rg: (a) => {
+    if (has(a, '--pre', '--pre-glob')) return 'rg --pre runs a program of its own over every file';
+    if (has(a, '--hostname-bin')) return 'rg --hostname-bin runs the program it names';
+    if (a.some((w) => w === '--search-zip' || (w.startsWith('-') && !w.startsWith('--') && w.slice(1).includes('z')))) {
+      return 'rg -z/--search-zip shells out to the decompressor it picks';
+    }
+    return undefined;
+  },
   jq: () => undefined,
   sort: (a) => (has(a, '-o', '--output') ? 'sort -o writes a file' : undefined),
   uniq: (a) => (a.filter((x) => !x.startsWith('-')).length > 1 ? 'uniq with an output file' : undefined),
@@ -221,19 +295,66 @@ const reading: Readonly<Record<string, Rule>> = {
     a.every((x) => x === '-p' || tmpOrNull(x)) ? undefined : 'mkdir only under /tmp',
 };
 
-const GIT_READS: ReadonlySet<string> = new Set([
-  'diff', 'log', 'show', 'merge-base', 'rev-parse', 'rev-list', 'ls-files', 'grep', 'blame',
-  'status', 'range-diff', 'cat-file', 'for-each-ref', 'describe', 'shortlog',
-]);
+const GIT_READS: Readonly<Record<string, true>> = {
+  diff: true, log: true, show: true, 'merge-base': true, 'rev-parse': true, 'rev-list': true,
+  'ls-files': true, grep: true, blame: true, status: true, 'range-diff': true, 'cat-file': true,
+  'for-each-ref': true, describe: true, shortlog: true,
+};
 
-const git: Rule = (args) => {
+/** The reads that generate a patch, and so run a textconv filter unless it is turned off. */
+const NO_TEXTCONV: Readonly<Record<string, true>> = { log: true, show: true, blame: true, grep: true };
+
+/** The flags that make a git read hand files to a program the developer's configuration names. */
+const gitSpawn = (sub: string, rest: readonly string[]): Refusal => {
+  const pager = rest.find((a) => a === '-O' || a.startsWith('-O') || a.startsWith('--open-files-in-pager'));
+  if (pager !== undefined) return `git ${pager} runs the program it names, through a shell if it holds metacharacters`;
+  if (has(rest, '--ext-diff')) return 'git --ext-diff runs diff.external or diff.<driver>.command';
+  if (has(rest, '--textconv')) return 'git --textconv runs diff.<driver>.textconv';
+  if (has(rest, '--filters')) return 'git --filters runs the smudge filters and end-of-line conversion';
+  if (has(rest, '--show-signature') || rest.some((a) => a.includes('%G') || a.includes('%(signature'))) {
+    return 'git --show-signature and a %G format run gpg.program';
+  }
+  if (has(rest, '--exec-path', '--config-env')) return 'git --exec-path or --config-env names any program the configuration may run';
+  if (sub !== 'grep' && has(rest, '--output', '-o')) return `git ${sub} --output writes a file`;
+  return undefined;
+};
+
+/** The words the guard adds to a git read: the environment, three configs, and the negations. */
+const gitInjections = (sub: string, spans: readonly Span[], after: number): readonly Insertion[] => {
+  const program = spans[0];
+  // `spans` holds every word of the segment, program included; `after` counts the words of `args`.
+  const command = spans[after + 1];
+  if (program === undefined || command === undefined) return [];
+  const insertions: Insertion[] = [
+    { at: program.start, text: 'GIT_OPTIONAL_LOCKS=0 ' },
+    { at: program.end, text: ' -c core.pager=cat -c core.fsmonitor=false -c log.showSignature=false' },
+  ];
+  if (sub === 'diff') insertions.push({ at: command.end, text: ' --no-ext-diff --no-textconv' });
+  else if (Object.hasOwn(NO_TEXTCONV, sub)) insertions.push({ at: command.end, text: ' --no-textconv' });
+  return insertions;
+};
+
+const git: Rule = (args, _helper, spans) => {
   let rest = args;
-  while (rest[0] === '-C' || rest[0] === '--no-pager' || rest[0]?.startsWith('-c')) {
-    if (rest[0] === '-C') {
+  let skip = 0;
+  for (;;) {
+    const head = rest[0];
+    if (head === '-C') {
       if (!under(rest[1] ?? '', WORKSPACE)) return 'git -C only inside the Bruce workspace';
       rest = rest.slice(2);
-    } else if (rest[0] === '-c') return 'git -c changes configuration';
-    else rest = rest.slice(1);
+      skip += 2;
+      continue;
+    }
+    if (head === '--no-pager') {
+      rest = rest.slice(1);
+      skip += 1;
+      continue;
+    }
+    if (head !== undefined && head.startsWith('-c')) return 'git -c changes configuration';
+    if (head !== undefined && (head.startsWith('--config-env') || head.startsWith('--exec-path'))) {
+      return `git ${head.split('=')[0] ?? head} changes configuration, which can name any program`;
+    }
+    break;
   }
   const sub = rest[0] ?? '';
   if (sub === 'branch') {
@@ -243,9 +364,14 @@ const git: Rule = (args) => {
       ? undefined
       : 'git branch only to read (--show-current, --list, --contains)';
   }
-  if (!GIT_READS.has(sub)) return `git ${sub} is not a read`;
-  if (has(rest, '--output', '-o') && sub !== 'grep') return `git ${sub} --output writes a file`;
-  return undefined;
+  if (!Object.hasOwn(GIT_READS, sub)) return `git ${sub} is not a read`;
+  if (sub === 'range-diff') return "git range-diff's inner `git log -p` gets none of the flags this guard adds";
+  if (sub === 'status' && rest.some((a) => a === '--verbose' || /^-v+$/u.test(a))) {
+    return 'git status -v runs textconv, and status accepts no --no-textconv to turn it off';
+  }
+  const spawn = gitSpawn(sub, rest);
+  if (spawn !== undefined) return spawn;
+  return gitInjections(sub, spans, skip);
 };
 
 /** The gates of `rule://package-verification`, never the ones that write or install. */
@@ -268,7 +394,7 @@ const gate = (program: string, args: readonly string[]): Refusal => {
   }
 };
 
-const NPM_SCRIPTS: ReadonlySet<string> = new Set(['check', 'journeys']);
+const NPM_SCRIPTS: Readonly<Record<string, true>> = { check: true, journeys: true };
 
 const npx: Rule = (args, helper) => {
   const [program = '', ...rest] = args.filter((a) => a !== '--no-install');
@@ -277,7 +403,8 @@ const npx: Rule = (args, helper) => {
 };
 
 const npm: Rule = (args, helper) => {
-  if (args[0] !== 'run' || !NPM_SCRIPTS.has(args[1] ?? '')) return 'npm only as `npm run check` or `npm run journeys`';
+  if (args[0] !== 'run' || !Object.hasOwn(NPM_SCRIPTS, args[1] ?? '')) return 'npm only as `npm run check` or `npm run journeys`';
+  if (args.length > 2) return 'npm passes every word after the script name into its command line';
   if (args[1] === 'journeys' && helper !== 'bruce-verify') return 'only bruce-verify runs the journeys';
   return undefined;
 };
@@ -290,18 +417,24 @@ const BRUCELEE: Readonly<Record<Helper, readonly string[]>> = {
   ],
   'bruce-review': ['ticket review', 'ticket covering', 'ticket tests', 'status', 'packages links', 'packages overlay'],
   'bruce-verify': [
-    'dev ready', 'dev health', 'dev logs', 'dev hold', 'sms order', 'sms db', 'status', 'packages links',
+    'dev ready', 'dev health', 'dev logs', 'dev hold', 'sms order', 'status', 'packages links',
     'ticket covering',
   ],
 };
 
-const brucelee = (args: readonly string[], helper: Helper, pipedFrom: readonly string[] | undefined): Refusal => {
+/** `brucelee`'s own words, `brucelee` included at index 0, so `dev hold -- <command>` keeps its spans. */
+const brucelee = (words: readonly Word[], helper: Helper): Ruling => {
+  const args = words.slice(1).map((w) => w.text);
+  if (args[0] === 'sms' && args[1] === 'db') {
+    return 'brucelee sms db runs a script this file cannot read; a read-back through `brucelee sms read` is step 08 (leftovers 08 sms-read)';
+  }
   const verb = BRUCELEE[helper].find((v) => {
-    const words = v.split(' ');
-    return words.every((w, k) => args[k] === w);
+    const named = v.split(' ');
+    return named.every((w, k) => args[k] === w);
   });
   if (verb === undefined) return `brucelee ${args.slice(0, 2).join(' ')} is not one of ${helper}'s verbs`;
-  const rest = args.slice(verb.split(' ').length);
+  const width = verb.split(' ').length;
+  const rest = args.slice(width);
   switch (verb) {
     case 'ticket meeting':
       return has(rest, '--link', '--unlink') ? 'ticket meeting --link writes meetings.txt' : undefined;
@@ -314,25 +447,11 @@ const brucelee = (args: readonly string[], helper: Helper, pipedFrom: readonly s
     case 'dev hold': {
       const at = rest.indexOf('--');
       if (at < 0) return 'dev hold needs `-- <command>`';
-      const inner = rest.slice(at + 1);
-      return judgeWords(inner, helper, undefined);
+      return judgeWords(words.slice(1 + width + at + 1), helper);
     }
-    case 'sms db':
-      return dbScript(pipedFrom);
     default:
       return undefined;
   }
-};
-
-/** Writes a mongosh script may contain; a read-back reads, it never writes. */
-const DB_WRITES =
-  /\.(insert|insertOne|insertMany|update|updateOne|updateMany|replaceOne|delete|deleteOne|deleteMany|remove|drop|dropDatabase|bulkWrite|findOneAndUpdate|findOneAndDelete|findOneAndReplace|findAndModify|createCollection|createIndex|renameCollection|aggregate)\b|\$out|\$merge|eval\(|runCommand/u;
-
-const dbScript = (pipedFrom: readonly string[] | undefined): Refusal => {
-  if (pipedFrom === undefined || pipedFrom[0] !== 'echo' || pipedFrom.length !== 2) {
-    return 'sms db only as `echo \'<script>\' | brucelee sms db`';
-  }
-  return DB_WRITES.test(pipedFrom[1] as string) ? 'the sms db script writes' : undefined;
 };
 
 const playwrightCli: Rule = (args, helper) => {
@@ -355,63 +474,75 @@ const playwrightCli: Rule = (args, helper) => {
 
 const ENV_NAMES = /^(PLAYWRIGHT_MCP_SECRETS_FILE|E2E_[A-Z_]+)=/u;
 
-const judgeWords = (words: readonly string[], helper: Helper, pipedFrom: readonly string[] | undefined): Refusal => {
-  let rest = words;
-  while (rest[0] !== undefined && /^[A-Za-z_][A-Za-z0-9_]*=/u.test(rest[0])) {
-    if (!ENV_NAMES.test(rest[0])) return `the variable ${rest[0].split('=')[0] ?? ''}`;
-    rest = rest.slice(1);
+const judgeWords = (words: readonly Word[], helper: Helper): Ruling => {
+  let skip = 0;
+  for (;;) {
+    const head = words[skip];
+    if (head === undefined || !/^[A-Za-z_][A-Za-z0-9_]*=/u.test(head.text)) break;
+    if (!ENV_NAMES.test(head.text)) return `the variable ${head.text.split('=')[0] ?? ''}`;
+    skip += 1;
   }
-  const [program = '', ...args] = rest;
-  const read = reading[program];
-  if (read !== undefined) return read(args, helper);
+  const passed = words.slice(skip);
+  const args = passed.map((w) => w.text);
+  const [program = '', ...rest] = args;
+  if (program === 'brucelee') return brucelee(passed, helper);
+  if (Object.hasOwn(reading, program)) return (reading[program] as Rule)(rest, helper, passed);
   switch (program) {
     case 'git':
-      return helper === 'bruce-catch-up' ? 'bruce-catch-up reads no git history' : git(args, helper);
-    case 'brucelee':
-      return brucelee(args, helper, pipedFrom);
+      return helper === 'bruce-catch-up' ? 'bruce-catch-up reads no git history' : git(rest, helper, passed);
     case 'npx':
-      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : npx(args, helper);
+      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : npx(rest, helper, passed);
     case 'npm':
-      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : npm(args, helper);
+      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : npm(rest, helper, passed);
     case 'vitest':
     case 'eslint':
     case 'tsc':
-      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : gate(program, args);
+      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : gate(program, rest);
     case 'playwright-cli':
-      return playwrightCli(args, helper);
+      return playwrightCli(rest, helper, passed);
     default:
       return `${program} is not on ${helper}'s list`;
   }
 };
 
-/** Whether `helper` may run `command` from `cwd`; `undefined` means yes. */
-export const judge = (helper: Helper, command: string, cwd?: string): Refusal => {
+/** Whether `helper` may run `command` from `cwd`: the command that will run, or a refusal. */
+export const judge = (helper: Helper, command: string, cwd?: string): Guarded => {
   if (cwd !== undefined && cwd !== '' && !under(cwd, WORKSPACE) && !under(cwd, '/tmp') && !under(cwd, TICKETS)) {
-    return `the working directory ${cwd}`;
+    return { refusal: `the working directory ${cwd}` };
   }
   const tokens = tokenize(command);
-  if (typeof tokens === 'string') return tokens;
+  if (typeof tokens === 'string') return { refusal: tokens };
   const parts = segments(tokens);
-  if (typeof parts === 'string') return parts;
-  if (parts.length === 0) return 'an empty command';
+  if (typeof parts === 'string') return { refusal: parts };
+  if (parts.length === 0) return { refusal: 'an empty command' };
+  const insertions: Insertion[] = [];
   for (const part of parts) {
-    const refusal = judgeWords(part.words, helper, part.pipedFrom);
-    if (refusal !== undefined) return refusal;
+    const ruling = judgeWords(part.words, helper);
+    if (typeof ruling === 'string') return { refusal: ruling };
+    if (ruling !== undefined) insertions.push(...ruling);
   }
-  return undefined;
+  if (insertions.length === 0) return { command };
+  // Right to left, so every offset still names the place in the line it was read from.
+  let out = command;
+  for (const { at, text } of [...insertions].sort((a, b) => b.at - a.at)) {
+    out = out.slice(0, at) + text + out.slice(at);
+  }
+  return { command: out };
 };
 
-const HELPERS: ReadonlySet<string> = new Set<Helper>(['bruce-catch-up', 'bruce-review', 'bruce-verify']);
+const HELPERS: Readonly<Record<string, true>> = { 'bruce-catch-up': true, 'bruce-review': true, 'bruce-verify': true };
 
 export default function helperGuard(pi: ExtensionAPI): void {
   pi.on('tool_call', async (event, ctx) => {
     const agent = ctx.agent;
-    if (agent?.kind !== 'sub' || !HELPERS.has(agent.name)) return undefined;
+    if (agent?.kind !== 'sub' || !Object.hasOwn(HELPERS, agent.name)) return undefined;
     const helper = agent.name as Helper;
-    if (!TOOLS.has(event.toolName)) return { block: true, reason: `helper guard: ${helper} may not call ${event.toolName}` };
+    if (!Object.hasOwn(TOOLS, event.toolName)) return { block: true, reason: `helper guard: ${helper} may not call ${event.toolName}` };
     if (event.toolName !== 'bash') return undefined;
-    const input = event.input as { command?: unknown; cwd?: unknown };
-    const refusal = judge(helper, String(input.command ?? ''), typeof input.cwd === 'string' ? input.cwd : undefined);
-    return refusal === undefined ? undefined : { block: true, reason: `helper guard: ${helper} may not run this — ${refusal}` };
+    const input = event.input as Record<string, unknown>;
+    const written = String(input.command ?? '');
+    const verdict = judge(helper, written, typeof input.cwd === 'string' ? input.cwd : undefined);
+    if ('refusal' in verdict) return { block: true, reason: `helper guard: ${helper} may not run this — ${verdict.refusal}` };
+    return verdict.command === written ? undefined : { input: { ...input, command: verdict.command } };
   });
 }

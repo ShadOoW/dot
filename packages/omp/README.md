@@ -209,6 +209,20 @@ the reason, which the helper reports instead of retrying. omp has no per-agent c
 this extension checks every tool call of a subagent with one of those names (`ctx.agent.name`)
 and blocks the rest. A new helper with a shell gets its list here before its agent file is linked.
 
+It refuses every way it knows to run a program the rules do not name — `git -O<prog>`,
+`--ext-diff`, `--textconv`, `--filters`, `--show-signature`, `%G`, `--exec-path`, `--config-env`,
+a verbose `status`, `range-diff`, `npm run <script>` with anything after the script name,
+`rg --pre`, `--search-zip`, `--hostname-bin`, and `brucelee sms db`, whose mongosh script is
+arbitrary JavaScript no rule can read — and, for an allowed git read, it adds the flags that stop
+the developer's own configuration from running one: `GIT_OPTIONAL_LOCKS=0`, `-c core.pager=cat -c
+core.fsmonitor=false -c log.showSignature=false`, and `--no-ext-diff`/`--no-textconv` where the
+read generates a patch. An insertion is the only edit it ever makes to a command.
+
+It is not a boundary, and the file's header says at length what it does not bound — a repository's
+own config naming a program the flags miss, a later git or ripgrep with a new channel, and the
+three ways it is not reached at all (the operator's own session, an agent with a shell whose name
+is not listed, a hook omp failed to load). Read the header before trusting it with anything.
+
 - `bun test packages/omp/test` checks the lists; `just check` runs it.
 - The guard reads a command line the way a shell would, quotes included, and refuses what it cannot
   read for certain: command substitution, heredocs, background jobs, redirects outside `/tmp`.
