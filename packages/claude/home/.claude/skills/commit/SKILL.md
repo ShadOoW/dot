@@ -71,6 +71,12 @@ machine has no such rule: commit finished work by the repo's own convention.
   swept another session's staged deletions into its own commit (cleanup 17b Finding 19). `git
   reset -q -- <paths>` afterwards only for paths nobody else staged: it once unstaged another
   session's change to a file (cleanup 22c Finding 12).
+- **In `/data/code/logos` the tree now refuses the sweep itself.** Its `pre-commit` hook compares
+  the index git hands it with the repository's own, so a `git commit` that would take everything
+  staged — `git commit`, `git commit --amend`, `-a`/`--include`/`-i`/`-p` — is refused, and the
+  refusal prints the paths it would have taken and both ways out. A pathspec commit, a private
+  index, an index equal to HEAD and a commit that finishes a merge, cherry-pick, revert or rebase
+  stop are let through; `KIT_INDEX=1 git commit …` is the deliberate override.
 - **A private index pins the tree, never the parent.** If HEAD moves during a long gate, a plain
   `git commit` parents the new commit on the moved HEAD and reverts what landed in between: it
   reverted 17 files of one step (cleanup 22c Finding 21) and deleted another plan's design
