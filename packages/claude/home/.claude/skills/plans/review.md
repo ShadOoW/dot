@@ -71,8 +71,8 @@ Answer each from the record, with a number where one exists:
 - **Lessons hit more than once:** the same surprise in two or more steps' Findings means the
   lesson never reached a check, a tool or a skill.
 - **Open items carried:** items that sat in Open items across several sessions without moving.
-- **The plan's own instruments:** if the plan carries an instrument of its own (an older plan's
-  kill criterion or explain-back), did it ever produce a reading? An instrument that never ran is
+- **The plan's own instruments:** if the plan carries an instrument of its own (a kill
+  criterion in its House rules), did it ever produce a reading? An instrument that never ran is
   reported as such, not as a pass.
 - **Writing against code:** lines of plan markdown against lines of code changed.
 - **What worked,** with the evidence: the gate that caught a real defect, the drill that failed

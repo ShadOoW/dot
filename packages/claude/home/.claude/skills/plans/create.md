@@ -31,8 +31,7 @@ Do these before writing any file. They are the difference between a plan and a w
    Propose **consult** when the step decides something the operator will reason about later and has
    no industry-standard answer: a mechanism of his own system, a data model, a naming scheme,
    behaviour a user sees. Propose **inform** when a standard way exists (systemd wiring, a Nix
-   module, a migration, a credential rotation) or the work is mechanical. What older plans call a
-   chore is an inform step.
+   module, a migration, a credential rotation) or the work is mechanical.
 7. **Assign a drill to every step** (below). Decide it now, at plan time, so it is never a choice
    made when tired.
 
@@ -113,6 +112,9 @@ A drill performed manually twice becomes a script the third time, or it stops ha
    (Empty. Sessions append: surprises, design defects, corrections, the build record.)
    ```
 
+Section numbers never change once a file holds text: Findings, History and other steps cite them
+(`§8.3`).
+
 ---
 
 ## A plan in waves
@@ -134,12 +136,10 @@ Two more pre-generation obligations:
 
 `PLAN.md` adds, after the ledger:
 
-- **Wave table** — wave number, phases in it, and the assertion that they share no files.
-- **File-ownership map** — path → phases that touch it. Concurrency is read from here.
-- **Global invariants** — rules no phase may violate, each with the file that enforces it if one
-  exists.
-- **Blocking external decisions** — unresolved questions that gate specific phases, naming the
-  phase and the decision. They are also Open items.
+- **`## Waves`** — wave number, phases in it, and the assertion that they share no files.
+- **`## File-ownership map`** — path → phases that touch it. Concurrency is read from here.
+- **`## Global invariants`** — rules no phase may violate, each with the file that enforces it if
+  one exists.
 
 Each phase file, `.plans/<plan>/NN-<name>.md`, has exactly this structure:
 
@@ -217,20 +217,6 @@ Phase-specific constraints:
   migration of N call sites), keep it whole and make N explicit.
 - **Prefer parallel width over depth.** A dependency edge is a serialisation cost; only assert one
   where the later phase strictly cannot proceed without the earlier.
-
----
-
-## Hand-off protocol
-
-State it once in `PLAN.md`, not in every step:
-
-- Gates green → set this step to `[x]` in the ledger, commit code and ledger together.
-- Gates red → leave `[~]`, append to Findings, stop.
-- Every boundary: rewrite Current state, add or close Open items, one History line.
-- Never delete or restructure the plan's files; closing is the operator's call (the `plans` skill,
-  `close.md`).
-- Never edit a step file other than your own, except appending to another's Findings when you have
-  information it needs.
 
 ---
 

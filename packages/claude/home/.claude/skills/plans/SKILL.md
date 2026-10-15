@@ -52,9 +52,7 @@ feature to it was always the easy path.
 
 There is one kind of plan: a ladder of steps run one at a time, each designed in one session and
 built in a fresh one. A plan whose steps may run in parallel adds a wave table (`waves.md`); its
-first line is `# <plan> — a plan in waves`. Every other plan's first line is `# <plan>`. Old first
-lines (`— a study plan`, `— a build plan`) are read as the plain kind and the waves kind until
-`workflow 03` rewrites them.
+first line is `# <plan> — a plan in waves`. Every other plan's first line is `# <plan>`.
 
 | The operator says | The session follows |
 |---|---|
@@ -169,12 +167,16 @@ paragraph, is what says whether the rule holds for this operator's plans.
    resuming session reads this and the ledger before opening anything else.
 4. **House rules** — a pointer to the repository's own rules (its skill, AGENTS.md, README), plus
    only what is particular to this plan. Never a copy of the repository's rules: copies drift.
+   When that runs long it goes under `###` headings at the end of this section: `Before you start`
+   (what to check in another plan before a step that assumes it), `Kill criterion` (what makes the
+   plan stop and re-cut), `Rejected` (ideas the operator ruled out).
 5. **Ledger** — one line per step in run order: `[ ]` pending · `[~]` in design or in progress ·
    `[>]` designed, awaiting build · `[x]` done · `[!]` blocked, saying on whom.
    The only place status lives; step files carry none.
-6. The ladder table (step, name, what it builds, depth, drill), the **Established** list (one
-   line per landed step: the primitive a later step may assume without re-teaching), and for a
-   plan in waves the wave table and file-ownership map.
+6. **Ladder** — the table (step, name, what it builds, depth, drill), and any note on its order;
+   **Established** — one line per landed step: the primitive a later step may assume without
+   re-teaching; for a plan in waves, **Waves** and **File-ownership map** (`create.md`);
+   **Global invariants** when the plan has rules no step may break.
 7. **Open items** — what only the operator, or something outside this repository, can close: a
    ruling awaited, an act needing his credentials, his hands or a machine of his, a wait on a
    person or a system. Each names what closes it and who. What a session can do is not an item:

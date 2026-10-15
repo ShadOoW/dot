@@ -56,7 +56,8 @@ skill's lesson of the same name).
      rule (named), or not worth its cost.
 
    Why the draft is withheld: the answers then cannot repeat the draft's errors, and the draft was
-   not anchored on whatever the first articles said (Chain-of-Verification, `workflow 01` §6).
+   not anchored on whatever the first articles said (Chain-of-Verification, `workflow 01`'s
+   Research section).
 4. **Naming.** The words this step introduces. Check each: is there a standard word in its home
    field; is the candidate already load-bearing somewhere in this tree with a different meaning;
    what alternatives were rejected. Follow the repository's vocabulary policy where it has one. A

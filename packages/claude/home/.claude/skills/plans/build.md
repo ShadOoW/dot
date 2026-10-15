@@ -6,8 +6,8 @@ fresh session (layout, memory and replies: `SKILL.md`, beside this file). The de
 another session that you cannot see, with the operator when the step's depth is consult. Your
 context is the step file and the repository.
 
-**Find the design by its heading text**, `Design`, whatever its number: old step files have it at
-§9, new ones at §8.
+**Find each section by its heading text**, never its number: a section keeps the number it was
+written with (`create.md`).
 
 ---
 
@@ -62,6 +62,8 @@ Implement exactly what the Design section says. Nothing adjacent, nothing antici
   this step or report that you cannot.
 - **Where the design and the tree disagree, the tree wins and the design is a finding.** Specs are
   written before the tree moves.
+- **Another step's file is not yours.** Append to its Findings what it needs to know; change
+  nothing else in it.
 
 ---
 
@@ -70,8 +72,7 @@ Implement exactly what the Design section says. Nothing adjacent, nothing antici
 1. **The gate**, on the integrated tree, green.
 2. **The definition of done, checked yourself.** Countable criteria are countable — count them.
    Spot-check the negative: grep for what was supposed to be eliminated.
-3. **The drill, as the step's Drill line declares.** `none` means none. An old step file whose
-   Drill line says tier 1 gets its two sentences in Findings: what is lost, what brings it back.
+3. **The drill, as the step's Drill line declares.** `none` means none.
    - _Tier 2 — delete and recover:_ actually destroy the state, restart, and assert the
      **countable** claim the step names. A drill that cannot fail has tested nothing — if recovery
      would have passed without the destruction, say so and fix the drill.
