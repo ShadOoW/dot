@@ -39,21 +39,18 @@ skill's lesson of the same name).
    rename, copied text); then the Research section says so in one line. Otherwise:
    - Write down the assumptions the draft rests on about outside systems — tools, libraries,
      protocols, vendors, standards — each as a question.
-   - Run two subagents in one batch, each with a fresh context. **Neither is given the draft.**
-     - **Fact check.** Input: the questions only. Output: an answer to each from primary sources —
-       the official docs at the version in use, the source code, the standard, the tool's own
-       `--help` or man page — with the link or path and the date read; an answer it cannot source
-       is marked unverified.
-     - **Field survey.** Input: the problem in plain words (what must be true for the user when the
-       step is done) and the versions actually in use, read from the tree (for example the nixpkgs
-       pin in `flake.lock` and the systemd it ships; a `package.json`). Output: the current best
-       ways to solve it, each with sources — release notes and changelogs of those tools (features
-       newer than the model's training), how established projects or products solve the same
-       problem, the maintainers' own current guidance — and whether each is available at the
-       versions in use.
-   - **Revise.** Every fact-check answer that contradicts the draft changes it. Every survey option
-     is adopted, or gets one line on why not: not available at our version, conflicts with a house
-     rule (named), or not worth its cost.
+   - Run the two research helpers in one task batch, each with a fresh context. **Neither is
+     given the draft.** Their procedure and answer shape are their definitions (the `claude`
+     package README, *Helpers*, in dot); this file says only what to hand them.
+     - **`fact-check`** (`agent: fact-check`): the numbered questions and the versions in use,
+       nothing else.
+     - **`field-survey`** (`agent: field-survey`): the problem in plain words (what must be true
+       for the user when the step is done) and the versions actually in use, read from the tree
+       (for example the nixpkgs pin in `flake.lock` and the systemd it ships; a `package.json`).
+   - **Revise.** Every fact-check answer that contradicts the draft changes it. An `unverified`
+     answer that names a command is settled by running that command in this session: the helpers
+     run none. Every survey option is adopted, or gets one line on why not: not available at our
+     version, conflicts with a house rule (named), or not worth its cost.
 
    Why the draft is withheld: the answers then cannot repeat the draft's errors, and the draft was
    not anchored on whatever the first articles said (Chain-of-Verification, `workflow 01`'s
@@ -61,9 +58,9 @@ skill's lesson of the same name).
 4. **Naming.** The words this step introduces. Check each: is there a standard word in its home
    field; is the candidate already load-bearing somewhere in this tree with a different meaning;
    what alternatives were rejected. Follow the repository's vocabulary policy where it has one. A
-   colliding word misleads worse than an unfamiliar one. Grep before asserting a word is free. The
-   result goes in the Naming section; the reply mentions a name only when the operator will see it
-   in use.
+   colliding word misleads worse than an unfamiliar one. Run `rename-census <word> <repo>…` before
+   asserting a word is free. The result goes in the Naming section; the reply mentions a name only
+   when the operator will see it in use.
 5. **Reply.**
    - First line: what the step will build, in the operator's terms.
    - **consult**: the mechanism (the problem it solves, what existed before, the smallest example

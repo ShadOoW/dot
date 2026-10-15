@@ -1,0 +1,73 @@
+#!/bin/sh
+# rename-census — every place a name appears in one or more git repositories, before a rename
+# or a move: file contents and file paths, each hit marked tracked or untracked.
+#
+#   rename-census [-i] <name> [<repo>...]
+#
+# <name> is matched literally (no regex), case-sensitively unless -i. <repo> defaults to the
+# repository holding the current directory. Ignored files (.gitignore, node_modules) and
+# binary files are skipped. Tracked files are searched as they are in the working tree,
+# uncommitted edits included.
+#
+# Output, one hit per line, a header and a count line per repository:
+#
+#   # <repo>
+#   tracked    <path>:<line>:<text>
+#   untracked  <path>:<line>:<text>
+#   path       <path> (tracked|untracked)
+#   # <repo>: <n> tracked, <n> untracked, <n> paths
+#
+# <text> is cut at 200 characters. Exit 0 whatever the count; 2 on a usage error or a
+# directory that is not a git repository.
+set -eu
+
+usage() {
+  echo "usage: rename-census [-i] <name> [<repo>...]" >&2
+  exit 2
+}
+
+case_flag=""
+if [ "${1-}" = "-i" ]; then
+  case_flag="-i"
+  shift
+fi
+[ $# -ge 1 ] || usage
+name=$1
+shift
+[ -n "$name" ] || usage
+if [ $# -eq 0 ]; then
+  set -- "$(git rev-parse --show-toplevel 2>/dev/null)" || true
+  [ -n "$1" ] || {
+    echo "rename-census: not inside a git repository; name one" >&2
+    exit 2
+  }
+fi
+
+cut_text() { cut -c1-200; }
+count() { if [ -z "$1" ]; then echo 0; else printf '%s\n' "$1" | wc -l | tr -d ' '; fi; }
+
+# One repository, run in a subshell so its cd never leaks into the next relative <repo>.
+census_one() (
+  cd "$1"
+  tracked=$(git -c core.quotePath=false grep -I -n $case_flag -F -e "$name" | cut_text || true)
+  untracked=$(git ls-files -z --others --exclude-standard |
+    xargs -0 -r grep -I -n -H $case_flag -F -e "$name" -- 2>/dev/null | cut_text || true)
+  paths_t=$(git -c core.quotePath=false ls-files | grep $case_flag -F -e "$name" || true)
+  paths_u=$(git -c core.quotePath=false ls-files --others --exclude-standard |
+    grep $case_flag -F -e "$name" || true)
+  echo "# $1"
+  [ -z "$tracked" ] || printf '%s\n' "$tracked" | sed 's/^/tracked    /'
+  [ -z "$untracked" ] || printf '%s\n' "$untracked" | sed 's/^/untracked  /'
+  [ -z "$paths_t" ] || printf '%s\n' "$paths_t" | sed 's/^/path       /; s/$/ (tracked)/'
+  [ -z "$paths_u" ] || printf '%s\n' "$paths_u" | sed 's/^/path       /; s/$/ (untracked)/'
+  np=$(($(count "$paths_t") + $(count "$paths_u")))
+  echo "# $1: $(count "$tracked") tracked, $(count "$untracked") untracked, $np paths"
+)
+
+for repo in "$@"; do
+  root=$(git -C "$repo" rev-parse --show-toplevel 2>/dev/null) || {
+    echo "rename-census: $repo is not a git repository" >&2
+    exit 2
+  }
+  census_one "$root"
+done

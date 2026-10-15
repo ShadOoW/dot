@@ -290,8 +290,8 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   and its home measurement each cost one query. An item is written with its size — `one line`, `a
   step`, `a ruling` — the one-liners are fixed in the session that noticed them, and the rest is
   asked for in that session's reply, where an unanswered question is visible.
-- **Before a rename or a move, grep the tree for the old name and account for every hit.** The
-  design carries that grep's output with a line per hit: corrected here, or not mine and why.
+- **Before a rename or a move, run `rename-census <old name> <repo>…` and account for every hit.**
+  The design carries its output with a line per hit: corrected here, or not mine and why.
   retention 01 §10 asked for "the two stale comments"; five files asserted the old lake layout, and
   the other three were one `grep` away when the design was cut — they surfaced at the build instead,
   as an Open item still open at the close.

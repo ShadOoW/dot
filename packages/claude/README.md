@@ -10,6 +10,8 @@ Manages Claude Code's user-level config and the slash-command library that is
 | `~/.claude/commands/*.md`                                               | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them  |
 | `~/.omp/agent/commands`                                                 | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here     |
 | `~/.local/bin/claude-turn-*`                                            | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                     |
+| `~/.omp/agent/agents/*.md`                                              | per-file symlinks             | Helpers that are omp agents (`## Helpers`). Per-file: `omp agents unpack` writes here    |
+| `~/.local/bin/rename-census`                                            | symlink                       | Helper that is a command (`## Helpers`)                                                  |
 | `~/.claude/skills/<logos skill>`                                        | symlinks (via `configure.sh`) | Every `<logos>/skills/<name>` fleet does not keep logos-only; no copy, no drift possible |
 | `~/.claude/{CLAUDE.md,SHARED.md,COMMUNICATION.md,DOTFILES.md,TESTS.md}` | per-file symlinks             | Machine-wide instructions. `SHARED.md` is the part both harnesses read                   |
 | `~/.omp/agent/AGENTS.md`                                                | per-file symlink              | omp's user context file: one line, `@~/.claude/SHARED.md`                                |
@@ -31,6 +33,85 @@ to it — never a folder of its own:
   `configure.sh`;
 - `~/.claude/skills/synced` is Claude Code's own download of claude.ai skills — the one folder
   here nothing in dot writes.
+
+## Helpers
+
+A helper is recurring fetch work given a name, a fixed procedure and a fixed answer shape, so
+every session that calls it fetches the same way. A helper reads and returns; only the calling
+session writes. This section is the one place that says where helpers live and how one is added.
+
+- **An omp agent**, `home/.omp/agent/agents/<name>.md`, when the job needs judgement: which
+  source settles a question, which practice is current. Its answer shape is the `output` schema in
+  its frontmatter (JSON Type Definition, as omp's bundled `scout` uses), and `structured: true`
+  makes omp check every answer against it. After three failed attempts omp accepts the answer
+  anyway with a `SYSTEM WARNING: Subagent exhausted schema-retry budget` line: that warning in a
+  helper's result means its definition needs fixing. Its model is a role alias (`@task`), so model
+  IDs stay in `~/.omp/agent/config.yml`. omp only: Claude Code reads `~/.claude/agents` in another
+  format (other tool names, no answer schema), and omp never reads that directory.
+- **A command**, `home/.local/bin/<name>`, when the job is deterministic. Its answer shape is its
+  header comment. Both harnesses can run it.
+
+| Helper          | Kind    | Called from                                             | Answers with                                                       |
+| --------------- | ------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
+| `fact-check`    | agent   | `plans` skill, `design.md` step 3                       | per question: answer, sourced or unverified, sources with quotes   |
+| `field-survey`  | agent   | `plans` skill, `design.md` step 3                       | options: how, who, available at the versions in use, sources       |
+| `rename-census` | command | `plans` skill, `design.md` step 4 and the rename lesson | one line per hit, tracked or untracked, path hits, counts per repo |
+
+`rename-census` limits: `-i` covers letter case only (`fooBar` and `foo_bar` are separate runs), a
+tracked file deleted in the working tree still shows as a path hit, and submodules are not
+searched.
+
+### Adding or changing a helper
+
+1. Write the file.
+   - An agent lists only read tools in `tools` (`read, grep, glob, find, web_search`). With `bash`
+     a helper can write, and one did: a research subagent appended to logos' `.gitignore` to test
+     git's behaviour, then reset the file (workflow 04).
+   - Never give an agent a bundled agent's name (`scout`, `reviewer`, `security-reviewer`,
+     `task`, `sonic`): a user agent replaces the bundled one silently.
+   - dot's linker skips a file named `README.md`, `configure.sh`, `CHEATSHEET.md`, `setup.sh` or
+     `meta.json`, or starting with `enable` or `disable` (`SKIP_NAMES` in logos'
+     `apps/dot/src/lib/pkg.ts`).
+   - A command is POSIX `sh`, and `shellcheck -s sh` and `shfmt -d -i 2 -ci` print nothing on it:
+     `just check` covers only `*.sh`.
+2. `dot pkg claude link`, then `dot pkg claude status`.
+3. Run its smoke call below from a fresh shell and read the answer. A new helper adds its own
+   smoke call here, with a known answer where one exists.
+
+### Smoke calls
+
+`omp -p` prints the calling model's reply, which paraphrases the helper's answer, and a long
+answer reaches it only as a preview. `--mode json` prints every event instead; the `wait` or
+`task` result carries the helper's own schema-checked answer as `structured` (`status` `valid`,
+and `data` holding the answer). Each agent smoke saves the events, then shows that and counts
+schema warnings.
+
+```sh
+omp -p --mode json --model @smol "Use the task tool with agent fact-check. Questions: 1. Does omp load task-agent definitions from ~/.claude/agents/? Versions in use: omp $(omp --version | cut -d/ -f2). Then reply DONE." > /tmp/smoke-fact-check.jsonl
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-fact-check.jsonl
+grep -c 'SYSTEM WARNING' /tmp/smoke-fact-check.jsonl || true
+```
+
+Expect, in about a minute: `status` `valid`, one answer, its `status` `sourced`, the answer "no",
+a source with a quote (omp's own docs or its `src/task/discovery.ts`); the warning count `0`. A
+`jq` that prints `null` means no helper answer was found: read the `.jsonl`.
+
+```sh
+omp -p --mode json --model @smol "Use the task tool with agent field-survey. Problem: before renaming a word or moving a file in a git repository, a person needs every place the old name appears, in file contents and file paths, split into committed and not-yet-committed files, one line per hit. Versions in use: git $(git --version | cut -d' ' -f3), ripgrep $(rg --version | head -1 | cut -d' ' -f2). Then reply DONE." > /tmp/smoke-field-survey.jsonl
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-field-survey.jsonl
+grep -c 'SYSTEM WARNING' /tmp/smoke-field-survey.jsonl || true
+```
+
+Expect, in about five minutes: `status` `valid`, two to eight options, one of them `git grep` with
+`git ls-files`, each with `available` and dated sources; the warning count `0`. There is no known
+answer: read it.
+
+```sh
+rename-census 'fact check' /data/config/dot | tail -1
+git -C /data/config/dot grep -I -c -F 'fact check' | awk -F: '{s+=$NF} END {print s}'
+```
+
+Expect: the tracked count on the first line equals the number on the second.
 
 ## One set of instructions for both harnesses
 
