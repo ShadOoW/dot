@@ -70,11 +70,11 @@ output:
                 type: boolean
         erased:
           metadata:
-            description: How many of created the read-back found erased.
+            description: How many of created the read-back found erased; 0 when the read-back was not run (step 7).
           type: uint16
         left:
           metadata:
-            description: Slots the read-back did not find erased, each with the refusal. Must be empty.
+            description: Slots the read-back did not find erased, each with the refusal. Every created slot is here while the read-back is not run (step 7); empty when it ran.
           elements:
             properties:
               slot:
@@ -127,14 +127,11 @@ If the input also says what the change does or that the gates passed, ignore it.
    A Then states a value shown, never only that something is there.
 7. Erase, pass or fail: for each staffed slot, `brucelee sms order f8ZCOmYrNH --as agency --scope slot=<id> --input '{"slot":{"<id>":{"className":"Slot","objectId":"<id>","worker":null}}}'`;
    then for every created slot `brucelee sms order 6cyd4LE1Dv --as agency --scope slot=<id>`.
-   Then read back, with the ids filled in:
 
-   ```sh
-   echo 'const ids = ["<id>", "<id>"]; print(JSON.stringify(ids.filter((id) => { const s = db.Slot.findOne({ _id: id }); return !s || !(s.parentScopes && s.parentScopes.length > 0); })))' | brucelee sms db
-   ```
-
-   The printed ids are erased; every other created id goes in `left` with the erase order's
-   refusal.
+   The read-back is `not-run`: the helper guard refuses a mongosh script piped to `brucelee`, since
+   arbitrary JavaScript is what no argv rule can read, and it returns when a read-back verb exists
+   (`brucelee sms read`, leftovers 08 `sms-read`). Report `erased` 0 and every created slot in
+   `left` with that refusal, so the caller reads them back by hand and erases anything still there.
 
 8. `playwright-cli -s=bruce-verify close`.
 
