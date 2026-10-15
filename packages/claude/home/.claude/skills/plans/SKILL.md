@@ -14,8 +14,8 @@ description: |
   or running a wave of one; when the operator says "next step", "design <plan> NN", "build
   <plan> NN", "run wave N of <plan>", "review <plan>" or "close <plan>"; before reading or
   writing anything under a `.plans/` directory; and when new work comes up while a plan is
-  running. Not for Bruce tickets: their plans live in brucelee's state and follow the
-  bruce-plan skill.
+  running. A plan named by a Jira key (BRC-9080) is a Bruce ticket's: load the bruce-plan
+  skill with this one; it says where that plan lives and wins where the two differ.
 ---
 
 # Plans
@@ -65,6 +65,12 @@ first line is `# <plan> — a plan in waves`. Every other plan's first line is `
 
 When the plan is not named and `.plans/` holds more than one open plan, the session lists them in
 one line and stops; that is the one question it may ask before working.
+
+**A Bruce ticket.** A plan named by a Jira key — "design BRC-9103 01", "build BRC-9080 75", "next step of
+BRC-9080" — is that ticket's `plan/` in brucelee's state, not a folder under `.plans/`. Read the `bruce-plan`
+skill and its `phase.md` with this skill's procedure file: they map `PLAN.md`, the ledger and History onto a
+ticket's dashboard and workstreams, and win wherever they differ from this skill. `create.md`, `waves.md`,
+`review.md` and `close.md` do not run on a ticket; `bruce-plan`'s jobs replace them.
 
 **Depth.** Every step has one:
 

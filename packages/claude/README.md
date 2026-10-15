@@ -55,10 +55,10 @@ session writes. This section is the one place that says where helpers live and h
 | ---------------- | ------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
 | `fact-check`     | agent   | `plans` skill, `design.md` step 3                       | per question: answer, sourced or unverified, sources with quotes    |
 | `field-survey`   | agent   | `plans` skill, `design.md` step 3                       | options: how, who, available at the versions in use, sources        |
-| `bruce-scout`    | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | per question: answer, found or not, path:line refs with quotes      |
-| `bruce-catch-up` | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | proposals (add/replace/drop, file, current, new, source with quote) |
-| `bruce-review`   | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | verdict, gates, findings (consequence, who, why, where, fix)        |
-| `bruce-verify`   | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | per gate and criterion: verdict, screenshot; records created, left  |
+| `bruce-scout`    | agent   | `bruce-plan`: `phase.md`, `start.md`, `returns.md`      | per question: answer, found or not, path:line refs with quotes      |
+| `bruce-catch-up` | agent   | `bruce-plan`: `catch-up.md`, `start.md`                 | proposals (add/replace/drop, file, current, new, source with quote) |
+| `bruce-review`   | agent   | `bruce-plan`: `ship.md`                                 | verdict, gates, findings (consequence, who, why, where, fix)        |
+| `bruce-verify`   | agent   | `bruce-plan`: `phase.md`                                | per gate and criterion: verdict, screenshot; records created, left  |
 | `rename-census`  | command | `plans` skill, `design.md` step 4 and the rename lesson | one line per hit, tracked or untracked, path hits, counts per repo  |
 
 The Bruce helpers are called from a session whose working directory is `/data/code/work/bruce`:
