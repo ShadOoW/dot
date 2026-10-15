@@ -24,7 +24,9 @@ prefer reading the source over describing it.
 
 **Probe the live system while designing, not while building.** Run every script and gate command
 the design depends on once, against the real target, before the design is written (the `plans`
-skill's lesson of the same name).
+skill's lesson of the same name). A check, hook or guard the step adds is run by the step itself, on
+the commit or job it is for: the `workflow` plan's hook would have refused its own cutover commit,
+and its helper guard refused its own first real job, and only those runs showed either.
 
 ---
 
@@ -74,7 +76,11 @@ skill's lesson of the same name).
 6. **Write.** consult: after the confirm. inform: at once, before replying. Fill the Research,
    Naming and Design sections; set `[>]`; rewrite Current state; one History line; commit the plan
    folder's files (`plan: <plan> — NN designed: <what it will build>`), on a private index (the
-   `commit` skill) — the design lands committed (the lesson about uncommitted designs).
+   `commit` skill) — the design lands committed (the lesson about uncommitted designs). Before that
+   commit, run every command the design's own Definition of done and Gates name — each `grep`, `ls`,
+   `wc -l` — against the drafted file and the tree: two of the six `workflow` builds stopped where a
+   design contradicted itself this way (a DoD that forbade a line the same §9 mandated; a 300-line
+   cap against text that came to 358).
 7. **Next**, from the ledger read again now: the in-window form `/new`, the switch for the step's
    Build session model (`/ss5` or `/so5`), `build <plan> NN`, and one sentence on why a new
    session: the build must work from the file alone. Waiting on a consult confirm: "reply here with

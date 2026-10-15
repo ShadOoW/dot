@@ -61,6 +61,11 @@ machine has no such rule: commit finished work by the repo's own convention.
   is what catches a sweep. Then `unset GIT_INDEX_FILE` and `git reset -q -- <your paths>`, in that
   order: with the variable still exported you reset the private index and leave the shared one
   holding a staged reversal of the commit (ticket-flow 07 Finding 17, 09 Finding 14).
+- **Stage after the last write, not before.** `git mv` and `git add` record a file's bytes as they are
+  at that moment; a later pass that rewrites the file leaves the index on the old bytes — a cutover
+  commit missed six rewritten citations that way and was amended in the same session (workflow 02).
+  In dot the pre-commit hook stashes and restores unstaged files ("Stashing unstaged files…"), so a
+  commit there does not sweep another session's work but does move the tree mid-commit.
 - **On a shared index, commit the paths in one command.** `git commit -- <paths>` takes only
   those paths from the working tree whatever another session has staged; a plain `git commit`
   swept another session's staged deletions into its own commit (cleanup 17b Finding 19). `git

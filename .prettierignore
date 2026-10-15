@@ -1,5 +1,7 @@
 backup/
 packages/prettierd/
+# Instruction files, never formatted: prettier re-indents a list whose item holds an indented code
+# block, and rewrites the file on every run (workflow 05 Finding 6), so these are hand-formatted.
 packages/claude/home/.claude/skills/
 justfile
 .pre-commit-config.yaml
