@@ -176,13 +176,13 @@ run. No known answer: read it.
 ```sh
 cd /data/code/work/bruce
 brucelee dev ready
-omp -p --mode json --model @smol "Use the task tool with agent bruce-verify. Ticket: BRC-9080. Gates: client — npx tsc --noEmit, baseline none. Criteria: C1, as agency — Given an agency draft on the line 'Fiche test Pauline' (e2e agencyDraft) on the first weekday at least two days ahead, 06:00 to 07:00; When the agency opens /app/planning/companies on that day's week; Then that slot's card shows the status 'En création'. Then reply DONE." > /tmp/smoke-bruce-verify.jsonl
+omp -p --mode json --model @smol "Use the task tool with agent bruce-verify. Ticket: BRC-9080. Gates: client — npx tsc --noEmit, baseline none. Criteria: C1, as agency — Given an agency draft on the line 'Fiche test Pauline' (e2e agencyDraft) on the first weekday at least two days ahead, 06:00 to 07:00; When the agency opens /app/planning/companies on that day's week; Then that slot's card shows the status 'Brouillon'. Then reply DONE." > /tmp/smoke-bruce-verify.jsonl
 jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-bruce-verify.jsonl
 grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-verify.jsonl || true
 ```
 
-Expect, in five to ten minutes: `status` `valid`; C1 with a screenshot under `/tmp/bruce-verify/`;
-`data.created` one slot, `erased` 1, `left` empty; the warning count `0`. Open the screenshot.
+Expect, in five to ten minutes: `status` `valid`; C1 `pass` with a screenshot under
+`/tmp/bruce-verify/`; `data.created` one slot, `erased` 1, `left` empty; the warning count `0`. Open the screenshot.
 Then read the created ids back yourself (the verifier's own read-back, step 7 of its definition):
 every id must print.
 
