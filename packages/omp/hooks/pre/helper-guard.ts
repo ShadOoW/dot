@@ -47,7 +47,8 @@
 // without a sandbox is fundamentally flawed", with the `rg --pre` and `git show --output` RCEs),
 // and the eight bypasses of CVE-2025-66032. A boundary is an OS sandbox — `bwrap --ro-bind / / …
 // -- bash -c <cmd>` on Linux, which is what Codex does, Seatbelt on macOS — plus a read-only
-// database credential; neither is this file's, and the step that needs the second is 08.
+// database credential; neither is this file's, and the step that needs the second is `leftovers 08
+// sms-read`.
 //
 // Fail-closed: a command this file cannot read for certain — command substitution, a heredoc, a
 // redirect outside /tmp, an unknown program — is refused. A refused helper says so in its answer,
