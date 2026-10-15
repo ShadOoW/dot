@@ -200,3 +200,15 @@ cd /tmp && omp --model @smol "Call the ask tool now with question 'Test?', optio
 
 Expected: the picker does not open, and the transcript shows "Blocked: this `ask` was sent
 with no reply text…".
+
+## Helper guard — `hooks/pre/helper-guard.ts`
+
+A Bruce helper that holds a shell (`bruce-catch-up`, `bruce-review`, `bruce-verify`; the claude
+package README, _Helpers_) runs only the commands on its own list; anything else is refused with
+the reason, which the helper reports instead of retrying. omp has no per-agent command rule, so
+this extension checks every tool call of a subagent with one of those names (`ctx.agent.name`)
+and blocks the rest. A new helper with a shell gets its list here before its agent file is linked.
+
+- `bun test packages/omp/test` checks the lists; `just check` runs it.
+- The guard reads a command line the way a shell would, quotes included, and refuses what it cannot
+  read for certain: command substitution, heredocs, background jobs, redirects outside `/tmp`.
