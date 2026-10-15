@@ -70,11 +70,11 @@ output:
                 type: boolean
         erased:
           metadata:
-            description: How many of created the read-back found erased; 0 when the read-back was not run (step 7).
+            description: How many of created the read-back found erased — no `_p_` pointer left on the row (step 7).
           type: uint16
         left:
           metadata:
-            description: Slots the read-back did not find erased, each with the refusal. Every created slot is here while the read-back is not run (step 7); empty when it ran.
+            description: Slots the read-back found still carrying a `_p_` pointer, each with the pointers it printed; empty when every created slot came back erased.
           elements:
             properties:
               slot:
@@ -125,13 +125,21 @@ If the input also says what the change does or that the gates passed, ignore it.
 6. Each criterion: open its page with `goto`, act, check what the Then states with `find` or a
    snapshot, then `screenshot --filename=/tmp/bruce-verify/<run>/<id>.png` and `console error`.
    A Then states a value shown, never only that something is there.
-7. Erase, pass or fail: for each staffed slot, `brucelee sms order f8ZCOmYrNH --as agency --scope slot=<id> --input '{"slot":{"<id>":{"className":"Slot","objectId":"<id>","worker":null}}}'`;
-   then for every created slot `brucelee sms order 6cyd4LE1Dv --as agency --scope slot=<id>`.
+7. Erase, then read back, pass or fail. For each staffed slot, unstaff it —
+   `brucelee sms order f8ZCOmYrNH --as agency --scope slot=<id> --input '{"slot":{"<id>":{"className":"Slot","objectId":"<id>","worker":null}}}'`;
+   then erase every created slot — `brucelee sms order 6cyd4LE1Dv --as agency --scope slot=<id>`.
 
-   The read-back is `not-run`: the helper guard refuses a mongosh script piped to `brucelee`, since
-   arbitrary JavaScript is what no argv rule can read, and it returns when a read-back verb exists
-   (`brucelee sms read`, leftovers 08 `sms-read`). Report `erased` 0 and every created slot in
-   `left` with that refusal, so the caller reads them back by hand and erases anything still there.
+   The erase order erases the slot's scope; it does not delete the row. The row stays as a trace with
+   every `_p_*` pointer null, `parentScopes` `[]` and `_rperm`/`_wperm` empty (measured on the
+   development database, 2026-10-15). So read each created slot back and judge what came back:
+
+   ```sh
+   brucelee sms read Slot <id> | jq -c 'if . == null then "gone" else [to_entries[] | select(.key | startswith("_p_")) | select(.value != null) | .key] end'
+   ```
+
+   `[]` is erased, `"gone"` is erased (there is no such row at all), and anything else names the
+   pointers still there: that slot goes in `left` with them. `erased` counts the slots that read
+   back `[]` or `"gone"`.
 
 8. `playwright-cli -s=bruce-verify close`.
 

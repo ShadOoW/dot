@@ -182,10 +182,8 @@ grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-verify.jsonl || true
 ```
 
 Expect, in five to ten minutes: `status` `valid`; C1 `pass` with a screenshot under
-`/tmp/bruce-verify/`; `data.created` one slot, `erased` 0 with that slot in `left`, the refusal
-saying the read-back is not run (step 7 of the verifier's definition, where the command stood);
-the warning count `0`. Open the screenshot.
-Then read the created ids back yourself — the verifier cannot — and every id must print.
+`/tmp/bruce-verify/`; `data.created` one slot, `erased` 1 with `left` empty (the read-back's own
+verdict, step 7 of the verifier's definition); the warning count `0`. Open the screenshot.
 
 ## One set of instructions for both harnesses
 

@@ -55,6 +55,7 @@ describe('what bruce-verify may run', () => {
     ok('bruce-verify', 'PLAYWRIGHT_MCP_SECRETS_FILE="$HOME/.config/secrets/agent-web" playwright-cli -s=bruce-verify open http://localhost:8080/app/slots');
     ok('bruce-verify', 'playwright-cli -s=bruce-verify screenshot --filename=/tmp/bruce-verify/r1/c1.png');
     ok('bruce-verify', `brucelee sms order 6cyd4LE1Dv --as agency --scope slot=abc123 --json`);
+    ok('bruce-verify', 'brucelee sms read Slot DQNFW40EiM');
     ok('bruce-verify', 'cd /data/code/work/bruce/e2e && brucelee dev hold -- npx playwright test --grep "\\[A3a\\]"');
     ok('bruce-verify', 'mkdir -p /tmp/bruce-verify/r1');
   });
@@ -64,6 +65,13 @@ describe('what bruce-verify may run', () => {
     refused('bruce-verify', 'playwright-cli -s=bruce-verify kill-all', 'reaches past');
     refused('bruce-verify', 'playwright-cli -s=bruce-verify screenshot --filename=/data/code/work/bruce/x.png', 'only under /tmp');
     refused('bruce-verify', 'brucelee sms db < /tmp/script.js', 'cannot read');
+    ok('bruce-verify', `brucelee sms read Slot DQNFW40EiM | jq -c 'if . == null then "gone" else [to_entries[] | select(.key | startswith("_p_")) | select(.value != null) | .key] end'`);
+    refused('bruce-verify', 'brucelee sms read _Session DQNFW40EiM', 'the collection');
+    refused('bruce-verify', 'brucelee sms read Slot DQNFW40Ei', 'the id');
+    refused('bruce-verify', 'brucelee sms read Slot DQ"NFW40Ei', 'unclosed double quote');
+    refused('bruce-verify', 'brucelee sms read Slot DQNFW40EiM extra', 'nothing else');
+    refused('bruce-verify', 'brucelee sms read Slot', 'nothing else');
+    refused('bruce-review', 'brucelee sms read Slot DQNFW40EiM', 'not one of');
     refused('bruce-verify', 'brucelee sms session login --as agency', 'not one of');
     refused('bruce-verify', 'brucelee dev hold -- npm run build', 'npm only as');
     refused('bruce-verify', 'brucelee dev stop sms', 'not one of');

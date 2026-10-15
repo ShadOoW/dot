@@ -3,13 +3,13 @@
 // Why: a helper reads and returns, and only the calling session writes (the claude package
 // README, "Helpers"). Three Bruce helpers cannot do their job without a shell — `bruce-catch-up`
 // runs `brucelee ticket new`, `bruce-review` runs git and the gates, `bruce-verify` runs the
-// gates, `playwright-cli` and `brucelee sms order` — and a shell can write. In the Bruce
-// workspace that is not hypothetical: sms's `npm run build` begins with `rm -rf out`, the running
-// dev server's compiled code; `eslint --fix` and `npm ci` rewrite the developer's uncommitted
-// work. omp has no per-agent command restriction (an agent file's frontmatter has none, and
-// `bash.patterns` applies to the whole session), but an extension sees every tool call of every
-// subagent, with the subagent's name, and may refuse it. So each guarded helper gets an
-// allowlist here, and anything not on it is refused with the reason (workflow 05).
+// gates, `playwright-cli`, `brucelee sms order` and the read-back `brucelee sms read` — and a shell
+// can write. In the Bruce workspace that is not hypothetical: sms's `npm run build` begins with
+// `rm -rf out`, the running dev server's compiled code; `eslint --fix` and `npm ci` rewrite the
+// developer's uncommitted work. omp has no per-agent command restriction (an agent file's
+// frontmatter has none, and `bash.patterns` applies to the whole session), but an extension sees
+// every tool call of every subagent, with the subagent's name, and may refuse it. So each guarded
+// helper gets an allowlist here, and anything not on it is refused with the reason (workflow 05).
 //
 // WHAT THIS PROMISES. The plausible accident is impossible: a helper cannot write the tree, the
 // build, the dependencies or the database, and a git read cannot hand a program of the
@@ -35,6 +35,8 @@
 //     the channels refused below are the ones measured on git 2.54.0 and ripgrep 15.1.0;
 //   - npm's argv channel before the script name: `npm run <script>` is bounded, the script itself
 //     is the developer's own code;
+//   - the credential `brucelee sms read` connects with can write: the verb runs one `findOne` and
+//     nothing else, and a read-only database user is still the operator's to create;
 //   - three ways the guard is not reached at all: the operator's own session (no `ctx.agent`, or
 //     `kind !== "sub"`, by design), a shell-holding agent whose name is not in `HELPERS` (which is
 //     why a new shell helper's list goes here before its agent file is linked), and a hook omp
@@ -47,8 +49,8 @@
 // without a sandbox is fundamentally flawed", with the `rg --pre` and `git show --output` RCEs),
 // and the eight bypasses of CVE-2025-66032. A boundary is an OS sandbox — `bwrap --ro-bind / / …
 // -- bash -c <cmd>` on Linux, which is what Codex does, Seatbelt on macOS — plus a read-only
-// database credential; neither is this file's, and the step that needs the second is `leftovers 08
-// sms-read`.
+// database credential; neither is this file's. What it does bound is what a helper may ask the
+// database: `brucelee sms read` below, whose two words reach a script this file's rules can read.
 //
 // Fail-closed: a command this file cannot read for certain — command substitution, a heredoc, a
 // redirect outside /tmp, an unknown program — is refused. A refused helper says so in its answer,
@@ -418,16 +420,33 @@ const BRUCELEE: Readonly<Record<Helper, readonly string[]>> = {
   ],
   'bruce-review': ['ticket review', 'ticket covering', 'ticket tests', 'status', 'packages links', 'packages overlay'],
   'bruce-verify': [
-    'dev ready', 'dev health', 'dev logs', 'dev hold', 'sms order', 'status', 'packages links',
+    'dev ready', 'dev health', 'dev logs', 'dev hold', 'sms order', 'sms read', 'status', 'packages links',
     'ticket covering',
   ],
+};
+
+/**
+ * `brucelee sms read`'s two words: a Parse class name and a ten-character record id.
+ *
+ * The same two shapes logos holds (`apps/brucelee/lib/dev.ts`'s `CLASS_NAME` and `OBJECT_ID`), and a
+ * deliberate second copy — this file cannot import that repository. Neither copy is what makes the
+ * read safe (logos hands the words to its own script as values); they are here so a word of the
+ * wrong shape is refused where it was typed, with the reason.
+ */
+const SMS_READ_WORDS = [/^[A-Z][A-Za-z0-9_]{0,39}$/u, /^[A-Za-z0-9]{10}$/u] as const;
+
+/** Whether `sms read` was given exactly a collection and a record id, both of the shapes the verb takes. */
+const smsRead = (rest: readonly string[]): Ruling => {
+  if (rest.length !== 2) return 'sms read takes a collection and a record id, and nothing else';
+  const wrong = rest.findIndex((word, at) => !(SMS_READ_WORDS[at] as RegExp).test(word));
+  return wrong < 0 ? undefined : `the ${wrong === 0 ? 'collection' : 'id'} ${JSON.stringify(rest[wrong] ?? '')}`;
 };
 
 /** `brucelee`'s own words, `brucelee` included at index 0, so `dev hold -- <command>` keeps its spans. */
 const brucelee = (words: readonly Word[], helper: Helper): Ruling => {
   const args = words.slice(1).map((w) => w.text);
   if (args[0] === 'sms' && args[1] === 'db') {
-    return 'brucelee sms db runs a script this file cannot read; a read-back through `brucelee sms read` is step 08 (leftovers 08 sms-read)';
+    return 'brucelee sms db runs a script this file cannot read; read one record back with `brucelee sms read <collection> <id>`';
   }
   const verb = BRUCELEE[helper].find((v) => {
     const named = v.split(' ');
@@ -450,6 +469,8 @@ const brucelee = (words: readonly Word[], helper: Helper): Ruling => {
       if (at < 0) return 'dev hold needs `-- <command>`';
       return judgeWords(words.slice(1 + width + at + 1), helper);
     }
+    case 'sms read':
+      return smsRead(rest);
     default:
       return undefined;
   }
