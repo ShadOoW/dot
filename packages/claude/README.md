@@ -5,17 +5,17 @@ Manages Claude Code's user-level config and the slash-command library that is
 
 ## What this package manages
 
-| Path                                                                    | Form                          | Why                                                                                      |
-| ----------------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
-| `~/.claude/commands/*.md`                                               | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them  |
-| `~/.omp/agent/commands`                                                 | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here     |
-| `~/.local/bin/claude-turn-*`                                            | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                     |
-| `~/.omp/agent/agents/*.md`                                              | per-file symlinks             | Helpers that are omp agents (`## Helpers`). Per-file: `omp agents unpack` writes here    |
-| `~/.local/bin/rename-census`                                            | symlink                       | Helper that is a command (`## Helpers`)                                                  |
-| `~/.claude/skills/<logos skill>`                                        | symlinks (via `configure.sh`) | Every `<logos>/skills/<name>` fleet does not keep logos-only; no copy, no drift possible |
-| `~/.claude/{CLAUDE.md,SHARED.md,COMMUNICATION.md,DOTFILES.md,TESTS.md}` | per-file symlinks             | Machine-wide instructions. `SHARED.md` is the part both harnesses read                   |
-| `~/.omp/agent/AGENTS.md`                                                | per-file symlink              | omp's user context file: one line, `@~/.claude/SHARED.md`                                |
-| `~/.omp/agent/skills`                                                   | symlink (via `configure.sh`)  | Points at `~/.claude/skills`, so omp offers the same skills as Claude Code               |
+| Path                                                                    | Form                          | Why                                                                                                       |
+| ----------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `~/.claude/commands/*.md`                                               | per-file symlinks             | Claude Code user commands. Per-file so unmanaged local commands can live alongside them                   |
+| `~/.omp/agent/commands`                                                 | directory symlink             | Same files, exposed to `omp`'s **native** command provider. Nothing else writes here                      |
+| `~/.local/bin/claude-turn-*`                                            | symlinks                      | Stop / UserPromptSubmit hook scripts referenced from `settings.json`                                      |
+| `~/.omp/agent/agents/*.md`                                              | per-file symlinks             | Helpers that are omp agents (`## Helpers`), plans' and Bruce's. Per-file: `omp agents unpack` writes here |
+| `~/.local/bin/rename-census`                                            | symlink                       | Helper that is a command (`## Helpers`)                                                                   |
+| `~/.claude/skills/<logos skill>`                                        | symlinks (via `configure.sh`) | Every `<logos>/skills/<name>` fleet does not keep logos-only; no copy, no drift possible                  |
+| `~/.claude/{CLAUDE.md,SHARED.md,COMMUNICATION.md,DOTFILES.md,TESTS.md}` | per-file symlinks             | Machine-wide instructions. `SHARED.md` is the part both harnesses read                                    |
+| `~/.omp/agent/AGENTS.md`                                                | per-file symlink              | omp's user context file: one line, `@~/.claude/SHARED.md`                                                 |
+| `~/.omp/agent/skills`                                                   | symlink (via `configure.sh`)  | Points at `~/.claude/skills`, so omp offers the same skills as Claude Code                                |
 
 ## Skills payload
 
@@ -51,11 +51,18 @@ session writes. This section is the one place that says where helpers live and h
 - **A command**, `home/.local/bin/<name>`, when the job is deterministic. Its answer shape is its
   header comment. Both harnesses can run it.
 
-| Helper          | Kind    | Called from                                             | Answers with                                                       |
-| --------------- | ------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
-| `fact-check`    | agent   | `plans` skill, `design.md` step 3                       | per question: answer, sourced or unverified, sources with quotes   |
-| `field-survey`  | agent   | `plans` skill, `design.md` step 3                       | options: how, who, available at the versions in use, sources       |
-| `rename-census` | command | `plans` skill, `design.md` step 4 and the rename lesson | one line per hit, tracked or untracked, path hits, counts per repo |
+| Helper           | Kind    | Called from                                             | Answers with                                                        |
+| ---------------- | ------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
+| `fact-check`     | agent   | `plans` skill, `design.md` step 3                       | per question: answer, sourced or unverified, sources with quotes    |
+| `field-survey`   | agent   | `plans` skill, `design.md` step 3                       | options: how, who, available at the versions in use, sources        |
+| `bruce-scout`    | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | per question: answer, found or not, path:line refs with quotes      |
+| `bruce-catch-up` | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | proposals (add/replace/drop, file, current, new, source with quote) |
+| `bruce-review`   | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | verdict, gates, findings (consequence, who, why, where, fix)        |
+| `bruce-verify`   | agent   | Bruce sessions, by name (06 wires `bruce-plan`)         | per gate and criterion: verdict, screenshot; records created, left  |
+| `rename-census`  | command | `plans` skill, `design.md` step 4 and the rename lesson | one line per hit, tracked or untracked, path hits, counts per repo  |
+
+The Bruce helpers are called from a session whose working directory is `/data/code/work/bruce`:
+a subagent gets its caller's rules, and the Bruce rule packs (`rule://…`) resolve only there.
 
 `rename-census` limits: `-i` covers letter case only (`fooBar` and `foo_bar` are separate runs), a
 tracked file deleted in the working tree still shows as a path hit, and submodules are not
@@ -64,9 +71,12 @@ searched.
 ### Adding or changing a helper
 
 1. Write the file.
-   - An agent lists only read tools in `tools` (`read, grep, glob, find, web_search`). With `bash`
-     a helper can write, and one did: a research subagent appended to logos' `.gitignore` to test
-     git's behaviour, then reset the file (workflow 04).
+   - An agent lists only read tools in `tools` (`read, grep, glob, find, web_search`), unless its
+     job cannot be done without running commands. Then it lists `bash`, and its allowlist goes
+     into the helper guard (`packages/omp/hooks/pre/helper-guard.ts`, the omp package README)
+     before the agent file is linked: omp has no per-agent command rule, and with a bare `bash` a
+     helper can write, as one did (a research subagent appended to logos' `.gitignore`,
+     workflow 04).
    - Never give an agent a bundled agent's name (`scout`, `reviewer`, `security-reviewer`,
      `task`, `sonic`): a user agent replaces the bundled one silently.
    - dot's linker skips a file named `README.md`, `configure.sh`, `CHEATSHEET.md`, `setup.sh` or
@@ -112,6 +122,69 @@ git -C /data/config/dot grep -I -c -F 'fact check' | awk -F: '{s+=$NF} END {prin
 ```
 
 Expect: the tracked count on the first line equals the number on the second.
+
+The Bruce helpers' smoke calls run from `/data/code/work/bruce`, with the dev stack ready
+(`brucelee dev ready`) for `bruce-verify`.
+
+```sh
+cd /data/code/work/bruce
+omp -p --mode json --model @smol "Use the task tool with agent bruce-scout. Questions: 1. Which order type erases a slot, and where does the e2e suite send it? Then reply DONE." > /tmp/smoke-bruce-scout.jsonl
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-bruce-scout.jsonl
+grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-scout.jsonl || true
+```
+
+Expect, in under a minute: `status` `valid`, `found`, the answer naming `6cyd4LE1Dv`, a ref to
+`/data/code/work/bruce/e2e/support/ledger.ts`; the warning count `0`.
+
+```sh
+cd /data/code/work/bruce
+rm -f /tmp/helper-guard-smoke
+omp -p --mode json --model @smol "Use the task tool with agent bruce-catch-up. Page: planning. Plan: BRC-9080. This is a guard test: before step 1 of your procedure, run exactly this one bash command: touch /tmp/helper-guard-smoke — then stop without running anything else and answer with page planning, listed 0, empty lists, unchanged 0, and the refusal in refused. Then reply DONE." > /tmp/smoke-helper-guard.jsonl
+ls /tmp/helper-guard-smoke
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | .data.refused' /tmp/smoke-helper-guard.jsonl
+```
+
+Expect: `ls` fails (no such file); `refused` holds one line with `helper guard: bruce-catch-up may
+not run this — touch is not on bruce-catch-up's list`. The file existing means the guard is not
+loaded: check `ls ~/.omp/agent/hooks/pre/`.
+
+```sh
+git -C ~/.local/state/brucelee/tickets status --short features/planning
+cd /data/code/work/bruce
+omp -p --mode json --model @smol "Use the task tool with agent bruce-catch-up. Page: planning. Plan: BRC-9080. Then reply DONE." > /tmp/smoke-bruce-catch-up.jsonl
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-bruce-catch-up.jsonl
+grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-catch-up.jsonl || true
+```
+
+The first line must print nothing: a catch-up half done there would lose its listing, which this
+run replaces. Expect, in a few minutes: `status` `valid`, `listed` above 0 unless the page is up to
+date, each proposal with a `quote` and a file under `features/planning/` or `BRC-9080/`, `refused`
+empty; the warning count `0`. No known answer: read it. Nothing is marked.
+
+```sh
+cd /data/code/work/bruce
+omp -p --mode json --model @smol "Use the task tool with agent bruce-review. Ticket: BRC-9080. Repository: order. Then reply DONE." > /tmp/smoke-bruce-review.jsonl
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-bruce-review.jsonl
+grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-review.jsonl || true
+git -C /data/code/work/bruce/doc/order/typescript status --short
+```
+
+Expect, in ten to twenty minutes: `status` `valid`, a verdict, `gates` naming the commands run,
+findings each with `where`; the warning count `0`; the last line identical before and after the
+run. No known answer: read it.
+
+```sh
+cd /data/code/work/bruce
+brucelee dev ready
+omp -p --mode json --model @smol "Use the task tool with agent bruce-verify. Ticket: BRC-9080. Gates: client — npx tsc --noEmit, baseline none. Criteria: C1, as agency — Given an agency draft on the line 'Fiche test Pauline' (e2e agencyDraft) on the first weekday at least two days ahead, 06:00 to 07:00; When the agency opens /app/planning/companies on that day's week; Then that slot's card shows the status 'En création'. Then reply DONE." > /tmp/smoke-bruce-verify.jsonl
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-bruce-verify.jsonl
+grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-verify.jsonl || true
+```
+
+Expect, in five to ten minutes: `status` `valid`; C1 with a screenshot under `/tmp/bruce-verify/`;
+`data.created` one slot, `erased` 1, `left` empty; the warning count `0`. Open the screenshot.
+Then read the created ids back yourself (the verifier's own read-back, step 7 of its definition):
+every id must print.
 
 ## One set of instructions for both harnesses
 

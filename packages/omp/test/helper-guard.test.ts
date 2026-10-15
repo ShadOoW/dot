@@ -64,6 +64,7 @@ describe('what bruce-catch-up may run', () => {
     ok('bruce-catch-up', 'brucelee ticket new planning');
     ok('bruce-catch-up', 'brucelee transcript google-meet/61fbab3e --at 12:30');
     ok('bruce-catch-up', 'brucelee ticket facts planning notes');
+    ok('bruce-catch-up', 'cd ~/.local/state/brucelee/tickets && cat BRC-9080/plan/PLAN.md');
   });
   test('no marking, no linking, no git and no gates', () => {
     refused('bruce-catch-up', 'brucelee ticket mark planning --listed', 'not one of');
@@ -85,6 +86,8 @@ describe('what no guarded helper can slip past', () => {
     refused('bruce-review', 'find . -name "*.ts" -delete', 'find with an action');
     refused('bruce-review', 'rg --pre=sh foo', '--pre');
     refused('bruce-review', 'cd ../../etc', 'cd only');
+    refused('bruce-review', 'cd ~/.ssh', 'cd only');
+    refused('bruce-review', 'cd ~root', 'cd only');
     refused('bruce-review', 'NODE_OPTIONS=--require=x npx vitest run', 'variable');
     refused('bruce-review', 'git log', 'working directory', '/data/code/logos');
   });

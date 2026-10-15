@@ -23,7 +23,8 @@ export type Helper = 'bruce-catch-up' | 'bruce-review' | 'bruce-verify';
 export type Refusal = string | undefined;
 
 const WORKSPACE = '/data/code/work/bruce';
-const TICKETS = `${process.env.HOME ?? '/home/shad'}/.local/state/brucelee/tickets`;
+const HOME = process.env.HOME ?? '/home/shad';
+const TICKETS = `${HOME}/.local/state/brucelee/tickets`;
 
 /** The tools a guarded helper may call at all; its own `tools` line is narrower still. */
 const TOOLS: ReadonlySet<string> = new Set(['read', 'grep', 'glob', 'find', 'bash', 'yield']);
@@ -212,9 +213,9 @@ const reading: Readonly<Record<string, Rule>> = {
       ? 'find with an action that runs or writes'
       : undefined,
   cd: (a) => {
-    const to = a[0] ?? '';
-    const inside = to.startsWith('/') ? under(to, WORKSPACE) || under(to, '/tmp') : to !== '' && !to.startsWith('~') && !to.split('/').includes('..');
-    return a.length === 1 && inside ? undefined : 'cd only into the Bruce workspace or /tmp';
+    const to = (a[0] ?? '').replace(/^~(?=\/|$)/u, HOME);
+    const inside = to.startsWith('/') ? under(to, WORKSPACE) || under(to, '/tmp') || under(to, TICKETS) : to !== '' && !to.startsWith('~') && !to.split('/').includes('..');
+    return a.length === 1 && inside ? undefined : 'cd only into the Bruce workspace, the tickets directory or /tmp';
   },
   mkdir: (a) =>
     a.every((x) => x === '-p' || tmpOrNull(x)) ? undefined : 'mkdir only under /tmp',
