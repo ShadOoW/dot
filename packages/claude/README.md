@@ -176,14 +176,16 @@ run. No known answer: read it.
 
 ```sh
 cd /data/code/work/bruce
-omp -p --mode json --model anthropic/claude-sonnet-5-5 "Use the task tool with agent bruce-rereview. Ticket: BRC-9103. Repository: client. Finding: F4, SHOULD FIX — consequence: The reviewer cannot tell which edits fix the ticket and which are unrelated. Why: The Affiliation query's limit was lowered from 1024 to 256 and nothing in the ticket asks for it. Where: app/client/web/code/src/Stage/Shape/Controllers/Feature/Worker/View/index.tsx:57. Fix: Restore limit 1024 on the Affiliation query, or state why it changed. Questions: 1. sms/server/node @ origin/development, code/src/Route/api/query/setup.ts:275-282 — what bound does the affiliation rule put on where.limit? 2. app/client/web @ BRC-9103-viviers-show-0-people-for-a-dom, code/src/Stage/Shape/Controllers/Feature/Worker/View/index.tsx:50-60 — what value does the Affiliation query's limit hold? Then reply DONE." > /tmp/smoke-bruce-rereview.jsonl
+omp -p --mode json --model anthropic/claude-sonnet-5-5 "Use the task tool with agent bruce-rereview, and the batch's context field exactly: Re-read one finding from the code. Ticket: BRC-9103. Repository: client. Finding: F4, SHOULD FIX — consequence: The reviewer cannot tell which edits fix the ticket and which are unrelated. Why: The Affiliation query's limit was lowered from 1024 to 256 and nothing in the ticket asks for it. Where: app/client/web/code/src/Stage/Shape/Controllers/Feature/Worker/View/index.tsx:57. Fix: Restore limit 1024 on the Affiliation query, or state why it changed. Questions: 1. sms/server/node @ origin/development, code/src/Route/api/query/setup.ts:275-282 — what bound does the affiliation rule put on where.limit? 2. app/client/web @ BRC-9103-viviers-show-0-people-for-a-dom, code/src/Stage/Shape/Controllers/Feature/Worker/View/index.tsx:50-60 — what value does the Affiliation query's limit hold? After the task call, call the wait tool until the agent has settled. Then reply DONE." > /tmp/smoke-bruce-rereview.jsonl
 jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-bruce-rereview.jsonl
 grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-rereview.jsonl || true
 ```
 
-Expect, in a few minutes: `status` `valid`; `data.consequence` `withdrawn`; `data.deciding.text`
-containing `<= 256`; question 1 `answered`; the warning count `0`. The call names BRC-9103's branch:
-re-point it when that branch is deleted. No other known answer: read it.
+Expect, in a few minutes: `status` `valid`; `data.consequence` `narrowed` (the limit is the service rule's, so the
+change is not unrelated; `withdrawn` is a defensible reading too) and `data.fix` `does-not-land`;
+`data.deciding.text` containing `<= 256`; question 1 `answered`; the warning count `0`. Without the `wait` call `-p`
+exits as soon as the task is spawned and the helper never answers. The call names BRC-9103's branch: re-point it when
+that branch is deleted.
 
 ```sh
 cd /data/code/work/bruce
