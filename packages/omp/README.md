@@ -226,3 +226,19 @@ is not listed, a hook omp failed to load). Read the header before trusting it wi
 - `bun test packages/omp/test` checks the lists; `just check` runs it.
 - The guard reads a command line the way a shell would, quotes included, and refuses what it cannot
   read for certain: command substitution, heredocs, background jobs, redirects outside `/tmp`.
+
+## Turn-end check — `hooks/pre/bruce-turn-end.ts`
+
+A session in the Bruce workspace that wrote test files through `edit` or `write` cannot finish while the weak-test lint
+(`brucelee ticket lint`, on the lines the branch added) is red on them: at `session_stop` the hook returns each problem with
+its file, line, rule and message as a `block`, and the session fixes it in the same turn. Source files it changed get the
+specs that import them named, with the command; nothing slow runs (a covering run is 98 s against a 30 s handler budget).
+
+- Two caps, because omp counts a `block` against none: a problem set refused twice is let through (give the reason for a
+  false positive in the reply), and so is a stop chain of six refusals.
+- It fails open and says so: a missing `brucelee`, a 20 s timeout or unreadable output is a warning, never a block.
+- It does not see a file a shell or `ast_edit` wrote, another person's lines in the same file, a session ended by
+  interrupt, or Claude Code.
+- Every stop writes a `bruce-turn-end` entry: `jq -c 'select(.customType=="bruce-turn-end").data' <session file>`.
+
+Verify: `bun test packages/omp/test`.
