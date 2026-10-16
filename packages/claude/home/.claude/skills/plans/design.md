@@ -122,7 +122,9 @@ default search does not reach, runs it against the unfixed tree, and pastes the 
 never the check's source. A check never seen failing proves nothing. The build session reads the output and
 never the check, and its gate includes the check, which must pass on the fixed tree. Where no check can exist (a
 copy change, a visual redesign) the Design says so and names the stand-in: a stated state, a screenshot to
-compare, or a named manual step.
+compare, or a named manual step. The check sits beside a review, not in place of one: it grades the pages and the
+account it opens, so a page it never opens, how the fix works, a comment and a role granted to the account it
+tests are the review's.
 
 ---
 
