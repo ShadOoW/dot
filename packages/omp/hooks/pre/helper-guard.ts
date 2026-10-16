@@ -496,7 +496,8 @@ const playwrightCli: Rule = (args, helper) => {
   return undefined;
 };
 
-const ENV_NAMES = /^(PLAYWRIGHT_MCP_SECRETS_FILE|E2E_[A-Z_]+)=/u;
+// GIT_OPTIONAL_LOCKS=0 is the word the guard writes before a git read; a helper that copies it back is let through.
+const ENV_NAMES = /^(PLAYWRIGHT_MCP_SECRETS_FILE=|E2E_[A-Z_]+=|GIT_OPTIONAL_LOCKS=0$)/u;
 
 /** The helpers that read a repository and never run a gate. */
 const runsNoGate = (helper: Helper): boolean => helper === 'bruce-catch-up' || helper === 'bruce-rereview';

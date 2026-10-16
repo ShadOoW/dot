@@ -176,6 +176,11 @@ describe('what the guard adds to a git read, and nothing else', () => {
     expect(runs('bruce-review', 'git branch --show-current')).toBe('git branch --show-current');
     expect(runs('bruce-review', "grep -n 'a && b | c > d' src/x.ts")).toBe("grep -n 'a && b | c > d' src/x.ts");
   });
+  test("a helper that copies the guard's own prefix back is let through, and no other value is", () => {
+    expect(runs('bruce-rereview', 'GIT_OPTIONAL_LOCKS=0 git log -1')).toContain('log --no-textconv -1');
+    refused('bruce-rereview', 'GIT_OPTIONAL_LOCKS=1 git log -1', 'GIT_OPTIONAL_LOCKS');
+    refused('bruce-rereview', 'GIT_OPTIONAL_LOCKS=0 GIT_DIR=/x git log -1', 'GIT_DIR');
+  });
 });
 
 describe('the wiring omp calls', () => {
