@@ -26,7 +26,11 @@ prefer reading the source over describing it.
 the design depends on once, against the real target, before the design is written (the `plans`
 skill's lesson of the same name). A check, hook or guard the step adds is run by the step itself, on
 the commit or job it is for: the `workflow` plan's hook would have refused its own cutover commit,
-and its helper guard refused its own first real job, and only those runs showed either.
+and its helper guard refused its own first real job, and only those runs showed either. Two gaps of
+the same kind, each found late (`arrival 04` Finding 10, `arrival 10` Finding 12): a live gate whose
+input the step's own deploy consumes must plant that input, or the reading is taken before the deploy
+and the line under test cannot be reached; and a gate that names a mutation must run that mutation at
+design time — the build's own shellcheck or an eval assertion may reject it before the VM boots.
 
 ---
 

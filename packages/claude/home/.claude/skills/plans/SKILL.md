@@ -263,7 +263,10 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
 - **Re-read the live state when the build starts.** A design's census of authored files is true
   the hour it is taken: `meeting-links 01` designed a cutover of "the two link files that exist",
   and a third was written that morning, between design and build. A cutover over authored files
-  lists them again (`ls`, `git status`) before it rewrites any.
+  lists them again (`ls`, `git status`) before it rewrites any. When another plan's build is writing
+  the same files, build in a worktree of HEAD; if that build commits first, re-apply on its content,
+  re-gate on the combined tree, and re-read every reading taken on the first tree (`arrival 13`
+  Findings 9 and 14).
 - **The second copy of a recipe becomes a tool.** The same hand-written gate recipe was rewritten
   five times, and the fifth lost a result; it ended as `bin/snake run`. When a step's gate repeats
   an earlier step's commands, make them a command in the repository first.
@@ -300,7 +303,10 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   The design carries its output with a line per hit: corrected here, or not mine and why.
   retention 01 §10 asked for "the two stale comments"; five files asserted the old lake layout, and
   the other three were one `grep` away when the design was cut — they surfaced at the build instead,
-  as an Open item still open at the close.
+  as an Open item still open at the close. **A removal is a rename too** (`arrival 10`): grep the
+  *concept's prose* over the whole tree, not only the identifier — a provider this plan deleted still
+  had its names in `fleet/machines/snake/secrets.nix` and a `docs/VOCABULARY.md` row describing it in
+  words.
 - **When a plan's Open items double, review them.** `review.md` may run mid-plan, and the moment the
   waiting list grows is when an item is still cheap to turn into a step or a question. Every item
   retention held at 01's close had been created by a session doing the work rather than by the step
