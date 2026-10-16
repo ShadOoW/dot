@@ -322,6 +322,9 @@ Each line cost a plan real sessions. Read them before writing a step or a gate.
   re-launched on a closed step on 2026-10-14; the commit it made from a private index parented on a
   newer HEAD and deleted another plan's design from the tree (repaired the same hour). A step's
   record is the commit that closed it; a second visit changes nothing.
+- **A step that waits for another plan's deploy reads the live system, not that plan's ledger line.** `personal 07`
+  had deployed to punk and snake while its line still read `[~]`, and three `lake-purge 03` sessions stopped on
+  the ledger. The test is a unit, a timer or a start time read where it runs (`lake-purge 03` Findings 12, 23, 24).
 - **An operator-only act inside a build's own execution order makes the design two sessions.** `squad 06`
   put punk's `nixos-rebuild switch` — which needs the operator's sudo — inside a sequence its §9.2 called the
   build's, so the build stopped at that step and handed it over, and the before-read it had banked first was
