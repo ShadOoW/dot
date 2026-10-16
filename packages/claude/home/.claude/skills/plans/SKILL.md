@@ -102,6 +102,18 @@ nothing for him to act on is not asked. When nothing qualifies, the reply says
 Every reply that ends a session ends with `## Needs you` then `## Next`, in that order; nothing
 follows `## Next`.
 
+**`## Next` names exactly one action, the one that works now.** Read the ledger and the step file
+again before writing it, and name only a command whose own precondition holds at this moment:
+`build <plan> NN` only when NN is `[>]` and its Design section is written. A step that waits on
+something (the operator's confirm, a sign-in, another step) gets no second route behind the wait:
+the line is the wait itself, as one instruction (`reply here with confirm or your correction`),
+and the command that follows is named by the reply that follows. No "then", no "or", no "after
+that, in a new window". The same holds for the `**Next:**` line in Current state, which a
+launcher reads. Cost of record, `hidden-check 07` (2026-10-16): a design reply waiting on a
+confirm also printed `/new`, `/ss5`, `build hidden-check 07`; the operator asked whether he could
+skip the confirm, and he could not, because the build stops on the empty Design section, as the
+builds of `hidden-check` 03 and 04 had.
+
 ## Which model runs a session
 
 Every session of a plan starts fresh, so its model is chosen when it is launched, and the

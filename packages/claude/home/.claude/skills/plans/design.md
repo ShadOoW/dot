@@ -85,11 +85,13 @@ design time — the build's own shellcheck or an eval assertion may reject it be
    `wc -l` — against the drafted file and the tree: two of the six `workflow` builds stopped where a
    design contradicted itself this way (a DoD that forbade a line the same §9 mandated; a 300-line
    cap against text that came to 358).
-7. **Next**, from the ledger read again now: the in-window form `/new`, the switch for the step's
-   Build session model (`/ss5` or `/so5`), `build <plan> NN`, and one sentence on why a new
-   session: the build must work from the file alone. Waiting on a consult confirm: "reply here with
-   confirm or your correction". A re-split: the ledger change, then `design <plan> MM` in a new
-   session on Opus.
+7. **Next**, one action, from the ledger read again now (`plans` skill, *What a reply may ask of
+   the operator*). The design is written and the step is `[>]`: the in-window form `/new`, the
+   switch for the step's Build session model (`/ss5` or `/so5`), `build <plan> NN`, and one
+   sentence on why a new session: the build must work from the file alone. A consult confirm is
+   still awaited (the step is `[~]`, §8 empty): only "reply here with confirm or your correction",
+   never the build command, which would stop on the empty Design section. A re-split: the ledger
+   change, then `design <plan> MM` in a new session on Opus.
 
 ---
 

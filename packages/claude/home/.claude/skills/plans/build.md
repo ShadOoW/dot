@@ -133,8 +133,8 @@ Written after the commit, or after the blocker has been recorded.
 - "Changed from the design" only when he would notice the difference in use.
 - Gate results in one line.
 - `## Needs you` per the `plans` skill.
-- `## Next`, from the ledger in `.plans/<plan>/PLAN.md` read again now, in the in-window form the
-  `plans` skill gives:
+- `## Next`, one action (`plans` skill, *What a reply may ask of the operator*), from the ledger in
+  `.plans/<plan>/PLAN.md` read again now, in the in-window form the `plans` skill gives:
   - This step is `[x]`: the first step after it that is not `[x]` — `[>]` → `/new`, the switch for
     its Build session model (read from that step's Design section; Sonnet 5.5 if it has no Build
     session line, saying the line was missing), `build <plan> MM`; `[ ]` or `[~]` → `/new`, `/so5`,
