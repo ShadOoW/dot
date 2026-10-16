@@ -114,6 +114,14 @@ otherwise it runs on a start by hand, and a timer run that must be seen is hande
 next session, never waited for. And anything only the operator can do that does not depend on the
 build goes first in the execution order.
 
+**A step that fixes a defect opens with its check.** The design session writes the check that grades the fix —
+from the report alone, before it reads the code that causes the fault — keeps it where the fixing session's
+default search does not reach, runs it against the unfixed tree, and pastes the failing output into the Design,
+never the check's source. A check never seen failing proves nothing. The build session reads the output and
+never the check, and its gate includes the check, which must pass on the fixed tree. Where no check can exist (a
+copy change, a visual redesign) the Design says so and names the stand-in: a stated state, a screenshot to
+compare, or a named manual step.
+
 ---
 
 ## Constraints
