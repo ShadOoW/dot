@@ -84,7 +84,11 @@ design time — the build's own shellcheck or an eval assertion may reject it be
    commit, run every command the design's own Definition of done and Gates name — each `grep`, `ls`,
    `wc -l` — against the drafted file and the tree: two of the six `workflow` builds stopped where a
    design contradicted itself this way (a DoD that forbade a line the same §9 mandated; a 300-line
-   cap against text that came to 358).
+   cap against text that came to 358). `grep -c` and `rg -c` count lines, not mentions: a Definition of
+   done that wants a phrase "in two places" counts files (`-l`) or occurrences (`-o`), and a phrase
+   that wraps across a line break counts as zero (two builds of `hidden-check` found their §9 count
+   wrong this way). A Gate that counts something and can read `0` names a control that reads non-zero
+   when the instrument works: a mistyped field also answers `0`.
 7. **Next**, one action, from the ledger read again now (`plans` skill, *What a reply may ask of
    the operator*). The design is written and the step is `[>]`: the in-window form `/new`, the
    switch for the step's Build session model (`/ss5` or `/so5`), `build <plan> NN`, and one
