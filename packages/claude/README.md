@@ -51,15 +51,16 @@ session writes. This section is the one place that says where helpers live and h
 - **A command**, `home/.local/bin/<name>`, when the job is deterministic. Its answer shape is its
   header comment. Both harnesses can run it.
 
-| Helper           | Kind    | Called from                                             | Answers with                                                        |
-| ---------------- | ------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
-| `fact-check`     | agent   | `plans` skill, `design.md` step 3                       | per question: answer, sourced or unverified, sources with quotes    |
-| `field-survey`   | agent   | `plans` skill, `design.md` step 3                       | options: how, who, available at the versions in use, sources        |
-| `bruce-scout`    | agent   | `bruce-plan`: `phase.md`, `start.md`, `returns.md`      | per question: answer, found or not, path:line refs with quotes      |
-| `bruce-catch-up` | agent   | `bruce-plan`: `catch-up.md`, `start.md`                 | proposals (add/replace/drop, file, current, new, source with quote) |
-| `bruce-review`   | agent   | `bruce-plan`: `ship.md`                                 | verdict, gates, findings (consequence, who, why, where, fix)        |
-| `bruce-verify`   | agent   | `bruce-plan`: `phase.md`                                | per gate and criterion: verdict, screenshot; records created, left  |
-| `rename-census`  | command | `plans` skill, `design.md` step 4 and the rename lesson | one line per hit, tracked or untracked, path hits, counts per repo  |
+| Helper           | Kind    | Called from                                             | Answers with                                                                                               |
+| ---------------- | ------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `fact-check`     | agent   | `plans` skill, `design.md` step 3                       | per question: answer, sourced or unverified, sources with quotes                                           |
+| `field-survey`   | agent   | `plans` skill, `design.md` step 3                       | options: how, who, available at the versions in use, sources                                               |
+| `bruce-scout`    | agent   | `bruce-plan`: `phase.md`, `start.md`, `returns.md`      | per question: answer, found or not, path:line refs with quotes                                             |
+| `bruce-catch-up` | agent   | `bruce-plan`: `catch-up.md`, `start.md`                 | proposals (add/replace/drop, file, current, new, source with quote)                                        |
+| `bruce-review`   | agent   | `bruce-plan`: `ship.md`                                 | verdict, gates, findings (consequence, who, why, where, fix)                                               |
+| `bruce-rereview` | agent   | `bruce-plan`: `ship.md`                                 | per finding: consequence and fix, each with a quote; per question: answered, premise-false or beyond-reach |
+| `bruce-verify`   | agent   | `bruce-plan`: `phase.md`                                | per gate and criterion: verdict, screenshot; records created, left                                         |
+| `rename-census`  | command | `plans` skill, `design.md` step 4 and the rename lesson | one line per hit, tracked or untracked, path hits, counts per repo                                         |
 
 The Bruce helpers are called from a session whose working directory is `/data/code/work/bruce`:
 a subagent gets its caller's rules, and the Bruce rule packs (`rule://…`) resolve only there.
@@ -172,6 +173,17 @@ git -C /data/code/work/bruce/doc/order/typescript status --short
 Expect, in ten to twenty minutes: `status` `valid`, a verdict, `gates` naming the commands run,
 findings each with `where`; the warning count `0`; the last line identical before and after the
 run. No known answer: read it.
+
+```sh
+cd /data/code/work/bruce
+omp -p --mode json --model anthropic/claude-sonnet-5-5 "Use the task tool with agent bruce-rereview. Ticket: BRC-9103. Repository: client. Finding: F4, SHOULD FIX — consequence: The reviewer cannot tell which edits fix the ticket and which are unrelated. Why: The Affiliation query's limit was lowered from 1024 to 256 and nothing in the ticket asks for it. Where: app/client/web/code/src/Stage/Shape/Controllers/Feature/Worker/View/index.tsx:57. Fix: Restore limit 1024 on the Affiliation query, or state why it changed. Questions: 1. sms/server/node @ origin/development, code/src/Route/api/query/setup.ts:275-282 — what bound does the affiliation rule put on where.limit? 2. app/client/web @ BRC-9103-viviers-show-0-people-for-a-dom, code/src/Stage/Shape/Controllers/Feature/Worker/View/index.tsx:50-60 — what value does the Affiliation query's limit hold? Then reply DONE." > /tmp/smoke-bruce-rereview.jsonl
+jq -s '[.[] | .. | .structured? | select(type=="object")][0] | {status, data}' /tmp/smoke-bruce-rereview.jsonl
+grep -c 'SYSTEM WARNING' /tmp/smoke-bruce-rereview.jsonl || true
+```
+
+Expect, in a few minutes: `status` `valid`; `data.consequence` `withdrawn`; `data.deciding.text`
+containing `<= 256`; question 1 `answered`; the warning count `0`. The call names BRC-9103's branch:
+re-point it when that branch is deleted. No other known answer: read it.
 
 ```sh
 cd /data/code/work/bruce

@@ -1,8 +1,9 @@
 // The helper guard: a Bruce helper that holds a shell runs only the commands its job needs.
 //
 // Why: a helper reads and returns, and only the calling session writes (the claude package
-// README, "Helpers"). Three Bruce helpers cannot do their job without a shell — `bruce-catch-up`
-// runs `brucelee ticket new`, `bruce-review` runs git and the gates, `bruce-verify` runs the
+// README, "Helpers"). Four Bruce helpers cannot do their job without a shell — `bruce-catch-up`
+// runs `brucelee ticket new`, `bruce-review` runs git and the gates, `bruce-rereview` runs git reads
+// and the review prompt's `--dry-run`, never a gate, `bruce-verify` runs the
 // gates, `playwright-cli`, `brucelee sms order` and the read-back `brucelee sms read` — and a shell
 // can write. In the Bruce workspace that is not hypothetical: sms's `npm run build` begins with
 // `rm -rf out`, the running dev server's compiled code; `eslint --fix` and `npm ci` rewrite the
@@ -61,7 +62,7 @@
 
 import type { ExtensionAPI } from '@oh-my-pi/pi-coding-agent';
 
-export type Helper = 'bruce-catch-up' | 'bruce-review' | 'bruce-verify';
+export type Helper = 'bruce-catch-up' | 'bruce-review' | 'bruce-rereview' | 'bruce-verify';
 
 /** Why a command may not run. */
 export type Refusal = string;
@@ -419,6 +420,7 @@ const BRUCELEE: Readonly<Record<Helper, readonly string[]>> = {
     'ticket feature', 'ticket meeting', 'transcript', 'meetings',
   ],
   'bruce-review': ['ticket review', 'ticket covering', 'ticket tests', 'status', 'packages links', 'packages overlay'],
+  'bruce-rereview': ['ticket review'],
   'bruce-verify': [
     'dev ready', 'dev health', 'dev logs', 'dev hold', 'sms order', 'sms read', 'status', 'packages links',
     'ticket covering',
@@ -496,6 +498,9 @@ const playwrightCli: Rule = (args, helper) => {
 
 const ENV_NAMES = /^(PLAYWRIGHT_MCP_SECRETS_FILE|E2E_[A-Z_]+)=/u;
 
+/** The helpers that read a repository and never run a gate. */
+const runsNoGate = (helper: Helper): boolean => helper === 'bruce-catch-up' || helper === 'bruce-rereview';
+
 const judgeWords = (words: readonly Word[], helper: Helper): Ruling => {
   let skip = 0;
   for (;;) {
@@ -513,13 +518,13 @@ const judgeWords = (words: readonly Word[], helper: Helper): Ruling => {
     case 'git':
       return helper === 'bruce-catch-up' ? 'bruce-catch-up reads no git history' : git(rest, helper, passed);
     case 'npx':
-      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : npx(rest, helper, passed);
+      return runsNoGate(helper) ? `${helper} runs no gate` : npx(rest, helper, passed);
     case 'npm':
-      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : npm(rest, helper, passed);
+      return runsNoGate(helper) ? `${helper} runs no gate` : npm(rest, helper, passed);
     case 'vitest':
     case 'eslint':
     case 'tsc':
-      return helper === 'bruce-catch-up' ? 'bruce-catch-up runs no gate' : gate(program, rest);
+      return runsNoGate(helper) ? `${helper} runs no gate` : gate(program, rest);
     case 'playwright-cli':
       return playwrightCli(rest, helper, passed);
     default:
@@ -552,7 +557,12 @@ export const judge = (helper: Helper, command: string, cwd?: string): Guarded =>
   return { command: out };
 };
 
-const HELPERS: Readonly<Record<string, true>> = { 'bruce-catch-up': true, 'bruce-review': true, 'bruce-verify': true };
+const HELPERS: Readonly<Record<string, true>> = {
+  'bruce-catch-up': true,
+  'bruce-review': true,
+  'bruce-rereview': true,
+  'bruce-verify': true,
+};
 
 export default function helperGuard(pi: ExtensionAPI): void {
   pi.on('tool_call', async (event, ctx) => {

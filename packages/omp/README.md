@@ -203,7 +203,7 @@ with no reply text…".
 
 ## Helper guard — `hooks/pre/helper-guard.ts`
 
-A Bruce helper that holds a shell (`bruce-catch-up`, `bruce-review`, `bruce-verify`; the claude
+A Bruce helper that holds a shell (`bruce-catch-up`, `bruce-review`, `bruce-rereview`, `bruce-verify`; the claude
 package README, _Helpers_) runs only the commands on its own list; anything else is refused with
 the reason, which the helper reports instead of retrying. omp has no per-agent command rule, so
 this extension checks every tool call of a subagent with one of those names (`ctx.agent.name`)

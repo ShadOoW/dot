@@ -49,6 +49,29 @@ describe('what bruce-review may run', () => {
   });
 });
 
+describe('what bruce-rereview may run', () => {
+  test('the change section and the files of a revision', () => {
+    ok('bruce-rereview', 'mkdir -p /tmp/bruce-rereview/r1');
+    ok('bruce-rereview', 'brucelee ticket review BRC-9103 --repo client --dry-run > /tmp/bruce-rereview/r1/prompt.md');
+    ok('bruce-rereview', 'grep -n "^## " /tmp/bruce-rereview/r1/prompt.md');
+    ok('bruce-rereview', 'git -C /data/code/work/bruce/app/client/web show BRC-9103-x:code/src/a.ts | grep -n \'\'');
+    ok('bruce-rereview', 'git -C /data/code/work/bruce/sms/server/node grep -n limit origin/development -- code/src');
+    ok('bruce-rereview', 'git -C /data/code/work/bruce/app/client/web diff origin/development...BRC-9103-x --stat');
+    expect(runs('bruce-rereview', 'git -C /data/code/work/bruce/app/client/web show BRC-9103-x:code/src/a.ts')).toContain('show --no-textconv');
+  });
+  test('no gate, no browser, no other verb', () => {
+    refused('bruce-rereview', 'cd /data/code/work/bruce/app/client/web/code && npm run check', 'runs no gate');
+    refused('bruce-rereview', 'npx tsc --noEmit', 'runs no gate');
+    refused('bruce-rereview', 'vitest run', 'runs no gate');
+    refused('bruce-rereview', 'brucelee ticket review BRC-9103 --repo client', '--dry-run');
+    refused('bruce-rereview', 'brucelee status', 'not one of');
+    refused('bruce-rereview', 'brucelee ticket covering a.ts', 'not one of');
+    refused('bruce-rereview', 'git checkout BRC-9103-x', 'not a read');
+    refused('bruce-rereview', 'sed -n 1,5p f', 'not on');
+    refused('bruce-rereview', 'playwright-cli -s=bruce-verify open http://x', 'only bruce-verify');
+  });
+});
+
 describe('what bruce-verify may run', () => {
   test('the stack, its own browser, orders and a read-back', () => {
     ok('bruce-verify', 'brucelee dev ready --wait 120');
@@ -189,5 +212,12 @@ describe('the wiring omp calls', () => {
       reason: 'helper guard: bruce-review may not call write',
     });
     expect(await call('bash', { command: 'touch /tmp/guard-test' }, { kind: 'main', id: 'Main', name: 'main', depth: 0 })).toBeUndefined();
+  });
+  test('a bruce-rereview call is guarded by name', async () => {
+    const rereview = { kind: 'sub', id: '0-bruce-rereview', name: 'bruce-rereview', depth: 1 };
+    expect(await call('bash', { command: 'touch /tmp/guard-test' }, rereview)).toEqual({
+      block: true,
+      reason: "helper guard: bruce-rereview may not run this — touch is not on bruce-rereview's list",
+    });
   });
 });
