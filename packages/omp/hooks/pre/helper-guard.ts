@@ -23,7 +23,9 @@
 // core.pager=cat -c core.fsmonitor=false -c log.showSignature=false` after it, and
 // `--no-ext-diff --no-textconv` (diff) or `--no-textconv` (log, show, blame, grep) after the
 // subcommand. A rewrite is an insertion and nothing else — every other command runs byte for byte
-// as written — and omp revalidates a rewritten command against the tool schema and displays it
+// as written — except that a git read already beginning `GIT_OPTIONAL_LOCKS=0`, which a helper
+// copies back from what it saw run, is let through and carries the word twice, which git accepts.
+// Omp revalidates a rewritten command against the tool schema and displays it
 // before it runs, so the operator sees what actually ran (`ToolCallEventResult.input`,
 // shared-events.d.ts).
 //
