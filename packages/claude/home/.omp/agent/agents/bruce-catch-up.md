@@ -131,3 +131,9 @@ key of the plan being worked (e.g. `BRC-9080`).
 - A command refused by the helper guard is not retried in another form: it goes in `refused`,
   and what it would have read is left unproposed.
 - `current` is copied from the file, never paraphrased; `new` is the exact text to write.
+- A listing's stretch block (`the developer … carried the talk …`) is the developer's demo and what the others said on
+  it, never a third party's decisions, and a line marked `(developer)` is his own words, never someone else's ruling.
+  When it names the plan you were given, propose one `add` to `<KEY>/brief.md` under `## Decisions`: a block headed
+  `### Decisions <date> (<the others>, meeting "<title>", returns on <developer>'s demo)` with each return's `MM:SS`, speaker and
+  words. When it names a different plan, several, or none, make no proposal and put one `elsewhere` entry (ticket: the
+  key named, or `(unassigned)`; what: returns on the developer's demo, plan unclear).
