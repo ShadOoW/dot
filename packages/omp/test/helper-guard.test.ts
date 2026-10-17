@@ -30,6 +30,7 @@ describe('what bruce-review may run', () => {
     ok('bruce-review', 'git branch --show-current');
     ok('bruce-review', 'git -C /data/code/work/bruce/sms/server/node ls-files "*/Feature/List/setup.ts"');
     ok('bruce-review', 'diff /tmp/bruce-review/new.ts src/Feature/List/setup.ts | grep -c "^[<>]"');
+    ok('bruce-review', 'brucelee ticket tests BRC-9080');
   });
   test('nothing that writes the tree, the build or the dependencies', () => {
     refused('bruce-review', 'cd /data/code/work/bruce/sms/server/node/code && npm run build', 'npm only as');
@@ -45,6 +46,7 @@ describe('what bruce-review may run', () => {
     refused('bruce-review', 'sed -i s/a/b/ file.ts', 'not on');
     refused('bruce-review', 'brucelee ticket review BRC-9080 --repo sms', '--dry-run');
     refused('bruce-review', 'brucelee ticket covering --run src/a.ts', 'does not run them');
+    refused('bruce-review', 'brucelee ticket mutate BRC-9080 src/a.ts', 'not one of');
     refused('bruce-review', 'npx playwright test', 'only bruce-verify');
   });
 });

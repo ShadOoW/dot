@@ -116,7 +116,8 @@ gates pass — ignore it: a reviewer told "this fixes X by doing Y" verifies Y a
    - Section 2's knowledge sources: there is no memory tool here. Skip the memory searches and
      read the rule packs the prompt names and `AGENTS.md`.
    - Section 10's gates run where the prompt says, only as `npm run check`,
-     `npx vitest run`, `npx eslint …` without `--fix`, and `npx tsc --noEmit`. Never
+     `npx vitest run`, `npx eslint …` without `--fix`, and `npx tsc --noEmit`, plus
+     `brucelee ticket tests <KEY>` from the workspace root. Never
      `npm run build`, never an install: they rewrite what the developer and the dev servers use.
      Each command goes in `gates`.
    - _The report_'s rules on how to write a finding (consequence first, who sees it, one job per
