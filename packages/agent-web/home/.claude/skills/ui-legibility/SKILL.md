@@ -61,6 +61,12 @@ Zones come from a selector map you write per screen, e.g. `{ header: '.grid-head
 '[data-slot-card]', axis: '.grid-pinned' }`. Five minutes of selector work turns an ambiguous
 report into a boundary.
 
+**Census every palette the surface ships.** A light and a dark theme are two screens with the
+same markup: run steps 1 and 4 in each, on the same page state, and report them side by side.
+Measured on logos' walkthrough page (2026-10-18): a code diff's syntax colours failed at 1.6:1
+on the light palette and 2.2:1 on the dark one, on different tokens in each, so a pass over one
+theme would have shipped every failure of the other.
+
 ### 2. Decide inside the design system
 
 The levers, in order of preference:
@@ -85,14 +91,15 @@ is a per-context colour matrix nobody maintains.
 
 In `references/probes/`. Each is a bare arrow function for
 `playwright-cli -s=<session> --raw eval "$(cat probe.js)"`; adapt the root and zone selectors at
-the top. They ship with an MUI data grid's selectors because the pass they survived was over
-one; they are an example to retarget per screen, not a default.
+the top. `census.js` and `fit.js` ship with an MUI data grid's selectors because the pass they
+survived was over one; `contrast.js` ships with the whole `body`. All are examples to retarget
+per screen, not a default.
 
-| Probe         | Answers                                                                  | Watch for                                                          |
-| ------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `census.js`   | how many text nodes at each size, how many clipped, by zone              | it only means something for `noWrap` text — see Trap 2             |
-| `contrast.js` | measured ratio of every distinct (colour, background, size, weight) pair | must blend through **ancestors**, not read the declared background |
-| `fit.js`      | does this string fit, and how much headroom                              | find the real ceiling by growing the element, not by arithmetic    |
+| Probe         | Answers                                                                  | Watch for                                                                        |
+| ------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `census.js`   | how many text nodes at each size, how many clipped, by zone              | it only means something for `noWrap` text — see Trap 2                           |
+| `contrast.js` | measured ratio of every distinct (colour, background, size, weight) pair | resolves colours through a canvas, blends **ancestors**, enters **shadow roots** |
+| `fit.js`      | does this string fit, and how much headroom                              | find the real ceiling by growing the element, not by arithmetic                  |
 
 ### Contrast is not the declared background
 
@@ -101,6 +108,16 @@ one; they are an example to retarget per screen, not a default.
 it may be a semi-transparent overlay composited onto another. `contrast.js` walks the ancestor
 chain and alpha-composites it. Anything simpler reports the ratio against white and passes text
 that is unreadable on a tinted row.
+
+**Nor is a computed colour an `rgb()` string.** A token-based design system hands back
+`oklch(0.68 0.044 278.79)`, `color-mix(…)` or `lab(…)`, and a regex that reads the first three
+numbers as red, green and blue reports a ratio that means nothing. `contrast.js` paints each
+colour on a 1×1 canvas and reads the pixel back, which is the colour the browser drew.
+
+**And a library's surface is often in a shadow root**, which a document-level `TreeWalker`
+never enters: a code diff, an editor, a date picker. On the walkthrough page every failing pair
+was in one, beside page text that all cleared 4.7:1. `contrast.js` collects every shadow root
+under `ROOT` and walks each, and marks a pair `shadow: true` when it was found inside one.
 
 Thresholds: **4.5:1** for body text, **3:1** for text ≥ 18.66 px bold or ≥ 24 px, **3:1** for
 graphical objects and UI component boundaries that carry meaning. A 1 px rule and a 3 px rule
@@ -174,6 +191,11 @@ whoever is holding the ticket. Repetition is the mechanism. A pinned assertion i
 - **No CI gate on the ratios either**, until a screen has been through the pass at least twice
   and its zone selectors have stopped moving. A gate written on the first pass encodes a
   boundary nobody has confirmed yet.
+- **The one exception is a design system's own token pairs.** A pair of tokens has one ratio
+  whatever the screen shows, so it cannot drift with data: test it where the tokens are
+  generated, in every palette (logos: `libs/ui/test/contrast.test.ts`). That leaves the pass
+  what tokens cannot reach: a library's own colours, an app's `color-mix`, and the backgrounds
+  they land on.
 - **What makes the next run cheap is the record, not a test**: the zone selector map, the one
   secondary colour that cleared every background, and the survivors with their owners. Put
   those where the next agent reads them — the project rulebook for what always holds, the
