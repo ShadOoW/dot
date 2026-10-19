@@ -79,7 +79,7 @@ The levers, in order of preference:
    you. Changing one is an escalation, not a fix. Say so and ask.
 
 The project's design system outranks this file on which token and which variant — its own skill
-if it has one (in `/data/code/fleet` that is `ui`). This file only says _how to know_ you need one.
+if it has one (in `/data/code/logos` that is `ui`). This file only says _how to know_ you need one.
 
 **One secondary colour, chosen for the worst background it can land on.** A grey that passes on
 white will fail on a tinted row, a hover state, or a highlighted column — and you will not notice

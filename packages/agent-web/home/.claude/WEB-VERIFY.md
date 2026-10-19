@@ -14,6 +14,11 @@ syntax. Hard rules that hold even before those skills are loaded:
   approval. If a diagnostic seems to need prod, stop and ask, stating what you would send.
 - Never fabricate, inject, or bypass a session. Unknown login: check
   `~/.config/agent-web/sites.json`; missing entry: ask the user once, then add it.
+  One exception, Bruce only: an automated test may put a session for a Bruce test account
+  (`agency`, `client`, `noperm`) into its own throwaway browser, against the local stack,
+  when the session came from `brucelee sms session login` and the test ends it with
+  `brucelee sms session logout` whatever its outcome. Never the agent profile, never a
+  session for any other account or environment.
 - Evidence with every UI claim: URL + screenshot path + console error output.
 
 ## Machine facts that override stale repo guidance

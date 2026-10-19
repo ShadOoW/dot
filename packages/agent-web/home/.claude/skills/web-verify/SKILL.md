@@ -110,8 +110,12 @@ playwright-cli -s=$S console error                  # runtime regressions
 playwright-cli -s=$S --raw requests                 # network overview
 playwright-cli -s=$S --raw request 1384             # headers for one request
 playwright-cli -s=$S --raw response-body 1384       # server payload, e.g. why a login failed
-playwright-cli -s=$S --raw request-body 1384        # what the app actually sent
+playwright-cli -s=$S --raw request-body 1384 | jq 'del(._SessionToken)'   # what the app actually sent
 ```
+
+A Parse request body carries the page's `_SessionToken`, and a login response carries
+`sessionToken`: filter them with `jq` before the output reaches the transcript. The token is the
+agent profile's live session, so never print it.
 
 Interaction: `click <ref>`, `fill <ref> <text>`, `select <ref> <value>`, `press <key>`,
 `hover <ref>`, `check <ref>`. Refs (`e12`) come from the latest snapshot and are invalidated by
