@@ -17,11 +17,12 @@ signature** and the second-order coupling that file does not list.
 > All `src/…` paths in this document are relative to the moved CLI at
 > **`/data/code/logos/apps/dot`** (entry `apps/dot/dot.ts`); this repo has no TS of its own.
 
-## 1. Early boot — `/data` is unmounted until `local-fs.target`
+## 1. The hook and the home directory
 
-Anything systemd, the kernel, or udev reads before the mount must be a **real file**
-installed from `etc-real*/`. A dot symlink there resolves to nothing. Cost of record:
-a 9-day silent swap outage.
+No package ships an `etc-real*` tree since dot 02. On the desk `/etc` is store-owned: NixOS
+generates the configuration from the flake and installs it as a store symlink, so a payload
+file under `system/` aimed at `/etc` is either ignored or in conflict. On the Mac, launchd
+reads `~/Library/LaunchAgents` after `$HOME` is mounted, so a payload link there is safe.
 
 | Signature in a diff                                                                                                                                                                                          | Verdict                |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
@@ -30,88 +31,68 @@ a 9-day silent swap outage.
 | The literal `etc-real` appearing anywhere in `src/**`                                                                                                                                                        | blocker — see §5       |
 | `dot doctor --fix --force` proposed near one of these paths: a real file at the target is classified `drift` and replaced with a symlink                                                                     | blocker                |
 
-Match `etc-real*`, not `etc-real`. Three names are in use: `etc-real/`,
-`etc-real-systemd/`, `etc-real-runit/`. AGENTS.md's table lists 4 files; the real inventory
-is 10 across 5 packages — `journald` and `usage` are entirely undocumented there, as are
-`zram`'s `/etc/sysctl.d/30-reclaim.conf` and `/etc/tmpfiles.d/zswap.conf`. A diff adding an
-`etc-real*` file should add the AGENTS.md row in the same commit.
+Match `etc-real*`, not `etc-real`: the linker still accepts `etc-real/`,
+`etc-real-systemd/` and `etc-real-runit/` as names. A diff adding an `etc-real*` file is a
+blocker on both hosts, and it adds the file to `AGENTS.md`'s hazard section in the same
+commit.
 
-**Proof standard.** These are verified **only on a fresh boot**. `systemctl daemon-reload`
-re-runs generators _after_ the mount and `sv restart` re-reads config _after_ the FS is up —
-both mask exactly this class. Separately, `systemctl enable --now` on an already-running unit
-does not pick up a changed `ExecStart`; demand `restart`
-(`packages/oom/configure.sh:83-89` is the correct shape). If a diff's stated verification is
-a reload, that is not verification: say so.
+**Proof standard.** These are verified **only on a fresh boot or login**. `systemctl
+daemon-reload` re-runs generators _after_ the mount and `sv restart` re-reads config _after_
+the FS is up — both mask exactly this class. Separately, `systemctl enable --now` on an
+already-running unit does not pick up a changed `ExecStart`; demand `restart`. If a diff's
+stated verification is a reload, that is not verification: say so.
 
-## 2. Shipped units and runit `run` scripts
+## 2. Shipped units
 
 The repo has already paid for each of these once.
 
 - **Interpreter path in a version-managed dir.** `ExecStart=`/`exec`/shebang matching
   `managed-fnm`, `/.cache/`, `/.nvm/`, `/.asdf/`, `/.pyenv/`, `node_modules/.bin`,
   `/.local/share/mise`, `$HOME/.bun/bin`, or `env node|bun|python`. The alias moves, the unit
-  hot-loops on `status=203/EXEC`. Under runit it is worse: `/etc/runit/2` execs
-  `env - PATH=$PATH runsvdir`, so a scrubbed `PATH` cannot find a bare name. blocker.
+  hot-loops on `status=203/EXEC`. blocker.
 - **`Restart=` without a start limit.** `Restart=on-failure|always` needs
   `StartLimitIntervalSec=` **and** `StartLimitBurst=`, and both belong in **`[Unit]`** —
   systemd silently ignores them in `[Service]`. A small `RestartSec` never trips the default
   5-in-10s limit, so a broken path becomes an indefinite loop instead of a failed unit.
-  Correct examples: `oom-notify.service:6-7`, `polkit-agent.service:5-6`. concern, blocker if
-  the exec path is also unstable.
-- **runit service with no log sink.** `runsv` wires only _stdout_ to `svlogd`. A new
-  `packages/**/etc/sv/<svc>/` needs a sibling `log/run`, an `exec 2>&1` in `run`, and a
-  `sleep`-guarded `exit 1` preflight so a missing binary backs off instead of spinning at
-  ~1 Hz. `svlogd` also exits instantly if its log dir does not exist, so `log/run` must
-  create the dir itself rather than assume `configure.sh` ran. concern.
-- **Void has no journal and no syslog socket.** Do not accept "the error will be in the log"
-  as a defence for a runit service; stderr goes nowhere.
+  Correct example: `polkit-agent.service:5-6`. concern, blocker if the exec path is also
+  unstable.
+- **launchd needs an absolute program and a bounded loop.** `ProgramArguments` must be an
+  absolute path (launchd has no `PATH` search), and `KeepAlive=true` on a program that exits
+  immediately is the launchd shape of the restart loop — pair it with `RunAtLoad` and a
+  program that runs until it is told to stop. concern, blocker if the path is unstable.
 
 ## 3. Real-file installers (`configure.sh`)
 
 `install`/`cp` onto a symlink path **follows the link** and clobbers the file inside
 `/data/config/dot`. Every write into `/etc` must be `rm -f "$dst"` first, then install, and
-ideally a `[ -L "$dst" ]` bail. Correct shape: `fonts/configure.sh:24-25`,
-`journald/configure.sh:33-37`, `zram/configure.sh:70-74`. blocker when the package also ships
-a `system/` path to the same destination.
+ideally a `[ -L "$dst" ]` bail. `fonts/configure.sh` is the one configure script that no
+longer writes there — it runs `fc-cache -fv` and nothing else — and `secrets/configure.sh`
+shows the same real-file discipline for `$HOME` (mode 700, files 600, never a link). blocker
+when the package also ships a `system/` path to the same destination.
 
-**Init detection is `[ -d /run/systemd/system ]`, never `[ -d /run/systemd ]`.** elogind
-creates `/run/systemd` on Void, so the bare test reports systemd on a runit box — the script
-then installs the Arch tree, never writes the runit config, and dies on
-`systemctl: command not found` while looking configured. Fixed twice already (`zram`, then
-`journald`). Flag any new `[ -d /run/systemd ]`, `command -v systemctl`, or `uname`-based init
-probe. blocker.
+## 4. Memory tiers are the host's
 
-## 4. The memory tiers are coupled — never review one in isolation
-
-`zram` (compressed RAM, pri 100), `swap` (16 GiB NVMe swapfile, pri 10) and `oom`
-(`earlyoom` absolute thresholds) are one system with two init-specific copies of each config.
-
-- A change to swap **capacity** invalidates `earlyoom`'s `-S`; a change to `-M`/`-S` in one
-  init's file must land in the other (`oom/etc-real-systemd/.../10-args.conf` **and**
-  `oom/etc-real-runit/etc/sv/earlyoom/run`). concern.
-- `-m`/`-s` (relative) instead of `-M`/`-S` (absolute KiB) makes the killer unreachable under
-  load. It has already both slept through freezes and killed 177 processes in two minutes.
-  blocker.
-- `zram-size` above ~25% of RAM deadlocks reclaim (storing a compressed page requires
-  allocating one): no OOM kill, swap 68% free, machine stops. In `zramen`'s conf an **unset**
-  `ZRAM_MAX_SIZE` means _no ceiling_, not a default. blocker.
-- Deleting `30-reclaim.conf` or `zswap.conf` "because the GRUB cmdline covers it" is not
-  equivalent. concern.
+The desk has no swap; punk owns the host's memory policy — earlyoom, zswap and the disk
+swap (`/data/code/logos/fleet/machines/punk/memory.nix`, `storage/disk.nix`). A payload diff
+adding zram, swap or earlyoom configuration is a blocker; so is one that moves a threshold
+out of punk's declaration and into a package.
 
 ## 5. `src/` invariants that nothing but convention enforces
 
 - **`etc-real*` is unreachable by design, not by check.** `collectFiles` walks only
   `join(pkgDir, section)` for `section: "home" | "system"` (`src/lib/pkg.ts:170-173`), and the
   string `etc-real` appears nowhere in `src/`. Widening that union, walking `pkgDir` itself, or
-  adding an `etc-real` branch to `resolveTarget` re-arms the outage. blocker.
+  adding an `etc-real` branch to `resolveTarget` re-arms the outage. blocker. The hazard and
+  its incident are in `AGENTS.md`, section "The early-boot hazard".
 - **`resolveTarget` has a catch-all.** `system/<x>/…` for any `<x>` outside
-  `base|runit|systemd|launchd` maps to `/<x>/…` (`src/lib/pkg.ts:199-207`), and the init
-  filter (`:184-186`) skips only those three exact strings. So `system/systmd/etc/foo.conf`
-  links to `/systmd/etc/foo.conf` on **every** init, silently. In any package diff, the second
-  segment under `system/` must be exactly `base|runit|systemd|launchd` — `packages/ly/system/etc/`
-  is the one legitimate fallthrough user. Adding a new init requires coordinated edits in
-  `collectFiles`, `resolveTarget`, `hasInitDirs`, `collectEnableScripts`, `declaredServices`
-  and `findSystemGhosts`; a partial set is a bug.
+  `base|systemd|launchd` maps to `/<x>/…` (`src/lib/pkg.ts:199-207`), and the init filter
+  (`:184-186`) skips only those three exact strings. So `system/systmd/etc/foo.conf` links to
+  `/systmd/etc/foo.conf` on every host, silently. Nothing in the payload uses the fallthrough
+  now that `ly` is gone: the second segment under `system/` must be exactly
+  `base|systemd|launchd`, and a new `runit` tree is a blocker even though the linker still
+  accepts the name. Adding a new init requires coordinated edits in `collectFiles`,
+  `resolveTarget`, `hasInitDirs`, `collectEnableScripts`, `declaredServices` and
+  `findSystemGhosts`; a partial set is a bug.
 - **PSS, never RSS.** `src/lib/memory.ts` reads `Pss`/`SwapPss` from
   `/proc/PID/smaps_rollup`; summed RSS double-counts shared node/chromium text (24.0 GiB
   reported vs 14.3 GiB true). Watch for a switch to `ps`/`statm` RSS, removal of the
@@ -135,24 +116,22 @@ probe. blocker.
   `--force` deletes a repo file. `doctor --fix --force` reaches this non-interactively for
   every package. Making `--force` the default, or adding it to a batch caller, is a blocker;
   adding a `realpathSync(...).startsWith(DOTFILES_DIR)` refusal is the fix.
-- `dot kernel`'s Void/Arch partition is a bare `startsWith("linux")` on a **shared `/boot`**.
-  Touching that split or bumping `KEEP_PURGEABLE` "for safety" can unbootstrap the Arch
-  install. blocker.
+- The parked distro verbs are unreachable on both hosts; do not extend them.
 
 ## 7. Distro divergence belongs in a table, not an `if`
 
 `run()` is `Bun.spawn` and **throws** on a missing binary rather than returning 127, so one
-unguarded `pacman` call kills the rest of the command. And a pacman-shaped assumption on Void
-produces a confident _false pass_: the drift scan looked for `*.pacnew`, which Void never
-writes (its marker is `<file>.new-<version>`), printed "no drift", then threw. Flag: new
-`pacman|paccache|yay|vkpurge|xbps-*` literals in `apps/dot/src/**` outside `sweep.ts`'s `SYSTEMS`
-table or without a `commandExists()` probe; any `if (distro === …)` in a command that has a
-table; any distro branch whose non-matching side emits _success_.
+unguarded `pacman` call kills the rest of the command. And a package-manager-shaped
+assumption on NixOS produces a confident _false pass_: `nixos` carries no package manager,
+`linux` matches it, and `arch`/`void` are valid only for the parked code. Flag: new
+`pacman|paccache|yay|vkpurge|xbps-*` literals in `apps/dot/src/**` outside `sweep.ts`'s
+`SYSTEMS` table or without a `commandExists()` probe; any `if (distro === …)` in a command
+that has a table; any distro branch whose non-matching side emits _success_.
 
 `appliesToCurrentOS` collapses everything non-macOS to `linux`, so **`os: ["linux"]` does not
-exclude Void** — an Arch-only package needs `os: ["arch"]`. `meta.json` unknown keys are
-warn-only and silently dropped, so `"service"` for `"services"` no-ops. 23 of 53 packages ship
-no `meta.json` at all and therefore claim to apply everywhere, macOS included.
+exclude a host**. `meta.json` unknown keys are warn-only and silently dropped, so `"service"`
+for `"services"` no-ops. Packages that ship no `meta.json` claim to apply everywhere, macOS
+included.
 
 ## 8. Gate blind spots — absorb these yourself
 
@@ -164,15 +143,11 @@ therefore must:
 - **No linter of any language.** `ruff.toml` is format-only; no shellcheck, no eslint. Unquoted
   expansions, `set -euo pipefail` omissions, undefined Python names all pass.
 - **The TS CLI (`/data/code/logos/apps/dot`) has no formatter and no lint**, and its `tsconfig`
-  lacks `noUncheckedIndexedAccess` — direct risk in the code parsing `/proc/*/smaps_rollup`
-  and `pacman -Q` output.
+  lacks `noUncheckedIndexedAccess` — direct risk in the code parsing `/proc/*/smaps_rollup`.
 - **CLI tests exist only under `apps/dot/src/lib/` (9 files).** `apps/dot/src/commands/link.ts` —
   the symlink engine — has none, nor do `sgc`/`doctor`/`sweep`/`kernel`.
-- **`packages/` is never type-checked** — the old `tsconfig.include: ["dot.ts","src"]` gate was
-  deleted with the CLI, and no TS remains in this repo.
-- **Extensionless shell is outside `just check`** (`find -name "*.sh"`), but pre-commit's
-  shfmt hook _rewrites_ it by shebang — so runit `run` scripts get reformatted by a gate that
-  never validates them. `.zsh` is covered by neither.
+- **`packages/` is never type-checked** — no TS remains in this repo.
+- **`.zsh` is covered by neither the formatter nor any test.**
 - **Nothing verifies that a file dot's linker would install is tracked by git.** `.gitignore`
   uses unanchored directory patterns, so a package payload can be invisible while every gate
   is green. Any new `.gitignore` line without a leading `/`, and any package path containing a
@@ -185,20 +160,14 @@ therefore must:
 Raise these **only** if the change touches them or makes them worse. Do repeat them if a diff
 walks past one while editing the same file.
 
-| Location                                                           | Defect                                                                                                                                                                            |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/agentmemory/system/systemd/.../agentmemory.service:8-10` | Still `ExecStart=%h/.cache/managed-fnm/…`, `Restart=on-failure`, no start limit — the incident AGENTS.md describes in past tense. The runit sibling was fixed; this was not.      |
-| `packages/usage/etc-real/.../dot-usage.service:18-19`              | `StartLimitIntervalSec`/`Burst` sit inside `[Service]` (line 8) — systemd ignores them, so the guard its own comment promises is inert.                                           |
-| `packages/kanata/.../kanata.service:7-8`                           | `Restart=on-failure` + `RestartSec=3`, no start limit; `/usr/bin/kanata` does not exist on Void and the package has no `meta.json` to scope it.                                   |
-| `sv/agentmemory/`, `sv/awsvpnclient/`, `sv/zramen/`                | No `log/run`. Only `sv/earlyoom/` has both `log/run` and `exec 2>&1`. `awsvpnclient/run` is 2 lines: no preflight, no backoff, target under `/opt`.                               |
-| `.gitignore:2` (`.cursor/`, unanchored)                            | Shadows the entire `packages/cursor` payload — 6 files on disk, 0 tracked.                                                                                                        |
-| `justfile:36,54`                                                   | `packages/zellij/config.kdl` does not exist; the real file is `packages/zellij/home/.config/zellij/config.kdl`, so the only `.kdl` is never checked.                              |
-| `src/commands/pkg.ts:156`                                          | `collectFiles(pkgDir, "system")` with no `init`, so init-only packages report zero files and are excluded from `dot pkg --all`. `packages/usage` is unreachable that way on Void. |
-| `packages/oom/.../10-args.conf:79`                                 | `-S 6291456,3145728` predates the 16 GiB swapfile; free swap rarely drops that low, so the swap brake is effectively unreachable.                                                 |
-| `AGENTS.md`                                                        | Says `just fmt`; the recipe is `just format`.                                                                                                                                     |
-| `packages/udev/`, `packages/snapper-config/`                       | Files at package root, no `home/`/`system/`/`etc-real/` — nothing links or installs them. The udev rule is early-boot anyway, so it could only ever live in `etc-real/`.          |
-| `packages/atuin/config.toml`                                       | Package-root duplicate of the linked copy, already drifted.                                                                                                                       |
-| `packages/agentmemory/home/.agentmemory/.env`                      | Tracked, with commented placeholder keys. Deleting one `#` commits a live credential, and `.gitignore` has no `.env`/`.npmrc`/`secrets` rule.                                     |
+| Location                                                           | Defect                                                                                                                                               |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/agentmemory/system/systemd/.../agentmemory.service:8-10` | Still `ExecStart=%h/.cache/managed-fnm/…`, `Restart=on-failure`, no start limit — the incident AGENTS.md describes in past tense.                    |
+| `.gitignore:2` (`.cursor/`, unanchored)                            | Shadows the entire `packages/cursor` payload — 6 files on disk, 0 tracked.                                                                           |
+| `justfile:36,54`                                                   | `packages/zellij/config.kdl` does not exist; the real file is `packages/zellij/home/.config/zellij/config.kdl`, so the only `.kdl` is never checked. |
+| `src/commands/pkg.ts:156`                                          | `collectFiles(pkgDir, "system")` with no `init`, so init-only packages report zero files and are excluded from `dot pkg --all`.                      |
+| `packages/atuin/config.toml`                                       | Package-root duplicate of the linked copy, already drifted.                                                                                          |
+| `packages/agentmemory/home/.agentmemory/.env`                      | Tracked, with commented placeholder keys. Deleting one `#` commits a live credential, and `.gitignore` has no `.env`/`.npmrc`/`secrets` rule.        |
 
 ## 10. Do not raise
 
@@ -207,9 +176,8 @@ walks past one while editing the same file.
   load-order-dependent require, never the ordering itself).
 - Missing tests for `src/commands/**`. No harness exists there; ask for a test only when the
   change is in `src/lib/`, which has one.
-- Commands from `docs/system-hygiene.md` or `docs/nvidia.md` on the Void boot — both are
-  Arch-only and prescribe `paccache`/`systemctl`/`mkinitcpio`, which do not exist there (this
-  host uses dracut). Citing a stale doc is worse than no advice.
+- Advice from a deleted document: `docs/` holds only `session.md` after dot 02, so a command
+  quoted from anything else is stale by definition.
 - Package payload **content** (a keybinding, a colour, a plugin list). Not your call unless it
   is boot-critical or a credential.
 - One note per update, and only with a concrete reason. "Looks risky" is not a note.

@@ -13,8 +13,8 @@ group-by=urgency,app-name
 
 [urgency=critical]
 # Red and persistent. default-timeout=0 never expires; ignore-timeout=1 makes that stick
-# even when the sender asks for a short timeout. Used by packages/oom's OOM notifier —
-# an OOM kill must not scroll past unnoticed.
+# even when the sender asks for a short timeout. For alerts that must not scroll past
+# unnoticed.
 background-color=#801420ff
 border-color=#f7768e
 border-size=3

@@ -9,7 +9,7 @@ which has no dependency on `dot` or on anything being linked yet.
 
 ## Two repositories
 
-The payload — `packages/`, `pkgbuilds/`, `docs/` — is this repo. The TypeScript is in the kit
+The payload — `packages/`, `docs/` — is this repo. The TypeScript is in the kit
 (`apps/dot`, `apps/brucelee`, …), a different repository, cloned somewhere different on each
 host. Neither tree can name the other, which is why `bootstrap.sh` resolves everything by
 path rather than spelling one out.

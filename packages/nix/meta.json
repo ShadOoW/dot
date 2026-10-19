@@ -1,9 +1,0 @@
-{
-  "description": "Nix package manager — daemon and configuration",
-  "packages": {
-    "arch": { "pacman": ["nix"] },
-    "void": { "xbps": ["nix"] }
-  },
-  "tags": ["system", "nix"],
-  "os": ["linux"]
-}

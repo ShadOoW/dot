@@ -1,6 +1,6 @@
 # Dotfiles
 
-Personal dotfiles for **Arch Linux**, **Void Linux**, and **macOS** — Sway/Wayland desktop, Neovim, Zsh, and friends.
+Personal configuration for the NixOS desk and the macOS MacBook — Sway/Wayland desktop, Neovim, Zsh, and friends.
 
 > This is a reference, not an installer. Read and understand before applying anything.
 
@@ -33,36 +33,33 @@ dot <command>
 
 ### Commands
 
-| Command                   | Description                                               |
-| ------------------------- | --------------------------------------------------------- |
-| `dot pkg <pkg> link`      | Symlink a package's files into place                      |
-| `dot pkg <pkg> unlink`    | Remove those symlinks                                     |
-| `dot pkg <pkg> info`      | Show metadata, files, and per-distro packages             |
-| `dot pkg <pkg> configure` | Run `configure.sh` for a package                          |
-| `dot pkg <pkg> enable`    | Run the enable script (init-system-aware)                 |
-| `dot pkg <pkg> disable`   | Run the disable script                                    |
-| `dot update system`       | Update xbps/pacman, flatpak, bun, deno, rustup            |
-| `dot update global`       | Update npm/bun/pipx/cargo global packages                 |
-| `dot update source`       | Build/update pkgbuilds, fnm, anyzig, ly, zinit            |
-| `dot update --info`       | Show installed versions                                   |
-| `dot update --ai`         | Run update then analyse output with an AI provider        |
-| `dot assets sync`         | Sync fonts, icons, themes from GitHub releases (parallel) |
-| `dot doctor`              | Health-check all packages: broken symlinks, drift         |
-| `dot doctor --fix`        | Auto-repair broken symlinks and re-link partial packages  |
-| `dot completions zsh`     | Print zsh completion script (pipe to `_dot` in `$fpath`)  |
-| `dot docs`                | Browse setup documentation                                |
+| Command                   | Description                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| `dot pkg <pkg> link`      | Symlink a package's files into place                                                      |
+| `dot pkg <pkg> unlink`    | Remove those symlinks                                                                     |
+| `dot pkg <pkg> info`      | Show metadata, files, and package declarations                                            |
+| `dot pkg <pkg> configure` | Run `configure.sh` for a package                                                          |
+| `dot pkg <pkg> enable`    | Run the package's enable script                                                           |
+| `dot pkg <pkg> disable`   | Run the disable script                                                                    |
+| `dot update system`       | Update package managers and self-managed runtimes (distribution-package paths are parked) |
+| `dot update global`       | Update npm/bun/pipx/cargo global packages                                                 |
+| `dot update source`       | Build/update fnm, anyzig, ly, zinit                                                       |
+| `dot update --info`       | Show installed versions                                                                   |
+| `dot update --ai`         | Run update then analyse output with an AI provider                                        |
+| `dot assets sync`         | Sync fonts, icons, themes from GitHub releases (parallel)                                 |
+| `dot doctor`              | Health-check all packages: broken symlinks, drift                                         |
+| `dot doctor --fix`        | Auto-repair broken symlinks and re-link partial packages                                  |
+| `dot completions zsh`     | Print zsh completion script (pipe to `_dot` in `$fpath`)                                  |
+| `dot docs`                | Browse setup documentation                                                                |
 
 ### Linking flags
 
 ```sh
 dot pkg zsh link                 # home files only
-dot pkg zram link                # auto-detects runit or systemd
-dot pkg ly link --init runit     # explicit init override
+dot pkg sway link                # a Wayland desktop package
 dot pkg --tag wayland link       # link all wayland-tagged packages
 dot pkg nvim link --dry-run      # preview without changes
 ```
-
-Init system (runit vs systemd) is auto-detected from the running PID 1. Pass `--init` to override.
 
 ## Package structure
 
@@ -76,11 +73,10 @@ packages/<name>/
 │   └── .config/<app>/
 ├── system/
 │   ├── base/          # symlinked to / (always)
-│   ├── runit/         # symlinked to / (when --init runit)
-│   └── systemd/       # symlinked to / (when --init systemd)
+│   ├── systemd/       # symlinked to / (Linux)
+│   └── launchd/       # symlinked to ~/Library/LaunchAgents (macOS)
 ├── configure.sh       # run with `dot pkg <pkg> configure`
-├── enable-runit.sh    # run with `dot pkg <pkg> enable --init runit`
-├── enable-systemd.sh  # run with `dot pkg <pkg> enable --init systemd`
+├── enable-*.sh        # run with `dot pkg <pkg> enable`
 └── disable-*.sh
 ```
 
@@ -92,13 +88,7 @@ Packages can declare metadata in `meta.json`:
 {
   "description": "Neovim with LSP and Mason",
   "packages": {
-    "arch": {
-      "pacman": ["neovim", "tree-sitter"],
-      "brew": ["python-pynvim", "ripgrep", "fd"]
-    },
-    "void": {
-      "xbps": ["neovim", "python3-neovim", "tree-sitter", "ripgrep", "fd"]
-    },
+    "nixos": {},
     "macos": { "brew": ["neovim", "ripgrep", "fd"] }
   },
   "tags": ["editor", "dev"],
@@ -107,41 +97,19 @@ Packages can declare metadata in `meta.json`:
 }
 ```
 
-`dot pkg <pkg> info` shows packages filtered to the current distro. `dot pkg --tag <tag> link` links all matching packages at once.
+`nixos` is a distro key with no package manager; the flake declares the desk's packages.
+`dot pkg <pkg> info` shows the packages that apply to the current host and OS, and
+`dot pkg --tag <tag> link` links all matching packages at once.
 
-## Custom packages (pkgbuilds)
+## Hosts
 
-Packages not available in official repos (e.g. proprietary .deb-only software) live in `pkgbuilds/`. Each package is a directory with a `build.sh` that downloads the source, stages the files, and produces a native xbps package via `xbps-create` — no void-packages clone required.
+- **desk** — NixOS 26.05 in a container on punk. The system layer is declared in the fleet
+  flake (`/data/code/logos/fleet/machines/desktop/`); this payload owns `~/.config` and the
+  other home files.
+- **Mac** — macOS. This payload owns `home/` and `system/launchd/`.
 
-```
-pkgbuilds/
-└── antigravity/
-    ├── build.sh          # VERSION= at the top, full build + install logic
-    └── antigravity.sh    # wrapper binary packaged into /usr/local/bin/
-```
-
-`dot update source` auto-discovers every `pkgbuilds/*/build.sh`, compares the `VERSION=` declared there against the installed xbps package, and rebuilds only when they differ. Built packages are cached in `~/.cache/dot/<name>/`.
-
-**To update a package to a new release:**
-
-1. Get the new download URL (it typically encodes version, timestamp, and MD5).
-2. Compute the sha256 checksum: `sha256sum <file>.deb`
-3. Update the variables at the top of `pkgbuilds/<name>/build.sh`:
-   ```sh
-   VERSION="1.24.0"
-   TIMESTAMP="1787654321"
-   MD5="<new-md5>"
-   CHECKSUM="<new-sha256>"
-   ```
-4. Run `dot update source` — it detects the version mismatch and rebuilds.
-
-To check without building: `dot update source --check`
-
-## OS support
-
-Shared `$HOME` is supported between Arch and Void (glibc). Node versions installed by fnm are ABI-compatible between both distros — install once, use on both.
-
-The shell config auto-detects the distro at startup and exports `$_DISTRO` (`arch`, `void`, `macos`, `linux`) for use in all shell contexts.
+The shell config auto-detects the host and exports `$_DISTRO` (`nixos` on the desk, `macos` on
+the Mac) for use in all shell contexts.
 
 ## Clipboard
 
@@ -149,15 +117,8 @@ All clipboard operations go through `~/.local/bin/clipboard-copy` (linked via `d
 
 ## Node / fnm
 
-fnm is installed natively via cargo on all Linux distros and via brew on macOS. FNM_DIR defaults to `~/.local/share/fnm` (or `~/.cache/managed-fnm` in managed mode). Since `$HOME` is shared between Arch and Void (both glibc), the same Node versions work on both.
-
-```sh
-# Install/update fnm
-cargo install fnm
-
-# Or via dot
-dot update source
-```
+fnm is declared by the desk's flake and installed by brew on the Mac. FNM_DIR defaults to
+`~/.local/share/fnm` (or `~/.cache/managed-fnm` in managed mode).
 
 ## AI analysis (`--ai`)
 
@@ -179,5 +140,5 @@ dot completions zsh > ~/.local/share/zsh/completions/_dot
 
 ## Notes
 
-- The `docs/` directory has setup notes for fonts, NVIDIA, grub, snapper, pipewire, and zram.
-- For Void-specific setup see `VOID.md`.
+- Setup notes for the live `dot session` command are in `docs/session.md`.
+- The `dot` CLI itself lives in `/data/code/logos/apps/dot`; this repo holds no TypeScript.

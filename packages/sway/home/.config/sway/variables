@@ -11,8 +11,9 @@ set {
     # scratchpad marks and `dot session restore` are unaffected.
     #
     # The tradeoff is deliberate: one process now owns every terminal, so a
-    # kitty crash takes them all. earlyoom's --avoid list (packages/oom) already
-    # covers kitty, which is what keeps memory pressure from being that crash.
+    # kitty crash takes them all. earlyoom's --avoid list
+    # (/data/code/logos/fleet/machines/punk/memory.nix) already covers kitty,
+    # which is what keeps memory pressure from being that crash.
     # Concurrent launches are safe — the instance election is a socket bind, so
     # the three prewarms in ./exec reliably produce one process.
     $term kitty --single-instance
