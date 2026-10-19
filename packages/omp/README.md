@@ -80,7 +80,7 @@ newer TypeScript (`TYPESCRIPT_NATIVE_VERSION=7.1.0 dot pkg omp configure`). The 
 prompt is `dot`'s gate on every `configure` action, not this script — it writes only
 inside `$HOME`.
 
-Measured on `/data/code/fleet` (751 TS files, 924 MiB `node_modules`) — cold start,
+Measured on `/data/code/logos` (751 TS files, 924 MiB `node_modules`) — cold start,
 `initialize` -> `didOpen` -> `hover` -> `references`, peak PSS over the whole process
 tree:
 
@@ -153,38 +153,41 @@ cd <project> && omp -p "Call the lsp tool with action=status." --model @smol
 means it fell back, and the heap-cap shim at `~/.local/bin/typescript-language-server`
 is what bounds it.
 
-## Prompt additions — `APPEND_SYSTEM.md`
+## Questions are plain messages — `ask.enabled: false`
 
-`home/.omp/agent/APPEND_SYSTEM.md` is added to the end of the system prompt of every
-session started from the `omp` CLI, under omp's "User Instructions" heading, which
-overrides conflicting built-in guidance. Subagents do not receive it (omp looks for the
-file only in `main.ts`), and they have no `ask` tool anyway (`hasUI: false`). A
-project-level `.omp/APPEND_SYSTEM.md` replaces it rather than stacking.
+The `ask` picker is off. An agent that needs a decision ends its turn with an ordinary
+reply: what the reader needs to know, the question, the options and its recommendation.
+The reader answers by typing.
 
-It holds one rule: explain in reply text, then call `ask`, and keep the picker's
-`question` to one sentence. The first version (2026-09-28) said "write the context in
-normal chat" and made things worse: the model planned the explanation in its reasoning,
-which the user never sees, then sent the picker alone. Counted over every omp session, an
-`ask` with no reply text in its turn went from 31 of 116 calls before that version to 13 of
-27 after it. The rule now says that reasoning is invisible, and the hook below enforces it.
+Why: the picker opens as a panel at the bottom of the screen, up to 70% of its height,
+with a box repeating the question in the transcript above it. Whatever the agent wrote
+just before the picker is pushed above the top of the screen and can only be read by
+scrolling up or after answering. Measured on 2026-10-12 in a 40-row tmux pane: a 31-line
+explanation lost its first 14 lines off the top while the picker was open. The picker's
+question is cut to 4 lines, so the explanation cannot move into it, and upstream declined
+changing the panel (can1357/oh-my-pi#12735, `wontfix`).
 
-Check that it loaded:
+What failed before this, so it is not retried: a system-prompt rule asking for the
+explanation as reply text beside the `ask` call (Opus 5.5 almost never writes text in a
+response that also calls a tool: 794 of 12,155 such responses), then an `explain` tool
+rendering the explanation above the picker, plus a guard blocking an `ask` without one
+(2026-09-28 to 2026-10-12). The tool worked; the picker hid what it rendered.
+
+The setting lives in `~/.omp/agent/config.yml`, which this package does not own (see the
+top of this file). Set it once per host:
 
 ```sh
-omp -p --model @smol "Quote the system-prompt section about the ask picker, or say NONE."
+omp config set ask.enabled false
 ```
 
-## The ask guard — `hooks/pre/ask-needs-text.ts`
+Check: `omp config get ask.enabled` prints `false`, and a new session's tool list has no
+`ask`.
 
-Blocks an `ask` call whose assistant message has under 20 characters of reply text, and
-tells the model to write the explanation first and ask again. It fails open: a call it has
-no record of goes through.
+## Hooks — `hooks/`
 
-Two details it depends on:
-
-- **`tool_call` fires before `message_end`.** The guard records text length from
-  `message_update` snapshots, which already hold the finished tool call when the guard runs.
-  Recording from `message_end` alone lets every call through.
+- **A hook factory receives the full extension API.** omp loads `.ts` files from the hook
+  directory as extension modules, so `registerCommand`, `setModel` and `registerTool` work
+  there.
 - **omp's native hook loader skips symlinked files.** It keeps only directory entries that
   are regular files (`Dirent.isFile()`), and dot links every file as a symlink, so a hook
   linked the normal way loads nothing and reports nothing. The real file lives in
@@ -192,14 +195,24 @@ Two details it depends on:
   (`../../../hooks`), linked as one entry, like `~/.omp/agent/commands` in the claude
   package. Add new hooks under `packages/omp/hooks/{pre,post}/`; no re-link needed.
 
-Verify in an interactive session (headless `-p` has no `ask` tool):
+## `/ss5`, `/so5`, `/sd4` — `hooks/pre/model-switch.ts`
+
+Switch the session to Sonnet 5.5 (`/ss5`), Opus 5.5 (`/so5`) or DeepSeek V4.1 Flash (`/sd4`,
+`deepseek/deepseek-flash`) without the `/model` picker, at effort `high`; an argument overrides
+it (`/ss5 xhigh`; DeepSeek takes only `low`, `high`, `max`). The switch is for the session only:
+`config.yml` is not written. Under `omp-claude` the deepseek provider is disabled, so `/sd4`
+leaves the model unchanged. `/ss5` and `/so5` exist for plans, whose design and build
+sessions alternate models (the `plans` skill, "Which model runs a session"). Loaded from the
+hook directory (above).
+
+Verify (each starts on the other model; the reply is the model after the switch):
 
 ```sh
-cd /tmp && omp --model @smol "Call the ask tool now with question 'Test?', options Yes and No, and no reply text before it."
+cd /tmp && omp -p --model anthropic/claude-opus-5-5 "/ss5 xhigh" "Reply with only your exact model id, nothing else."
 ```
 
-Expected: the picker does not open, and the transcript shows "Blocked: this `ask` was sent
-with no reply text…".
+Expected: `anthropic/claude-sonnet-5-5`, and the session file under
+`~/.omp/agent/sessions/-tmp/` ends with a `thinking_level_change` to `xhigh`.
 
 ## Helper guard — `hooks/pre/helper-guard.ts`
 
@@ -240,5 +253,29 @@ specs that import them named, with the command; nothing slow runs (a covering ru
 - It does not see a file a shell or `ast_edit` wrote, another person's lines in the same file, a session ended by
   interrupt, or Claude Code.
 - Every stop writes a `bruce-turn-end` entry: `jq -c 'select(.customType=="bruce-turn-end").data' <session file>`.
+
+Verify: `bun test packages/omp/test`.
+
+## Hidden-check gate — `hooks/pre/bruce-check-gate.ts`
+
+A session that changed the Bruce client (`app/client/web`) while its branch names a ticket with a hidden check cannot
+finish until that check has graded the work as it stands. The check is the test written from the ticket before the fix,
+which the session fixing the bug never reads (logos `apps/brucelee/lib/check.ts`). The developer sees the outcome at the
+end of the session as a notice: `Hidden check BRC-9103: PASS on the work as it stands …`, a `FAIL` or `NOT RUN` when the
+session was let through without a pass, or `Hidden check: none …` when the branch has no check.
+
+- When a prompt starts in the workspace, the hook reads the client's tree id with `brucelee ticket verdict --json`
+  (0.3 s, not awaited). At `session_stop` it reads it again; an unchanged tree with no `edit`/`write` in the lane ends
+  the turn silently.
+- A changed tree with no verdict on exactly that tree is refused with one instruction: run `brucelee ticket check`,
+  which reads the ticket off the branch, grades the working tree as it stands (about two minutes, one run at a time)
+  and records the verdict against the tree's id. A fail on that tree is refused with the failing row's title.
+- The hook never runs the check itself: a run is about 100 s against a 30 s handler budget.
+- Two caps, because omp counts a `block` against none: one tree refused twice in one state is let through, and so is a
+  stop chain of four refusals; either way the developer is told. A verdict that cannot be read is a warning, never a
+  block.
+- It does not see lanes other than the client, a subagent's own stop (its writes are judged at the parent's), a
+  session ended by interrupt, or Claude Code.
+- Every judged stop writes a `bruce-check-gate` entry: `jq -c 'select(.customType=="bruce-check-gate").data' <session file>`.
 
 Verify: `bun test packages/omp/test`.
