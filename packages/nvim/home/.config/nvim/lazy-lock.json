@@ -75,6 +75,10 @@
     "branch": "master",
     "commit": "d28a3f70721c79e3c5f6693057ae929f3d9c0a03"
   },
+  "kitty-scrollback.nvim": {
+    "branch": "main",
+    "commit": "4994c85e0f291598d0748488653c83cb698fd281"
+  },
   "kulala.nvim": {
     "branch": "main",
     "commit": "a9e17ae0236e886371671a7a9f01f070201a9cc1"

@@ -12,4 +12,5 @@ return {
   require('plugins.tools.ts-errors'),
   require('plugins.tools.tv'),
   require('plugins.tools.kulala'),
+  require('plugins.tools.kitty-scrollback'),
 }
