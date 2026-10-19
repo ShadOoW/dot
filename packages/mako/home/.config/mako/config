@@ -4,7 +4,7 @@ background-color=#285577ff
 border-color=#7dcfff
 group-by=app-name,urgency
 default-timeout=5000
-anchor=top-left
+anchor=bottom-right
 
 [urgency=high]
 background-color=#772855ff
