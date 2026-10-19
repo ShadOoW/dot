@@ -10,6 +10,7 @@
         "wl-clipboard",
         "grim",
         "slurp",
+        "autotiling",
         "jq",
         "brightnessctl"
       ]
@@ -23,6 +24,7 @@
         "wl-clipboard",
         "grim",
         "slurp",
+        "autotiling",
         "jq",
         "brightnessctl"
       ]

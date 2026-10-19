@@ -17,7 +17,15 @@ exec {
 
     # Workspaces 3/4 are reserved for scripted project layouts
     # (dot session restore) — autotiling would fight the tabbed containers.
-    autotiling-rs --workspace 5 6 7 8 9 10 &
+    #
+    # autotiling (Python), not autotiling-rs: rs 0.1.8 checks the focused window's own layout
+    # for tabbed/stacked — always `none` for a window — instead of its parent's (upstream #15,
+    # unfixed on master), so every tab it focused got wrapped in a one-child split, and a
+    # window opened from that tab split inside it instead of becoming a new tab. This one
+    # checks the parent. WINDOW_FOCUS alone is what rs subscribed to; the default also fires
+    # on every title change, and agent spinners retitle their kitty windows several times a
+    # second.
+    autotiling --workspaces 5 6 7 8 9 10 --events WINDOW_FOCUS &
     wl-paste --watch cliphist -db-path /data/stash/clipboard/cliphist -max-items 1000000 store &
 
     # Start MRU focus tracker for Alt-Tab behavior
