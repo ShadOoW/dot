@@ -8,8 +8,10 @@
 # repo's own .gitignore; personal per-repo ignores belong in .git/info/exclude.
 # ─────────────────────────────────────────────────────────────────────────
 
-# Claude Code per-machine local settings
+# Claude Code per-machine local settings, and the lock headroom's `wrap claude`
+# leaves beside them
 **/.claude/settings.local.json
+**/.claude/.headroom_wrap_settings.lock
 
 # Serena MCP scratch dirs (see ~/nuke-serena.sh to remove Serena entirely)
 .serena/
