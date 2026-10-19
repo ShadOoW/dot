@@ -45,8 +45,10 @@ session writes. This section is the one place that says where helpers live and h
   its frontmatter (JSON Type Definition, as omp's bundled `scout` uses), and `structured: true`
   makes omp check every answer against it. After three failed attempts omp accepts the answer
   anyway with a `SYSTEM WARNING: Subagent exhausted schema-retry budget` line: that warning in a
-  helper's result means its definition needs fixing. Its model is a role alias (`@task`), so model
-  IDs stay in `~/.omp/agent/config.yml`. omp only: Claude Code reads `~/.claude/agents` in another
+  helper's result means its definition needs fixing. Its model is a role alias — `@task`, or
+  `@review` and `@rereview` for the two review helpers — so model IDs stay in
+  `~/.omp/agent/config.yml`; a role missing there fails the spawn ("No model selected"), it does
+  not fall back. omp only: Claude Code reads `~/.claude/agents` in another
   format (other tool names, no answer schema), and omp never reads that directory.
 - **A command**, `home/.local/bin/<name>`, when the job is deterministic. Its answer shape is its
   header comment. Both harnesses can run it.

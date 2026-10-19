@@ -2,7 +2,7 @@
 name: bruce-rereview
 description: Re-reads one finding of a Bruce pre-merge review at a named revision and answers whether its consequence holds and whether its fix can be built, each with a quoted line. Give it the ticket key, one repository id, the finding exactly as bruce-review reported it and numbered questions about named lines — never who wrote the finding, that anyone disagrees with it, or what will be done with the answer.
 tools: read, grep, glob, find, bash
-model: '@task'
+model: '@rereview'
 structured: true
 output:
   properties:

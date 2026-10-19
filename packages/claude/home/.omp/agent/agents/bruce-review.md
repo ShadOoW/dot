@@ -2,7 +2,7 @@
 name: bruce-review
 description: Blocking pre-merge review of one Bruce workstream — one repository's branch — against the team's rules, with its gates run. Answers with a verdict and findings, each with its consequence, who sees it, where and the fix. Give it the ticket key and the repository id and nothing else — never the implementer's account, earlier findings or a claim about the gates.
 tools: read, grep, glob, find, bash
-model: '@task'
+model: '@review'
 structured: true
 output:
   properties:

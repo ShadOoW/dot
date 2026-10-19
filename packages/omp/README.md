@@ -2,10 +2,10 @@
 
 Model roles for oh-my-pi live in the base config; one overlay optionally hides DeepSeek.
 
-| profile     | command      | roles                                                                                                 |
-| ----------- | ------------ | ----------------------------------------------------------------------------------------------------- |
-| base        | `omp`        | Opus for default, Sonnet for task/worker/smol, Haiku for commit — set in `~/.omp/agent/config.yml`    |
-| claude-only | `omp-claude` | the base roles, plus the `deepseek` provider disabled so no picker, cycle or retry chain can reach it |
+| profile     | command      | roles                                                                                                                                  |
+| ----------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| base        | `omp`        | Opus for default, review (medium) and rereview (low); Sonnet for task/worker/smol; Haiku for commit — set in `~/.omp/agent/config.yml` |
+| claude-only | `omp-claude` | the base roles, plus the `deepseek` provider disabled so no picker, cycle or retry chain can reach it                                  |
 
 The roles live in `~/.omp/agent/config.yml`, which is **not** owned by this
 package: omp rewrites that file itself (`settings.set`, the `/model` role
